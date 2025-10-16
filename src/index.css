@@ -129,6 +129,50 @@ body {
   color: #666;
 }
 
+/* Style dla przycisku wylogowania */
+.logout-button {
+  background-color: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin-left: 15px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.logout-button:hover {
+  background-color: var(--danger);
+  color: white;
+}
+
+.logout-button:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 768px) {
+  .logout-button {
+    margin-left: 10px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-info {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .logout-button {
+    margin-left: 0;
+    width: 100%;
+    order: 3;
+  }
+}
+
 .content {
   padding: 30px;
   flex: 1;
@@ -378,4 +422,29 @@ body {
   .activity-content {
     text-align: center;
   }
+}
+
+/* Dodaj na końcu pliku index.css */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--gray);
+  border-top: 5px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

@@ -1,19 +1,31 @@
-function Header() {
-    return (
-      <div className="header">
-        <div className="search-bar">
-          <input type="text" placeholder="Wyszukaj..." />
-        </div>
-        <div className="user-info">
-          <div className="notifications" style={{cursor: 'pointer', fontSize: '1.2rem'}}>🔔</div>
-          <div className="user-avatar">JR</div>
-          <div className="user-details">
-            <div className="user-name">Jan Rolnik</div>
-            <div className="user-role">Właściciel</div>
-          </div>
-        </div>
-      </div>
-    )
+import { useAuth } from '../hooks/useAuth'
+
+const Header = () => {
+  const { user, logout } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
   }
-  
-  export default Header
+
+  return (
+    <div className="header">
+      <div className="search-bar">
+        <input type="text" placeholder="Szukaj..." />
+      </div>
+      <div className="user-info">
+        <div className="user-avatar">
+          {user?.email?.charAt(0).toUpperCase()}
+        </div>
+        <div className="user-details">
+          <div className="user-name">{user?.email}</div>
+          <div className="user-role">Użytkownik</div>
+        </div>
+        <button onClick={handleLogout} className="logout-button">
+          Wyloguj
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default Header

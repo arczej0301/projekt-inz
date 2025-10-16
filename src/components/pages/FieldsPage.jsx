@@ -239,7 +239,6 @@ const FieldsPage = () => {
       <div className="main-content">
         <div className="header">
           <h2>Zarządzanie polami</h2>
-          
         </div>
         
         <div className="content">

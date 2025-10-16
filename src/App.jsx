@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from './hooks/useAuth'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import Dashboard from './components/Dashboard'
@@ -8,8 +9,10 @@ import TasksPage from './components/pages/TasksPage'
 import FinancePage from './components/pages/FinancePage'
 import ReportsPage from './components/pages/ReportsPage'
 import MagazinePage from './components/pages/MagazinePage'
+import LoginPage from './components/LoginPage'
 
 function App() {
+  const { user, loading } = useAuth()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [farmData, setFarmData] = useState({
     area: 0,
@@ -21,17 +24,19 @@ function App() {
   })
 
   useEffect(() => {
-    setTimeout(() => {
-      setFarmData({
-        area: 125,
-        animals: 340,
-        crops: 5,
-        tasks: 12,
-        income: 45200,
-        expenses: 28750
-      })
-    }, 1000)
-  }, [])
+    if (user) {
+      setTimeout(() => {
+        setFarmData({
+          area: 125,
+          animals: 340,
+          crops: 5,
+          tasks: 12,
+          income: 45200,
+          expenses: 28750
+        })
+      }, 1000)
+    }
+  }, [user])
 
   const renderContent = () => {
     switch (activeTab) {
@@ -52,6 +57,19 @@ function App() {
       default:
         return <Dashboard farmData={farmData} />
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="loading-spinner"></div>
+        <p>Ładowanie...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <LoginPage />
   }
 
   return (
