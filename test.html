@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zarządzanie Gospodarstwem Rolnym - Pola</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA&libraries=drawing,geometry"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Panel boczny */
+        .sidebar {
+            width: 300px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .logo i {
+            font-size: 24px;
+            margin-right: 10px;
+            color: #27ae60;
+        }
+
+        .logo h1 {
+            font-size: 20px;
+        }
+
+        .menu {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+
+        .menu li {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .menu li:hover {
+            background-color: #34495e;
+        }
+
+        .menu li.active {
+            background-color: #27ae60;
+        }
+
+        .menu li i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 16px;
+            margin: 20px 0 10px;
+            color: #bdc3c7;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Główna zawartość */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h2 {
+            color: #2c3e50;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        /* Zawartość */
+        .content {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .actions-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .btn-primary {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #219653;
+        }
+
+        .btn-secondary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background-color: white;
+            border-radius: 5px;
+            padding: 5px 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .search-box input {
+            border: none;
+            padding: 8px;
+            width: 200px;
+            outline: none;
+        }
+
+        .search-box i {
+            color: #7f8c8d;
+        }
+
+        /* Mapa */
+        .map-container {
+            flex: 1;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Lista pól */
+        .fields-list {
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .fields-list h3 {
+            padding: 15px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .fields-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .fields-table th, .fields-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .fields-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .fields-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Responsywność */
+        @media (max-width: 992px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+            
+            .main-content {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Panel boczny -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-tractor"></i>
+                <h1>AgroManager</h1>
+            </div>
+            
+            <ul class="menu">
+                <li class="active"><i class="fas fa-home"></i> Dashboard</li>
+                <li><i class="fas fa-map-marked-alt"></i> Pola</li>
+                <li><i class="fas fa-seedling"></i> Uprawy</li>
+                <li><i class="fas fa-tasks"></i> Zadania</li>
+                <li><i class="fas fa-chart-bar"></i> Raporty</li>
+                <li><i class="fas fa-cog"></i> Ustawienia</li>
+            </ul>
+            
+            <div class="section-title">Twoje pola</div>
+            <div id="fields-sidebar">
+                <!-- Pola będą dodawane dynamicznie -->
+            </div>
+        </div>
+        
+        <!-- Główna zawartość -->
+        <div class="main-content">
+            <div class="header">
+                <h2>Zarządzanie polami</h2>
+                <div class="user-info">
+                    <img src="https://i.pravatar.cc/40?img=12" alt="Użytkownik">
+                    <span>Jan Kowalski</span>
+                </div>
+            </div>
+            
+            <div class="content">
+                <div class="actions-bar">
+                    <div>
+                        <button class="btn btn-primary" id="addFieldBtn">
+                            <i class="fas fa-plus"></i> Dodaj pole
+                        </button>
+                        <button class="btn btn-secondary" id="drawFieldBtn">
+                            <i class="fas fa-draw-polygon"></i> Narysuj pole
+                        </button>
+                    </div>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Szukaj pola...">
+                    </div>
+                </div>
+                
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+                
+                <div class="fields-list">
+                    <h3>Lista pól</h3>
+                    <table class="fields-table">
+                        <thead>
+                            <tr>
+                                <th>Nazwa</th>
+                                <th>Powierzchnia (ha)</th>
+                                <th>Typ gleby</th>
+                                <th>Uprawa</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fieldsTableBody">
+                            <!-- Dane pól będą dodawane dynamicznie -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal dodawania/edycji pola -->
+    <div class="modal" id="fieldModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Dodaj nowe pole</h3>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="fieldForm">
+                    <div class="form-group">
+                        <label for="fieldName">Nazwa pola</label>
+                        <input type="text" id="fieldName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="fieldArea">Powierzchnia (ha)</label>
+                        <input type="number" id="fieldArea" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="fieldSoil">Typ gleby</label>
+                        <select id="fieldSoil" required>
+                            <option value="">Wybierz typ gleby</option>
+                            <option value="gliniasta">Gliniasta</option>
+                            <option value="piaszczysta">Piaszczysta</option>
+                            <option value="ilasta">Ilasta</option>
+                            <option value="torfowa">Torfowa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fieldCrop">Aktualna uprawa</label>
+                        <select id="fieldCrop">
+                            <option value="">Brak uprawy</option>
+                            <option value="pszenica">Pszenica</option>
+                            <option value="kukurydza">Kukurydza</option>
+                            <option value="rzepak">Rzepak</option>
+                            <option value="ziemniaki">Ziemniaki</option>
+                            <option value="buraki">Buraki cukrowe</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fieldNotes">Notatki</label>
+                        <textarea id="fieldNotes"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelBtn">Anuluj</button>
+                <button class="btn btn-primary" id="saveFieldBtn">Zapisz pole</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dane przykładowe
+        let fields = [
+            { id: 1, name: "Pole Północne", area: 5.2, soil: "gliniasta", crop: "pszenica", notes: "Pole o dobrej jakości glebie", coordinates: [] },
+            { id: 2, name: "Pole Południowe", area: 3.8, soil: "piaszczysta", crop: "kukurydza", notes: "Wymaga regularnego nawadniania", coordinates: [] },
+            { id: 3, name: "Pole Zachodnie", area: 7.1, soil: "ilasta", crop: "rzepak", notes: "", coordinates: [] }
+        ];
+
+        let map;
+        let drawingManager;
+        let currentField = null;
+        let isEditing = false;
+
+        // Inicjalizacja mapy
+        function initMap() {
+            const mapOptions = {
+                center: { lat: 52.2297, lng: 21.0122 }, // Warszawa
+                zoom: 10,
+                mapTypeId: google.maps.MapTypeId.HYBRID
+            };
+            
+            map = new google.maps.Map(document.getElementById('map'), mapOptions);
+            
+            // Inicjalizacja narzędzia do rysowania
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: null,
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: ['polygon']
+                },
+                polygonOptions: {
+                    fillColor: '#27ae60',
+                    fillOpacity: 0.3,
+                    strokeWeight: 2,
+                    strokeColor: '#219653',
+                    editable: true,
+                    draggable: false
+                }
+            });
+            
+            drawingManager.setMap(map);
+            
+            // Obsługa zdarzenia po narysowaniu kształtu
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+                // Oblicz powierzchnię w hektarach
+                const area = google.maps.geometry.spherical.computeArea(polygon.getPath()) / 10000;
+                
+                // Otwórz modal z wypełnioną powierzchnią
+                openFieldModal();
+                document.getElementById('fieldArea').value = area.toFixed(2);
+                
+                // Zapisz współrzędne
+                currentField.coordinates = polygon.getPath().getArray();
+            });
+            
+            // Dodaj istniejące pola do mapy
+            renderFieldsOnMap();
+        }
+
+        // Renderowanie pól na mapie
+        function renderFieldsOnMap() {
+            fields.forEach(field => {
+                if (field.coordinates && field.coordinates.length > 0) {
+                    const polygon = new google.maps.Polygon({
+                        paths: field.coordinates,
+                        strokeColor: '#219653',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 2,
+                        fillColor: '#27ae60',
+                        fillOpacity: 0.35,
+                        map: map
+                    });
+                    
+                    // Dodaj informację o polu
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `
+                            <div>
+                                <h3>${field.name}</h3>
+                                <p>Powierzchnia: ${field.area} ha</p>
+                                <p>Gleba: ${field.soil}</p>
+                                <p>Uprawa: ${field.crop || 'Brak'}</p>
+                            </div>
+                        `
+                    });
+                    
+                    polygon.addListener('click', function() {
+                        infoWindow.open(map, polygon);
+                    });
+                }
+            });
+        }
+
+        // Renderowanie listy pól
+        function renderFieldsList() {
+            const tableBody = document.getElementById('fieldsTableBody');
+            tableBody.innerHTML = '';
+            
+            fields.forEach(field => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${field.name}</td>
+                    <td>${field.area}</td>
+                    <td>${field.soil}</td>
+                    <td>${field.crop || 'Brak'}</td>
+                    <td class="action-buttons">
+                        <button class="action-btn btn-primary" onclick="editField(${field.id})">
+                            <i class="fas fa-edit"></i> Edytuj
+                        </button>
+                        <button class="action-btn btn-danger" onclick="deleteField(${field.id})">
+                            <i class="fas fa-trash"></i> Usuń
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Renderowanie pól w panelu bocznym
+        function renderFieldsSidebar() {
+            const sidebar = document.getElementById('fields-sidebar');
+            sidebar.innerHTML = '';
+            
+            fields.forEach(field => {
+                const fieldElement = document.createElement('div');
+                fieldElement.className = 'field-item';
+                fieldElement.innerHTML = `
+                    <div style="padding: 10px; border-bottom: 1px solid #34495e; cursor: pointer;">
+                        <div style="font-weight: 600;">${field.name}</div>
+                        <div style="font-size: 12px; color: #bdc3c7;">${field.area} ha • ${field.soil}</div>
+                    </div>
+                `;
+                
+                fieldElement.addEventListener('click', function() {
+                    // Przesuń mapę do tego pola (jeśli ma współrzędne)
+                    if (field.coordinates && field.coordinates.length > 0) {
+                        const bounds = new google.maps.LatLngBounds();
+                        field.coordinates.forEach(coord => {
+                            bounds.extend(coord);
+                        });
+                        map.fitBounds(bounds);
+                    }
+                });
+                
+                sidebar.appendChild(fieldElement);
+            });
+        }
+
+        // Otwieranie modala
+        function openFieldModal(field = null) {
+            const modal = document.getElementById('fieldModal');
+            const modalTitle = document.getElementById('modalTitle');
+            
+            if (field) {
+                // Tryb edycji
+                modalTitle.textContent = 'Edytuj pole';
+                document.getElementById('fieldName').value = field.name;
+                document.getElementById('fieldArea').value = field.area;
+                document.getElementById('fieldSoil').value = field.soil;
+                document.getElementById('fieldCrop').value = field.crop || '';
+                document.getElementById('fieldNotes').value = field.notes || '';
+                currentField = field;
+                isEditing = true;
+            } else {
+                // Tryb dodawania
+                modalTitle.textContent = 'Dodaj nowe pole';
+                document.getElementById('fieldForm').reset();
+                currentField = { id: Date.now() };
+                isEditing = false;
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        // Zamykanie modala
+        function closeFieldModal() {
+            const modal = document.getElementById('fieldModal');
+            modal.style.display = 'none';
+            currentField = null;
+            isEditing = false;
+        }
+
+        // Dodawanie/edycja pola
+        function saveField() {
+            const name = document.getElementById('fieldName').value;
+            const area = parseFloat(document.getElementById('fieldArea').value);
+            const soil = document.getElementById('fieldSoil').value;
+            const crop = document.getElementById('fieldCrop').value;
+            const notes = document.getElementById('fieldNotes').value;
+            
+            if (!name || !area || !soil) {
+                alert('Proszę wypełnić wszystkie wymagane pola!');
+                return;
+            }
+            
+            if (isEditing) {
+                // Aktualizacja istniejącego pola
+                const index = fields.findIndex(f => f.id === currentField.id);
+                if (index !== -1) {
+                    fields[index] = {
+                        ...fields[index],
+                        name,
+                        area,
+                        soil,
+                        crop,
+                        notes
+                    };
+                }
+            } else {
+                // Dodanie nowego pola
+                fields.push({
+                    id: currentField.id,
+                    name,
+                    area,
+                    soil,
+                    crop,
+                    notes,
+                    coordinates: currentField.coordinates || []
+                });
+            }
+            
+            // Odśwież widoki
+            renderFieldsList();
+            renderFieldsSidebar();
+            renderFieldsOnMap();
+            
+            // Zamknij modal
+            closeFieldModal();
+        }
+
+        // Edycja pola
+        function editField(id) {
+            const field = fields.find(f => f.id === id);
+            if (field) {
+                openFieldModal(field);
+            }
+        }
+
+        // Usuwanie pola
+        function deleteField(id) {
+            if (confirm('Czy na pewno chcesz usunąć to pole?')) {
+                fields = fields.filter(f => f.id !== id);
+                renderFieldsList();
+                renderFieldsSidebar();
+                renderFieldsOnMap();
+            }
+        }
+
+        // Obsługa zdarzeń po załadowaniu strony
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicjalizacja mapy
+            initMap();
+            
+            // Renderowanie danych początkowych
+            renderFieldsList();
+            renderFieldsSidebar();
+            
+            // Obsługa przycisków
+            document.getElementById('addFieldBtn').addEventListener('click', function() {
+                openFieldModal();
+            });
+            
+            document.getElementById('drawFieldBtn').addEventListener('click', function() {
+                drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+            });
+            
+            document.getElementById('closeModal').addEventListener('click', closeFieldModal);
+            document.getElementById('cancelBtn').addEventListener('click', closeFieldModal);
+            document.getElementById('saveFieldBtn').addEventListener('click', saveField);
+            
+            // Zamknij modal po kliknięciu poza nim
+            document.getElementById('fieldModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeFieldModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
