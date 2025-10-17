@@ -1,108 +1,47 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LoadScript, GoogleMap, DrawingManager, Polygon, InfoWindow } from '@react-google-maps/api';
+import { LoadScript, GoogleMap, Polygon, InfoWindow, Marker } from '@react-google-maps/api';
+import { 
+  getFields, 
+  addField, 
+  updateField, 
+  deleteField,
+  subscribeToFields 
+} from '../../services/fieldsService';
 import './FieldsPage.css';
 
 const FieldsPage = () => { 
-  const [fields, setFields] = useState([
-    { 
-      id: 1, 
-      name: "Pole Północne", 
-      area: 5.2, 
-      soil: "gliniasta", 
-      crop: "pszenica", 
-      notes: "Pole o dobrej jakości glebie", 
-      coordinates: [
-        { lat: 52.23, lng: 21.01 }, 
-        { lat: 52.24, lng: 21.02 }, 
-        { lat: 52.23, lng: 21.03 }
-      ] 
-    },
-    { 
-      id: 2, 
-      name: "Pole Południowe", 
-      area: 3.8, 
-      soil: "piaszczysta", 
-      crop: "kukurydza", 
-      notes: "Wymaga regularnego nawadniania", 
-      coordinates: [
-        { lat: 52.20, lng: 21.00 }, 
-        { lat: 52.21, lng: 21.01 }, 
-        { lat: 52.20, lng: 21.02 }
-      ] 
-    },
-    { 
-      id: 3, 
-      name: "Pole Północne", 
-      area: 5.2, 
-      soil: "gliniasta", 
-      crop: "pszenica", 
-      notes: "Pole o dobrej jakości glebie", 
-      coordinates: [
-        { lat: 52.23, lng: 21.01 }, 
-        { lat: 52.24, lng: 21.02 }, 
-        { lat: 52.23, lng: 21.03 }
-      ] 
-    },
-    { 
-      id: 4, 
-      name: "Pole Północne", 
-      area: 5.2, 
-      soil: "gliniasta", 
-      crop: "pszenica", 
-      notes: "Pole o dobrej jakości glebie", 
-      coordinates: [
-        { lat: 52.23, lng: 21.01 }, 
-        { lat: 52.24, lng: 21.02 }, 
-        { lat: 52.23, lng: 21.03 }
-      ] 
-    },
-    { 
-      id: 5, 
-      name: "Pole Północne", 
-      area: 5.2, 
-      soil: "gliniasta", 
-      crop: "pszenica", 
-      notes: "Pole o dobrej jakości glebie", 
-      coordinates: [
-        { lat: 52.23, lng: 21.01 }, 
-        { lat: 52.24, lng: 21.02 }, 
-        { lat: 52.23, lng: 21.03 }
-      ] 
-    },
-    { 
-      id: 6, 
-      name: "Pole Północne", 
-      area: 5.2, 
-      soil: "gliniasta", 
-      crop: "pszenica", 
-      notes: "Pole o dobrej jakości glebie", 
-      coordinates: [
-        { lat: 52.23, lng: 21.01 }, 
-        { lat: 52.24, lng: 21.02 }, 
-        { lat: 52.23, lng: 21.03 }
-      ] 
-    },
-  ]);
-
+  const [fields, setFields] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentField, setCurrentField] = useState(null);
-  const [drawingMode, setDrawingMode] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [tempPolygon, setTempPolygon] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState(null);
-  const [mapCenter, setMapCenter] = useState({ lat: 52.2297, lng: 21.0122 });
-  const [mapZoom, setMapZoom] = useState(10);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [hoveredField, setHoveredField] = useState(null);
+
+  // Lokalizacja gospodarstwa: 53°12'46.9"N 22°09'42.6"E
+  const [mapCenter] = useState({ lat: 53.213027, lng: 22.161833 });
+  const [mapZoom] = useState(14);
 
   const mapRef = useRef();
-  const drawingManagerRef = useRef();
+  const googleRef = useRef();
 
   const mapContainerStyle = {
     width: '100%',
-    height: '100%'
+    height: '900px'
   };
 
   const mapOptions = {
     mapTypeId: 'hybrid',
-    streetViewControl: false
+    streetViewControl: false,
+    zoomControl: true,
+    mapTypeControl: true,
+    scaleControl: true,
+    rotateControl: true,
+    fullscreenControl: true,
+    draggableCursor: isDrawing ? 'crosshair' : 'default'
   };
 
   const polygonOptions = {
@@ -110,56 +49,213 @@ const FieldsPage = () => {
     fillOpacity: 0.35,
     strokeColor: '#219653',
     strokeOpacity: 0.8,
-    strokeWeight: 2
+    strokeWeight: 2,
+    clickable: true,
+    draggable: false,
+    editable: false,
+    zIndex: 1
   };
 
-  const drawingManagerOptions = {
-    drawingControl: true,
-    drawingControlOptions: {
-      position: window.google?.maps.ControlPosition.TOP_CENTER,
-      drawingModes: [window.google?.maps.drawing.OverlayType.POLYGON]
-    },
-    polygonOptions: {
-      fillColor: '#27ae60',
-      fillOpacity: 0.3,
+  const selectedPolygonOptions = {
+    fillColor: '#e74c3c',
+    fillOpacity: 0.5,
+    strokeColor: '#c0392b',
+    strokeOpacity: 0.9,
+    strokeWeight: 3,
+    clickable: true,
+    draggable: false,
+    editable: false,
+    zIndex: 3
+  };
+
+  const tempPolygonOptions = {
+    fillColor: '#3498db',
+    fillOpacity: 0.3,
+    strokeColor: '#2980b9',
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    clickable: false,
+    draggable: false,
+    editable: false,
+    zIndex: 2
+  };
+
+  const markerOptions = {
+    icon: {
+      path: window.google?.maps.SymbolPath.CIRCLE,
+      scale: 8,
+      fillColor: '#e74c3c',
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
       strokeWeight: 2,
-      strokeColor: '#219653',
-      editable: true,
-      draggable: false
     }
   };
 
-  // Inicjalizacja mapy
-  const onMapLoad = (map) => {
-    mapRef.current = map;
+  // Pobierz pola z Firebase
+  useEffect(() => {
+    const loadFields = async () => {
+      try {
+        setLoading(true);
+        const fieldsData = await getFields();
+        setFields(fieldsData);
+      } catch (error) {
+        console.error('Error loading fields:', error);
+        alert('Błąd podczas ładowania pól: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFields();
+
+    const unsubscribe = subscribeToFields((fieldsData) => {
+      setFields(fieldsData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Aktualizuj kursor mapy gdy zmienia się tryb rysowania
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.setOptions({
+        draggableCursor: isDrawing ? 'crosshair' : 'default'
+      });
+    }
+  }, [isDrawing]);
+
+  // Kliknięcie na mapę podczas rysowania - POPRAWIONE
+  const onMapClick = (event) => {
+    if (!isDrawing) return;
+
+    const newPoint = {
+      lat: event.latLng.lat(),
+      lng: event.latLng.lng()
+    };
+
+    // Sprawdź czy kliknięto w pobliżu pierwszego punktu (zamykanie polygonu)
+    if (tempPolygon.length >= 3) {
+      const firstPoint = tempPolygon[0];
+      const distance = calculateDistance(firstPoint, newPoint);
+      
+      // Jeśli kliknięto w pobliżu pierwszego punktu (w promieniu 20m) - zakończ rysowanie
+      if (distance < 20) {
+        finishDrawing();
+        return;
+      }
+    }
+
+    setTempPolygon(prev => [...prev, newPoint]);
   };
 
-  // Obsługa narysowanego kształtu
-  const onPolygonComplete = (polygon) => {
-    if (!window.google) return;
+  // Funkcja do obliczania centroidu polygonu
+const calculateCentroid = (coordinates) => {
+  if (!coordinates || coordinates.length === 0) return null;
+  
+  // Usuń ostatni punkt jeśli jest duplikatem pierwszego (zamknięty polygon)
+  const points = coordinates[0].lat === coordinates[coordinates.length - 1].lat && 
+                 coordinates[0].lng === coordinates[coordinates.length - 1].lng 
+                 ? coordinates.slice(0, -1) 
+                 : coordinates;
 
-    const coordinates = polygon.getPath().getArray().map(latLng => ({
-      lat: latLng.lat(),
-      lng: latLng.lng()
-    }));
+  if (points.length === 0) return null;
 
-    const area = (window.google.maps.geometry.spherical.computeArea(polygon.getPath()) / 10000).toFixed(2);
+  let signedArea = 0;
+  let centroidX = 0;
+  let centroidY = 0;
+
+  for (let i = 0; i < points.length; i++) {
+    const current = points[i];
+    const next = points[(i + 1) % points.length];
+    
+    const area = (current.lat * next.lng) - (next.lat * current.lng);
+    signedArea += area;
+    centroidX += (current.lat + next.lat) * area;
+    centroidY += (current.lng + next.lng) * area;
+  }
+
+  signedArea *= 0.5;
+  centroidX /= (6 * signedArea);
+  centroidY /= (6 * signedArea);
+
+  return { lat: centroidX, lng: centroidY };
+};
+
+  // Oblicz odległość między punktami w metrach
+  const calculateDistance = (point1, point2) => {
+    if (!googleRef.current) return Infinity;
+    
+    const latLng1 = new googleRef.current.maps.LatLng(point1.lat, point1.lng);
+    const latLng2 = new googleRef.current.maps.LatLng(point2.lat, point2.lng);
+    
+    return googleRef.current.maps.geometry.spherical.computeDistanceBetween(latLng1, latLng2);
+  };
+
+  // Zakończ rysowanie i oblicz powierzchnię
+  const finishDrawing = () => {
+    if (tempPolygon.length < 3) {
+      alert('Potrzebujesz co najmniej 3 punkty do utworzenia polygonu!');
+      return;
+    }
+
+    // Zamknij polygon (dodaj pierwszy punkt na koniec)
+    const closedPolygon = [...tempPolygon, tempPolygon[0]];
+    
+    // Oblicz powierzchnię
+    let areaHa = 0;
+    if (googleRef.current && googleRef.current.maps) {
+      try {
+        const areaM2 = googleRef.current.maps.geometry.spherical.computeArea(
+          new googleRef.current.maps.Polygon({ paths: closedPolygon }).getPath()
+        );
+        areaHa = (areaM2 / 10000).toFixed(2);
+      } catch (error) {
+        console.error('Error calculating area:', error);
+        areaHa = calculateApproximateArea(closedPolygon);
+      }
+    } else {
+      areaHa = calculateApproximateArea(closedPolygon);
+    }
 
     setCurrentField({
-      id: Date.now(),
       name: '',
-      area: parseFloat(area),
+      area: parseFloat(areaHa),
       soil: '',
       crop: '',
       notes: '',
-      coordinates: coordinates
+      coordinates: closedPolygon
     });
 
-    setDrawingMode(false);
+    setIsDrawing(false);
+    setTempPolygon([]);
     setIsModalOpen(true);
+  };
+
+  // Prosta funkcja do obliczania przybliżonej powierzchni
+  const calculateApproximateArea = (coordinates) => {
+    let area = 0;
+    const n = coordinates.length;
     
-    // Usuń polygon po narysowaniu
-    polygon.setMap(null);
+    for (let i = 0; i < n - 1; i++) {
+      area += coordinates[i].lat * coordinates[i + 1].lng - coordinates[i + 1].lat * coordinates[i].lng;
+    }
+    
+    area = Math.abs(area) / 2;
+    return (area * 10000).toFixed(2);
+  };
+
+  // Anuluj rysowanie
+  const cancelDrawing = () => {
+    setIsDrawing(false);
+    setTempPolygon([]);
+  };
+
+  // Rozpocznij rysowanie
+  const startDrawing = () => {
+    setIsDrawing(true);
+    setTempPolygon([]);
+    setSelectedField(null);
   };
 
   // Otwieranie modala
@@ -168,7 +264,6 @@ const FieldsPage = () => {
       setCurrentField(field);
     } else {
       setCurrentField({
-        id: Date.now(),
         name: '',
         area: '',
         soil: '',
@@ -178,30 +273,47 @@ const FieldsPage = () => {
       });
     }
     setIsModalOpen(true);
+    cancelDrawing();
   };
 
   // Zamykanie modala
   const closeFieldModal = () => {
     setIsModalOpen(false);
     setCurrentField(null);
+    setSaveLoading(false);
   };
 
-  // Zapis pola
-  const saveField = () => {
+  // Zapis pola do Firebase
+  const saveField = async () => {
     if (!currentField?.name || !currentField?.area || !currentField?.soil) {
       alert('Proszę wypełnić wszystkie wymagane pola!');
       return;
     }
 
-    if (fields.find(f => f.id === currentField.id)) {
-      // Edycja istniejącego pola
-      setFields(fields.map(f => f.id === currentField.id ? currentField : f));
-    } else {
-      // Dodanie nowego pola
-      setFields([...fields, currentField]);
-    }
+    try {
+      setSaveLoading(true);
+      
+      const fieldData = {
+        name: currentField.name.trim(),
+        area: parseFloat(currentField.area),
+        soil: currentField.soil,
+        crop: currentField.crop || '',
+        notes: currentField.notes || '',
+        coordinates: currentField.coordinates
+      };
 
-    closeFieldModal();
+      if (currentField.id) {
+        await updateField(currentField.id, fieldData);
+      } else {
+        await addField(fieldData);
+      }
+      
+      closeFieldModal();
+    } catch (error) {
+      console.error('Error saving field:', error);
+      alert('Błąd podczas zapisywania pola: ' + error.message);
+      setSaveLoading(false);
+    }
   };
 
   // Edycja pola
@@ -213,16 +325,56 @@ const FieldsPage = () => {
   };
 
   // Usuwanie pola
-  const deleteField = (id) => {
-    if (window.confirm('Czy na pewno chcesz usunąć to pole?')) {
-      setFields(fields.filter(f => f.id !== id));
-      setSelectedField(null);
+  const handleDeleteField = async (id) => {
+    if (!window.confirm('Czy na pewno chcesz usunąć to pole?')) {
+      return;
+    }
+
+    try {
+      await deleteField(id);
+      if (selectedField?.id === id) {
+        setSelectedField(null);
+      }
+    } catch (error) {
+      console.error('Error deleting field:', error);
+      alert('Błąd podczas usuwania pola: ' + error.message);
     }
   };
 
   // Kliknięcie na pole na mapie
   const onFieldClick = (field) => {
+    if (!isDrawing) {
+      setSelectedField(field);
+    }
+  };
+
+  // Wybierz pole z listy - NOWA FUNKCJA
+  const selectFieldFromList = (field) => {
     setSelectedField(field);
+    
+    // Przesuń mapę do wybranego pola
+    if (field.coordinates && field.coordinates.length > 0) {
+      const bounds = new window.google.maps.LatLngBounds();
+      field.coordinates.forEach(coord => {
+        bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
+      });
+      
+      if (mapRef.current) {
+        mapRef.current.fitBounds(bounds);
+        // Dodaj mały padding
+        mapRef.current.panToBounds(bounds, 50);
+      }
+    }
+  };
+
+  // Najedź na pole w liście - NOWA FUNKCJA
+  const hoverFieldFromList = (field) => {
+    setHoveredField(field);
+  };
+
+  // Zdejmij hover z pola - NOWA FUNKCJA
+  const leaveFieldFromList = () => {
+    setHoveredField(null);
   };
 
   // Filtrowanie pól
@@ -233,9 +385,7 @@ const FieldsPage = () => {
   );
 
   return (
-    <div className="container">
-      
-      {/* Główna zawartość */}
+    <div className="fields-page">
       <div className="main-content">
         <div className="header">
           <h2>Zarządzanie polami</h2>
@@ -243,17 +393,25 @@ const FieldsPage = () => {
         
         <div className="content">
           <div className="actions-bar">
-            <div>
+            <div className="action-buttons">
               <button className="btn btn-primary" onClick={() => openFieldModal()}>
                 <i className="fas fa-plus"></i> Dodaj pole
               </button>
               <button 
-                className="btn btn-secondary" 
-                onClick={() => setDrawingMode(!drawingMode)}
+                className={`btn ${isDrawing ? 'btn-danger' : 'btn-secondary'}`}
+                onClick={isDrawing ? cancelDrawing : startDrawing}
               >
                 <i className="fas fa-draw-polygon"></i> 
-                {drawingMode ? 'Anuluj rysowanie' : 'Narysuj pole'}
+                {isDrawing ? 'Anuluj rysowanie' : 'Narysuj pole'}
               </button>
+              {isDrawing && tempPolygon.length >= 3 && (
+                <button 
+                  className="btn btn-success"
+                  onClick={finishDrawing}
+                >
+                  <i className="fas fa-check"></i> Zakończ rysowanie
+                </button>
+              )}
             </div>
             <div className="search-box">
               <i className="fas fa-search"></i>
@@ -267,24 +425,53 @@ const FieldsPage = () => {
           </div>
           
           {/* Mapa */}
-          <div className="map-container">
+          <div className={`map-container ${isDrawing ? 'drawing-active' : ''}`}>
             <LoadScript 
               googleMapsApiKey="AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA"
-              libraries={['drawing', 'geometry']}
+              libraries={['geometry']}
+              onLoad={(google) => {
+                googleRef.current = google;
+              }}
             >
               <GoogleMap
                 mapContainerStyle={mapContainerStyle}
                 center={mapCenter}
                 zoom={mapZoom}
                 options={mapOptions}
-                onLoad={onMapLoad}
+                onLoad={(map) => {
+                  mapRef.current = map;
+                }}
+                onClick={onMapClick}
               >
-                {/* Manager rysowania */}
-                {drawingMode && (
-                  <DrawingManager
-                    onPolygonComplete={onPolygonComplete}
-                    options={drawingManagerOptions}
-                  />
+                {/* Tymczasowy polygon podczas rysowania */}
+                {isDrawing && tempPolygon.length > 0 && (
+                  <>
+                    <Polygon
+                      paths={tempPolygon}
+                      options={tempPolygonOptions}
+                    />
+                    {/* Znaczniki punktów */}
+                    {tempPolygon.map((point, index) => (
+                      <Marker
+                        key={index}
+                        position={point}
+                        label={{
+                          text: (index + 1).toString(),
+                          color: 'white',
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}
+                        icon={{
+                          path: window.google?.maps.SymbolPath.CIRCLE,
+                          scale: 8,
+                          fillColor: index === 0 ? '#e74c3c' : '#3498db',
+                          fillOpacity: 1,
+                          strokeColor: '#ffffff',
+                          strokeWeight: 2,
+                        }}
+                      />
+                    ))}
+                  </>
                 )}
                 
                 {/* Wyświetlanie istniejących pól */}
@@ -292,67 +479,160 @@ const FieldsPage = () => {
                   <Polygon
                     key={field.id}
                     paths={field.coordinates}
-                    options={polygonOptions}
+                    options={
+                      selectedField?.id === field.id 
+                        ? selectedPolygonOptions 
+                        : {
+                            ...polygonOptions,
+                            fillColor: hoveredField?.id === field.id ? '#f39c12' : '#27ae60'
+                          }
+                    }
                     onClick={() => onFieldClick(field)}
+                    onMouseOver={() => setHoveredField(field)}
+                    onMouseOut={() => setHoveredField(null)}
                   />
                 ))}
                 
                 {/* InfoWindow dla wybranego pola */}
-                {selectedField && (
-                  <InfoWindow
-                    position={selectedField.coordinates[0]}
-                    onCloseClick={() => setSelectedField(null)}
-                  >
-                    <div>
-                      <h3>{selectedField.name}</h3>
-                      <p>Powierzchnia: {selectedField.area} ha</p>
-                      <p>Gleba: {selectedField.soil}</p>
-                      <p>Uprawa: {selectedField.crop || 'Brak'}</p>
-                    </div>
-                  </InfoWindow>
-                )}
+{selectedField && (
+  <InfoWindow
+    position={calculateCentroid(selectedField.coordinates) || selectedField.coordinates[0]}
+    onCloseClick={() => setSelectedField(null)}
+    options={{
+      pixelOffset: new window.google.maps.Size(0, -40),
+      maxWidth: 300
+    }}
+  >
+    <div className="field-info-window">
+      <h3>{selectedField.name}</h3>
+      <div className="field-info-details">
+        <p>
+          <i className="fas fa-ruler-combined"></i> 
+          <strong>Powierzchnia:</strong> {selectedField.area} ha
+        </p>
+        <p>
+          <i className="fas fa-mountain"></i> 
+          <strong>Gleba:</strong> {selectedField.soil}
+        </p>
+        <p>
+          <i className="fas fa-seedling"></i> 
+          <strong>Uprawa:</strong> {selectedField.crop || 'Brak'}
+        </p>
+        {selectedField.notes && (
+          <p>
+            <i className="fas fa-sticky-note"></i> 
+            <strong>Notatki:</strong> {selectedField.notes}
+          </p>
+        )}
+      </div>
+      <div className="field-info-actions">
+        <button 
+          className="action-btn btn-primary"
+          onClick={() => editField(selectedField.id)}
+        >
+          <i className="fas fa-edit"></i> Edytuj
+        </button>
+        <button 
+          className="action-btn btn-danger"
+          onClick={() => handleDeleteField(selectedField.id)}
+        >
+          <i className="fas fa-trash"></i> Usuń
+        </button>
+      </div>
+    </div>
+  </InfoWindow>
+)}
               </GoogleMap>
             </LoadScript>
+            
+            {/* Instrukcja rysowania */}
+            {isDrawing && (
+              <div className="drawing-instruction">
+                <div className="instruction-content">
+                  <i className="fas fa-info-circle"></i>
+                  <div>
+                    <div><strong>Instrukcja rysowania:</strong></div>
+                    <div>Kliknij na mapę, aby dodać punkty polygonu</div>
+                    <div>Minimalnie 3 punkty - aktualnie: {tempPolygon.length}</div>
+                    {tempPolygon.length >= 3 && (
+                      <div style={{ color: '#27ae60', fontWeight: 'bold' }}>
+                        Kliknij w pobliżu pierwszego punktu, aby zamknąć polygon
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Lista pól */}
           <div className="fields-list">
-            <h3>Lista pól</h3>
-            <table className="fields-table">
-              <thead>
-                <tr>
-                  <th>Nazwa</th>
-                  <th>Powierzchnia (ha)</th>
-                  <th>Typ gleby</th>
-                  <th>Uprawa</th>
-                  <th>Akcje</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredFields.map(field => (
-                  <tr key={field.id}>
-                    <td>{field.name}</td>
-                    <td>{field.area}</td>
-                    <td>{field.soil}</td>
-                    <td>{field.crop || 'Brak'}</td>
-                    <td className="action-buttons">
-                      <button 
-                        className="action-btn btn-primary" 
-                        onClick={() => editField(field.id)}
-                      >
-                        <i className="fas fa-edit"></i> Edytuj
-                      </button>
-                      <button 
-                        className="action-btn btn-danger" 
-                        onClick={() => deleteField(field.id)}
-                      >
-                        <i className="fas fa-trash"></i> Usuń
-                      </button>
-                    </td>
+            <h3>Lista pól ({filteredFields.length})</h3>
+            {filteredFields.length === 0 ? (
+              <div className="no-fields">
+                <p>Brak pól do wyświetlenia</p>
+              </div>
+            ) : (
+              <table className="fields-table">
+                <thead>
+                  <tr>
+                    <th>Nazwa</th>
+                    <th>Powierzchnia (ha)</th>
+                    <th>Typ gleby</th>
+                    <th>Uprawa</th>
+                    <th>Akcje</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredFields.map(field => (
+                    <tr 
+                      key={field.id}
+                      className={`field-row ${
+                        selectedField?.id === field.id ? 'selected' : ''
+                      } ${
+                        hoveredField?.id === field.id ? 'hovered' : ''
+                      }`}
+                      onClick={() => selectFieldFromList(field)}
+                      onMouseEnter={() => hoverFieldFromList(field)}
+                      onMouseLeave={leaveFieldFromList}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td>
+                        <strong>{field.name}</strong>
+                        {selectedField?.id === field.id && (
+                          <span style={{ color: '#e74c3c', marginLeft: '8px' }}>
+                            <i className="fas fa-map-marker-alt"></i> Zaznaczone
+                          </span>
+                        )}
+                      </td>
+                      <td>{field.area}</td>
+                      <td>{field.soil}</td>
+                      <td>{field.crop || 'Brak'}</td>
+                      <td className="action-buttons">
+                        <button 
+                          className="action-btn btn-primary" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            editField(field.id);
+                          }}
+                        >
+                          <i className="fas fa-edit"></i> Edytuj
+                        </button>
+                        <button 
+                          className="action-btn btn-danger" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteField(field.id);
+                          }}
+                        >
+                          <i className="fas fa-trash"></i> Usuń
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
@@ -364,19 +644,20 @@ const FieldsPage = () => {
           onFieldChange={setCurrentField}
           onSave={saveField}
           onClose={closeFieldModal}
+          saveLoading={saveLoading}
         />
       )}
     </div>
   );
 };
 
-// Komponent modala
-const FieldModal = ({ field, onFieldChange, onSave, onClose }) => {
+// Komponent modala (bez zmian)
+const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     onFieldChange({
       ...field,
-      [name]: name === 'area' ? parseFloat(value) || '' : value
+      [name]: name === 'area' ? (value === '' ? '' : parseFloat(value)) : value
     });
   };
 
@@ -384,13 +665,13 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{field.id && fields.find(f => f.id === field.id) ? 'Edytuj pole' : 'Dodaj nowe pole'}</h3>
+          <h3>{field.id ? 'Edytuj pole' : 'Dodaj nowe pole'}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
           <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
             <div className="form-group">
-              <label htmlFor="fieldName">Nazwa pola</label>
+              <label htmlFor="fieldName">Nazwa pola *</label>
               <input
                 type="text"
                 id="fieldName"
@@ -401,19 +682,19 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose }) => {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="fieldArea">Powierzchnia (ha)</label>
+              <label htmlFor="fieldArea">Powierzchnia (ha) *</label>
               <input
                 type="number"
                 id="fieldArea"
                 name="area"
-                value={field.area}
+                value={field.area || ''}
                 onChange={handleInputChange}
                 step="0.01"
                 required
               />
             </div>
             <div className="form-group">
-              <label htmlFor="fieldSoil">Typ gleby</label>
+              <label htmlFor="fieldSoil">Typ gleby *</label>
               <select
                 id="fieldSoil"
                 name="soil"
@@ -426,6 +707,7 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose }) => {
                 <option value="piaszczysta">Piaszczysta</option>
                 <option value="ilasta">Ilasta</option>
                 <option value="torfowa">Torfowa</option>
+                <option value="mada">Mada rzeczna</option>
               </select>
             </div>
             <div className="form-group">
@@ -442,6 +724,9 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose }) => {
                 <option value="rzepak">Rzepak</option>
                 <option value="ziemniaki">Ziemniaki</option>
                 <option value="buraki">Buraki cukrowe</option>
+                <option value="owies">Owies</option>
+                <option value="jęczmień">Jęczmień</option>
+                <option value="żyto">Żyto</option>
               </select>
             </div>
             <div className="form-group">
@@ -452,16 +737,30 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose }) => {
                 value={field.notes || ''}
                 onChange={handleInputChange}
                 rows="3"
+                placeholder="Dodatkowe informacje o polu..."
               />
             </div>
+            {field.coordinates && field.coordinates.length > 0 && (
+              <div className="form-group">
+                <label>Informacje o narysowanym polu:</label>
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                  <div>Liczba punktów: {field.coordinates.length}</div>
+                  <div>Powierzchnia: {field.area} ha (obliczona automatycznie)</div>
+                </div>
+              </div>
+            )}
           </form>
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>
             Anuluj
           </button>
-          <button className="btn btn-primary" onClick={onSave}>
-            Zapisz pole
+          <button 
+            className="btn btn-primary" 
+            onClick={onSave}
+            disabled={saveLoading}
+          >
+            {saveLoading ? 'Zapisywanie...' : 'Zapisz pole'}
           </button>
         </div>
       </div>
