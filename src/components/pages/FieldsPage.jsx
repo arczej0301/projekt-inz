@@ -22,8 +22,8 @@ const FieldsPage = () => {
   const [hoveredField, setHoveredField] = useState(null);
 
   // Lokalizacja gospodarstwa: 53°12'46.9"N 22°09'42.6"E
-  const [mapCenter] = useState({ lat: 53.213027, lng: 22.161833 });
-  const [mapZoom] = useState(14);
+  const [mapCenter] = useState({ lat: 53.29684935063282, lng: 21.431474045415577 });
+  const [mapZoom] = useState(17);
 
   const mapRef = useRef();
   const googleRef = useRef();
@@ -192,58 +192,97 @@ const calculateCentroid = (coordinates) => {
     return googleRef.current.maps.geometry.spherical.computeDistanceBetween(latLng1, latLng2);
   };
 
-  // Zakończ rysowanie i oblicz powierzchnię
-  const finishDrawing = () => {
-    if (tempPolygon.length < 3) {
-      alert('Potrzebujesz co najmniej 3 punkty do utworzenia polygonu!');
-      return;
-    }
+  // Zakończ rysowanie i oblicz powierzchnię - POPRAWIONE
+const finishDrawing = () => {
+  if (tempPolygon.length < 3) {
+    alert('Potrzebujesz co najmniej 3 punkty do utworzenia polygonu!');
+    return;
+  }
 
-    // Zamknij polygon (dodaj pierwszy punkt na koniec)
-    const closedPolygon = [...tempPolygon, tempPolygon[0]];
-    
-    // Oblicz powierzchnię
-    let areaHa = 0;
-    if (googleRef.current && googleRef.current.maps) {
-      try {
-        const areaM2 = googleRef.current.maps.geometry.spherical.computeArea(
-          new googleRef.current.maps.Polygon({ paths: closedPolygon }).getPath()
-        );
-        areaHa = (areaM2 / 10000).toFixed(2);
-      } catch (error) {
-        console.error('Error calculating area:', error);
-        areaHa = calculateApproximateArea(closedPolygon);
-      }
-    } else {
+  // Zamknij polygon (dodaj pierwszy punkt na koniec)
+  const closedPolygon = [...tempPolygon, tempPolygon[0]];
+  
+  // Oblicz powierzchnię
+  let areaHa = 0;
+  if (googleRef.current && googleRef.current.maps) {
+    try {
+      // POPRAWIONE: Użyj bezpośrednio tablicy coordinates zamiast getPath()
+      const areaM2 = googleRef.current.maps.geometry.spherical.computeArea(
+        closedPolygon.map(coord => new googleRef.current.maps.LatLng(coord.lat, coord.lng))
+      );
+      areaHa = (areaM2 / 10000).toFixed(2);
+    } catch (error) {
+      console.error('Error calculating area:', error);
       areaHa = calculateApproximateArea(closedPolygon);
     }
+  } else {
+    areaHa = calculateApproximateArea(closedPolygon);
+  }
 
-    setCurrentField({
-      name: '',
-      area: parseFloat(areaHa),
-      soil: '',
-      crop: '',
-      notes: '',
-      coordinates: closedPolygon
-    });
-
-    setIsDrawing(false);
-    setTempPolygon([]);
-    setIsModalOpen(true);
-  };
-
-  // Prosta funkcja do obliczania przybliżonej powierzchni
-  const calculateApproximateArea = (coordinates) => {
-    let area = 0;
-    const n = coordinates.length;
+  // Alternatywna, dokładniejsza funkcja do obliczania powierzchni
+const calculateAreaAccurate = (coordinates) => {
+  if (coordinates.length < 3) return 0;
+  
+  let total = 0;
+  const n = coordinates.length;
+  
+  for (let i = 0; i < n - 1; i++) {
+    const lat1 = coordinates[i].lat * Math.PI / 180;
+    const lng1 = coordinates[i].lng * Math.PI / 180;
+    const lat2 = coordinates[i + 1].lat * Math.PI / 180;
+    const lng2 = coordinates[i + 1].lng * Math.PI / 180;
     
-    for (let i = 0; i < n - 1; i++) {
-      area += coordinates[i].lat * coordinates[i + 1].lng - coordinates[i + 1].lat * coordinates[i].lng;
-    }
-    
-    area = Math.abs(area) / 2;
-    return (area * 10000).toFixed(2);
-  };
+    total += (lng2 - lng1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+  }
+  
+  total = Math.abs(total);
+  const earthRadius = 6371000; // promień Ziemi w metrach
+  const areaM2 = total * earthRadius * earthRadius / 2;
+  
+  return (areaM2 / 10000).toFixed(2); // hektary
+};
+  setCurrentField({
+    name: '',
+    area: parseFloat(areaHa),
+    soil: '',
+    crop: '',
+    notes: '',
+    coordinates: closedPolygon
+  });
+
+  setIsDrawing(false);
+  setTempPolygon([]);
+  setIsModalOpen(true);
+};
+
+// Poprawiona funkcja do obliczania przybliżonej powierzchni - POPRAWIONE
+const calculateApproximateArea = (coordinates) => {
+  if (coordinates.length < 3) return 0;
+  
+  let area = 0;
+  const n = coordinates.length;
+  
+  for (let i = 0; i < n - 1; i++) {
+    area += coordinates[i].lng * coordinates[i + 1].lat - coordinates[i + 1].lng * coordinates[i].lat;
+  }
+  
+  // Oblicz pole w radianach kwadratowych, a następnie przelicz na metry kwadratowe
+  area = Math.abs(area) / 2;
+  
+  // Przeliczenie z stopni kwadratowych na metry kwadratowe
+  // Średni promień Ziemi w metrach: 6371000
+  // 1 stopień ≈ 111.32 km na równiku, ale uwzględniamy poprawkę na szerokość geograficzną
+  const earthRadius = 6371000; // w metrach
+  const centerLat = coordinates[0].lat * Math.PI / 180; // konwersja na radiany
+  
+  // Współczynnik korekty dla szerokości geograficznej
+  const latCorrection = Math.cos(centerLat);
+  
+  // Przeliczenie na metry kwadratowe
+  const areaM2 = area * (Math.PI/180) * earthRadius * (Math.PI/180) * earthRadius * latCorrection;
+  
+  return (areaM2 / 10000).toFixed(2); // konwersja na hektary
+};
 
   // Anuluj rysowanie
   const cancelDrawing = () => {

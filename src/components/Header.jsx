@@ -1,3 +1,4 @@
+// components/Header.jsx
 import { useAuth } from '../hooks/useAuth'
 
 const Header = () => {
@@ -8,7 +9,7 @@ const Header = () => {
   }
 
   return (
-    <div className="header">
+    <header className="header">
       <div className="search-bar">
         <input type="text" placeholder="Szukaj..." />
       </div>
@@ -17,14 +18,20 @@ const Header = () => {
           {user?.email?.charAt(0).toUpperCase()}
         </div>
         <div className="user-details">
-          <div className="user-name">{user?.email}</div>
+          <div className="user-name">
+            {user?.displayName || user?.email?.split('@')[0]}
+          </div>
           <div className="user-role">Użytkownik</div>
         </div>
-        <button onClick={handleLogout} className="logout-button">
+        <button 
+          onClick={handleLogout}
+          className="logout-button"
+          title="Zostaniesz automatycznie wylogowany po 1 minucie nieaktywności"
+        >
           Wyloguj
         </button>
       </div>
-    </div>
+    </header>
   )
 }
 

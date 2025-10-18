@@ -1,3 +1,4 @@
+// App.jsx
 import { useState, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
 import Sidebar from './components/Sidebar'
@@ -10,9 +11,10 @@ import FinancePage from './components/pages/FinancePage'
 import ReportsPage from './components/pages/ReportsPage'
 import MagazinePage from './components/pages/MagazinePage'
 import LoginPage from './components/LoginPage'
+import InactivityWarning from './components/InactivityWarning'
 
 function App() {
-  const { user, loading } = useAuth()
+  const { user, loading, updateUserActivity } = useAuth()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [farmData, setFarmData] = useState({
     area: 0,
@@ -23,6 +25,7 @@ function App() {
     expenses: 0
   })
 
+  // Inicjalizacja danych farmy po zalogowaniu
   useEffect(() => {
     if (user) {
       setTimeout(() => {
@@ -37,6 +40,28 @@ function App() {
       }, 1000)
     }
   }, [user])
+
+  // Dodatkowe śledzenie aktywności
+  useEffect(() => {
+    if (!user) return;
+
+    const handleUserActivity = () => {
+      updateUserActivity();
+    };
+
+    // Dodaj event listeners dla kluczowych akcji w aplikacji
+    const events = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
+    
+    events.forEach(event => {
+      document.addEventListener(event, handleUserActivity, { passive: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserActivity);
+      });
+    };
+  }, [user, updateUserActivity]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -74,6 +99,7 @@ function App() {
 
   return (
     <div className="app">
+      <InactivityWarning />
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="main-content">
         <Header />
