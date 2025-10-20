@@ -6,7 +6,7 @@ import {
   updateField, 
   deleteField,
   subscribeToFields 
-} from '../../services/fieldsService';
+} from '../services/fieldsService';
 import './FieldsPage.css';
 
 const FieldsPage = () => { 

@@ -3,13 +3,8 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-image: url('./public/background.jpg'); /* Ścieżka do zdjęcia */
-  background-size: cover; /* Dopasuj zdjęcie do całego ekranu */
-  background-position: center; /* Wyśrodkuj zdjęcie */
-  background-repeat: no-repeat; /* Zapobiegaj powtarzaniu zdjęcia */
-  background-attachment: fixed; /* Opcjonalnie: zdjęcie pozostaje nieruchome przy scrollowaniu */
+  background-color: var(--light);
 }
-
 
 .login-container {
   background: white;
