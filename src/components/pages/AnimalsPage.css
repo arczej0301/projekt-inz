@@ -360,3 +360,78 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Custom Select Styles dla AnimalsPage */
+.custom-select {
+  position: relative;
+  width: 100%;
+}
+
+.select-header {
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 42px;
+  font-size: 14px;
+}
+
+.select-header:hover {
+  border-color: #aaa;
+}
+
+.select-header .arrow {
+  transition: transform 0.2s;
+  color: #666;
+}
+
+.select-header.open .arrow {
+  transform: rotate(180deg);
+}
+
+.select-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.select-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.select-option:hover {
+  background: #f5f5f5;
+}
+
+.select-option.selected {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.select-option:last-child {
+  border-bottom: none;
+}
+
+/* Ensure modal is above everything */
+.modal-overlay {
+  z-index: 10000;
+}
+
+.modal-content {
+  z-index: 10001;
+}

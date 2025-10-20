@@ -125,7 +125,99 @@ const FieldsPage = () => {
     }
   }, [isDrawing]);
 
-  // Kliknięcie na mapę podczas rysowania - POPRAWIONE
+  // Funkcja do obliczania centroidu polygonu
+  const calculateCentroid = (coordinates) => {
+    if (!coordinates || coordinates.length === 0) return null;
+    
+    // Usuń ostatni punkt jeśli jest duplikatem pierwszego (zamknięty polygon)
+    const points = coordinates[0].lat === coordinates[coordinates.length - 1].lat && 
+                   coordinates[0].lng === coordinates[coordinates.length - 1].lng 
+                   ? coordinates.slice(0, -1) 
+                   : coordinates;
+
+    if (points.length === 0) return null;
+
+    let signedArea = 0;
+    let centroidX = 0;
+    let centroidY = 0;
+
+    for (let i = 0; i < points.length; i++) {
+      const current = points[i];
+      const next = points[(i + 1) % points.length];
+      
+      const area = (current.lat * next.lng) - (next.lat * current.lng);
+      signedArea += area;
+      centroidX += (current.lat + next.lat) * area;
+      centroidY += (current.lng + next.lng) * area;
+    }
+
+    signedArea *= 0.5;
+    centroidX /= (6 * signedArea);
+    centroidY /= (6 * signedArea);
+
+    return { lat: centroidX, lng: centroidY };
+  };
+
+  // Oblicz odległość między punktami w metrach
+  const calculateDistance = (point1, point2) => {
+    if (!googleRef.current || !googleRef.current.maps) return Infinity;
+    
+    try {
+      const latLng1 = new googleRef.current.maps.LatLng(point1.lat, point1.lng);
+      const latLng2 = new googleRef.current.maps.LatLng(point2.lat, point2.lng);
+      
+      return googleRef.current.maps.geometry.spherical.computeDistanceBetween(latLng1, latLng2);
+    } catch (error) {
+      console.error('Error calculating distance:', error);
+      return Infinity;
+    }
+  };
+
+  // Dokładna funkcja do obliczania powierzchni
+  const calculateAreaAccurate = (coordinates) => {
+    if (coordinates.length < 3) return 0;
+    
+    let total = 0;
+    const n = coordinates.length;
+    
+    for (let i = 0; i < n - 1; i++) {
+      const lat1 = coordinates[i].lat * Math.PI / 180;
+      const lng1 = coordinates[i].lng * Math.PI / 180;
+      const lat2 = coordinates[i + 1].lat * Math.PI / 180;
+      const lng2 = coordinates[i + 1].lng * Math.PI / 180;
+      
+      total += (lng2 - lng1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+    }
+    
+    total = Math.abs(total);
+    const earthRadius = 6371000; // promień Ziemi w metrach
+    const areaM2 = total * earthRadius * earthRadius / 2;
+    
+    return (areaM2 / 10000).toFixed(2); // hektary
+  };
+
+  // Funkcja do obliczania przybliżonej powierzchni
+  const calculateApproximateArea = (coordinates) => {
+    if (coordinates.length < 3) return 0;
+    
+    let area = 0;
+    const n = coordinates.length;
+    
+    for (let i = 0; i < n - 1; i++) {
+      area += coordinates[i].lng * coordinates[i + 1].lat - coordinates[i + 1].lng * coordinates[i].lat;
+    }
+    
+    area = Math.abs(area) / 2;
+    
+    const earthRadius = 6371000;
+    const centerLat = coordinates[0].lat * Math.PI / 180;
+    const latCorrection = Math.cos(centerLat);
+    const areaM2 = area * (Math.PI/180) * earthRadius * (Math.PI/180) * earthRadius * latCorrection;
+    
+    return (areaM2 / 10000).toFixed(2);
+  };
+
+  // Kliknięcie na mapę podczas rysowania
   const onMapClick = (event) => {
     if (!isDrawing) return;
 
@@ -149,140 +241,45 @@ const FieldsPage = () => {
     setTempPolygon(prev => [...prev, newPoint]);
   };
 
-  // Funkcja do obliczania centroidu polygonu
-const calculateCentroid = (coordinates) => {
-  if (!coordinates || coordinates.length === 0) return null;
-  
-  // Usuń ostatni punkt jeśli jest duplikatem pierwszego (zamknięty polygon)
-  const points = coordinates[0].lat === coordinates[coordinates.length - 1].lat && 
-                 coordinates[0].lng === coordinates[coordinates.length - 1].lng 
-                 ? coordinates.slice(0, -1) 
-                 : coordinates;
-
-  if (points.length === 0) return null;
-
-  let signedArea = 0;
-  let centroidX = 0;
-  let centroidY = 0;
-
-  for (let i = 0; i < points.length; i++) {
-    const current = points[i];
-    const next = points[(i + 1) % points.length];
-    
-    const area = (current.lat * next.lng) - (next.lat * current.lng);
-    signedArea += area;
-    centroidX += (current.lat + next.lat) * area;
-    centroidY += (current.lng + next.lng) * area;
-  }
-
-  signedArea *= 0.5;
-  centroidX /= (6 * signedArea);
-  centroidY /= (6 * signedArea);
-
-  return { lat: centroidX, lng: centroidY };
-};
-
-  // Oblicz odległość między punktami w metrach
-  const calculateDistance = (point1, point2) => {
-    if (!googleRef.current) return Infinity;
-    
-    const latLng1 = new googleRef.current.maps.LatLng(point1.lat, point1.lng);
-    const latLng2 = new googleRef.current.maps.LatLng(point2.lat, point2.lng);
-    
-    return googleRef.current.maps.geometry.spherical.computeDistanceBetween(latLng1, latLng2);
-  };
-
-  // Zakończ rysowanie i oblicz powierzchnię - POPRAWIONE
-const finishDrawing = () => {
-  if (tempPolygon.length < 3) {
-    alert('Potrzebujesz co najmniej 3 punkty do utworzenia polygonu!');
-    return;
-  }
-
-  // Zamknij polygon (dodaj pierwszy punkt na koniec)
-  const closedPolygon = [...tempPolygon, tempPolygon[0]];
-  
-  // Oblicz powierzchnię
-  let areaHa = 0;
-  if (googleRef.current && googleRef.current.maps) {
-    try {
-      // POPRAWIONE: Użyj bezpośrednio tablicy coordinates zamiast getPath()
-      const areaM2 = googleRef.current.maps.geometry.spherical.computeArea(
-        closedPolygon.map(coord => new googleRef.current.maps.LatLng(coord.lat, coord.lng))
-      );
-      areaHa = (areaM2 / 10000).toFixed(2);
-    } catch (error) {
-      console.error('Error calculating area:', error);
-      areaHa = calculateApproximateArea(closedPolygon);
+  // Zakończ rysowanie i oblicz powierzchnię
+  const finishDrawing = () => {
+    if (tempPolygon.length < 3) {
+      alert('Potrzebujesz co najmniej 3 punkty do utworzenia polygonu!');
+      return;
     }
-  } else {
-    areaHa = calculateApproximateArea(closedPolygon);
-  }
 
-  // Alternatywna, dokładniejsza funkcja do obliczania powierzchni
-const calculateAreaAccurate = (coordinates) => {
-  if (coordinates.length < 3) return 0;
-  
-  let total = 0;
-  const n = coordinates.length;
-  
-  for (let i = 0; i < n - 1; i++) {
-    const lat1 = coordinates[i].lat * Math.PI / 180;
-    const lng1 = coordinates[i].lng * Math.PI / 180;
-    const lat2 = coordinates[i + 1].lat * Math.PI / 180;
-    const lng2 = coordinates[i + 1].lng * Math.PI / 180;
+    // Zamknij polygon (dodaj pierwszy punkt na koniec)
+    const closedPolygon = [...tempPolygon, tempPolygon[0]];
     
-    total += (lng2 - lng1) * (2 + Math.sin(lat1) + Math.sin(lat2));
-  }
-  
-  total = Math.abs(total);
-  const earthRadius = 6371000; // promień Ziemi w metrach
-  const areaM2 = total * earthRadius * earthRadius / 2;
-  
-  return (areaM2 / 10000).toFixed(2); // hektary
-};
-  setCurrentField({
-    name: '',
-    area: parseFloat(areaHa),
-    soil: '',
-    crop: '',
-    notes: '',
-    coordinates: closedPolygon
-  });
+    // Oblicz powierzchnię
+    let areaHa = 0;
+    if (googleRef.current && googleRef.current.maps) {
+      try {
+        const areaM2 = googleRef.current.maps.geometry.spherical.computeArea(
+          closedPolygon.map(coord => new googleRef.current.maps.LatLng(coord.lat, coord.lng))
+        );
+        areaHa = (areaM2 / 10000).toFixed(2);
+      } catch (error) {
+        console.error('Error calculating area with Google API:', error);
+        areaHa = calculateAreaAccurate(closedPolygon);
+      }
+    } else {
+      areaHa = calculateAreaAccurate(closedPolygon);
+    }
 
-  setIsDrawing(false);
-  setTempPolygon([]);
-  setIsModalOpen(true);
-};
+    setCurrentField({
+      name: '',
+      area: parseFloat(areaHa),
+      soil: '',
+      crop: '',
+      notes: '',
+      coordinates: closedPolygon
+    });
 
-// Poprawiona funkcja do obliczania przybliżonej powierzchni - POPRAWIONE
-const calculateApproximateArea = (coordinates) => {
-  if (coordinates.length < 3) return 0;
-  
-  let area = 0;
-  const n = coordinates.length;
-  
-  for (let i = 0; i < n - 1; i++) {
-    area += coordinates[i].lng * coordinates[i + 1].lat - coordinates[i + 1].lng * coordinates[i].lat;
-  }
-  
-  // Oblicz pole w radianach kwadratowych, a następnie przelicz na metry kwadratowe
-  area = Math.abs(area) / 2;
-  
-  // Przeliczenie z stopni kwadratowych na metry kwadratowe
-  // Średni promień Ziemi w metrach: 6371000
-  // 1 stopień ≈ 111.32 km na równiku, ale uwzględniamy poprawkę na szerokość geograficzną
-  const earthRadius = 6371000; // w metrach
-  const centerLat = coordinates[0].lat * Math.PI / 180; // konwersja na radiany
-  
-  // Współczynnik korekty dla szerokości geograficznej
-  const latCorrection = Math.cos(centerLat);
-  
-  // Przeliczenie na metry kwadratowe
-  const areaM2 = area * (Math.PI/180) * earthRadius * (Math.PI/180) * earthRadius * latCorrection;
-  
-  return (areaM2 / 10000).toFixed(2); // konwersja na hektary
-};
+    setIsDrawing(false);
+    setTempPolygon([]);
+    setIsModalOpen(true);
+  };
 
   // Anuluj rysowanie
   const cancelDrawing = () => {
@@ -387,7 +384,7 @@ const calculateApproximateArea = (coordinates) => {
     }
   };
 
-  // Wybierz pole z listy - NOWA FUNKCJA
+  // Wybierz pole z listy
   const selectFieldFromList = (field) => {
     setSelectedField(field);
     
@@ -400,18 +397,17 @@ const calculateApproximateArea = (coordinates) => {
       
       if (mapRef.current) {
         mapRef.current.fitBounds(bounds);
-        // Dodaj mały padding
         mapRef.current.panToBounds(bounds, 50);
       }
     }
   };
 
-  // Najedź na pole w liście - NOWA FUNKCJA
+  // Najedź na pole w liście
   const hoverFieldFromList = (field) => {
     setHoveredField(field);
   };
 
-  // Zdejmij hover z pola - NOWA FUNKCJA
+  // Zdejmij hover z pola
   const leaveFieldFromList = () => {
     setHoveredField(null);
   };
@@ -533,54 +529,56 @@ const calculateApproximateArea = (coordinates) => {
                 ))}
                 
                 {/* InfoWindow dla wybranego pola */}
-{selectedField && (
-  <InfoWindow
-    position={calculateCentroid(selectedField.coordinates) || selectedField.coordinates[0]}
-    onCloseClick={() => setSelectedField(null)}
-    options={{
-      pixelOffset: new window.google.maps.Size(0, -40),
-      maxWidth: 300
-    }}
-  >
-    <div className="field-info-window">
-      <h3>{selectedField.name}</h3>
-      <div className="field-info-details">
-        <p>
-          <i className="fas fa-ruler-combined"></i> 
-          <strong>Powierzchnia:</strong> {selectedField.area} ha
-        </p>
-        <p>
-          <i className="fas fa-mountain"></i> 
-          <strong>Gleba:</strong> {selectedField.soil}
-        </p>
-        <p>
-          <i className="fas fa-seedling"></i> 
-          <strong>Uprawa:</strong> {selectedField.crop || 'Brak'}
-        </p>
-        {selectedField.notes && (
-          <p>
-            <i className="fas fa-sticky-note"></i> 
-            <strong>Notatki:</strong> {selectedField.notes}
-          </p>
-        )}
-      </div>
-      <div className="field-info-actions">
-        <button 
-          className="action-btn btn-primary"
-          onClick={() => editField(selectedField.id)}
-        >
-          <i className="fas fa-edit"></i> Edytuj
-        </button>
-        <button 
-          className="action-btn btn-danger"
-          onClick={() => handleDeleteField(selectedField.id)}
-        >
-          <i className="fas fa-trash"></i> Usuń
-        </button>
-      </div>
-    </div>
-  </InfoWindow>
-)}
+                {selectedField && (
+                  <InfoWindow
+                    position={calculateCentroid(selectedField.coordinates) || 
+                             (selectedField.coordinates && selectedField.coordinates[0]) || 
+                             mapCenter}
+                    onCloseClick={() => setSelectedField(null)}
+                    options={{
+                      pixelOffset: new window.google.maps.Size(0, -40),
+                      maxWidth: 300
+                    }}
+                  >
+                    <div className="field-info-window">
+                      <h3>{selectedField.name}</h3>
+                      <div className="field-info-details">
+                        <p>
+                          <i className="fas fa-ruler-combined"></i> 
+                          <strong>Powierzchnia:</strong> {selectedField.area} ha
+                        </p>
+                        <p>
+                          <i className="fas fa-mountain"></i> 
+                          <strong>Gleba:</strong> {selectedField.soil}
+                        </p>
+                        <p>
+                          <i className="fas fa-seedling"></i> 
+                          <strong>Uprawa:</strong> {selectedField.crop || 'Brak'}
+                        </p>
+                        {selectedField.notes && (
+                          <p>
+                            <i className="fas fa-sticky-note"></i> 
+                            <strong>Notatki:</strong> {selectedField.notes}
+                          </p>
+                        )}
+                      </div>
+                      <div className="field-info-actions">
+                        <button 
+                          className="action-btn btn-primary"
+                          onClick={() => editField(selectedField.id)}
+                        >
+                          <i className="fas fa-edit"></i> Edytuj
+                        </button>
+                        <button 
+                          className="action-btn btn-danger"
+                          onClick={() => handleDeleteField(selectedField.id)}
+                        >
+                          <i className="fas fa-trash"></i> Usuń
+                        </button>
+                      </div>
+                    </div>
+                  </InfoWindow>
+                )}
               </GoogleMap>
             </LoadScript>
             
@@ -690,21 +688,70 @@ const calculateApproximateArea = (coordinates) => {
   );
 };
 
-// Komponent modala (bez zmian)
+// Komponent modala (POPRAWIONA WERSJA)
 const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const [isSoilOpen, setIsSoilOpen] = useState(false);
+
+  // POPRAWIONE: Funkcja do obsługi zmian w formularzu
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    onFieldChange({
-      ...field,
-      [name]: name === 'area' ? (value === '' ? '' : parseFloat(value)) : value
-    });
+    if (typeof onFieldChange === 'function') {
+      onFieldChange(prev => ({
+        ...prev,
+        [name]: name === 'area' ? (value === '' ? '' : parseFloat(value)) : value
+      }));
+    }
+  };
+
+  // POPRAWIONE: Funkcja do custom select
+  const handleCustomSelect = (name, value) => {
+    if (typeof onFieldChange === 'function') {
+      onFieldChange(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    setIsCropOpen(false);
+    setIsSoilOpen(false);
+  };
+
+  const cropOptions = [
+    { value: '', label: 'Brak uprawy' },
+    { value: 'pszenica', label: 'Pszenica' },
+    { value: 'kukurydza', label: 'Kukurydza' },
+    { value: 'rzepak', label: 'Rzepak' },
+    { value: 'ziemniaki', label: 'Ziemniaki' },
+    { value: 'buraki', label: 'Buraki cukrowe' },
+    { value: 'owies', label: 'Owies' },
+    { value: 'jęczmień', label: 'Jęczmień' },
+    { value: 'żyto', label: 'Żyto' }
+  ];
+
+  const soilOptions = [
+    { value: '', label: 'Wybierz typ gleby' },
+    { value: 'gliniasta', label: 'Gliniasta' },
+    { value: 'piaszczysta', label: 'Piaszczysta' },
+    { value: 'ilasta', label: 'Ilasta' },
+    { value: 'torfowa', label: 'Torfowa' },
+    { value: 'mada', label: 'Mada rzeczna' }
+  ];
+
+  const getCurrentCropLabel = () => {
+    const option = cropOptions.find(opt => opt.value === (field?.crop || ''));
+    return option ? option.label : 'Brak uprawy';
+  };
+
+  const getCurrentSoilLabel = () => {
+    const option = soilOptions.find(opt => opt.value === (field?.soil || ''));
+    return option ? option.label : 'Wybierz typ gleby';
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{field.id ? 'Edytuj pole' : 'Dodaj nowe pole'}</h3>
+          <h3>{field?.id ? 'Edytuj pole' : 'Dodaj nowe pole'}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
@@ -715,7 +762,7 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
                 type="text"
                 id="fieldName"
                 name="name"
-                value={field.name}
+                value={field?.name || ''}
                 onChange={handleInputChange}
                 required
               />
@@ -726,60 +773,79 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
                 type="number"
                 id="fieldArea"
                 name="area"
-                value={field.area || ''}
+                value={field?.area || ''}
                 onChange={handleInputChange}
                 step="0.01"
                 required
               />
             </div>
+            
+            {/* CUSTOM SELECT dla gleby */}
             <div className="form-group">
               <label htmlFor="fieldSoil">Typ gleby *</label>
-              <select
-                id="fieldSoil"
-                name="soil"
-                value={field.soil}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="">Wybierz typ gleby</option>
-                <option value="gliniasta">Gliniasta</option>
-                <option value="piaszczysta">Piaszczysta</option>
-                <option value="ilasta">Ilasta</option>
-                <option value="torfowa">Torfowa</option>
-                <option value="mada">Mada rzeczna</option>
-              </select>
+              <div className="custom-select">
+                <div 
+                  className={`select-header ${isSoilOpen ? 'open' : ''}`}
+                  onClick={() => setIsSoilOpen(!isSoilOpen)}
+                >
+                  {getCurrentSoilLabel()}
+                  <span className="arrow">▼</span>
+                </div>
+                {isSoilOpen && (
+                  <div className="select-options">
+                    {soilOptions.map(option => (
+                      <div
+                        key={option.value}
+                        className={`select-option ${field?.soil === option.value ? 'selected' : ''}`}
+                        onClick={() => handleCustomSelect('soil', option.value)}
+                      >
+                        {option.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* CUSTOM SELECT dla uprawy */}
             <div className="form-group">
               <label htmlFor="fieldCrop">Aktualna uprawa</label>
-              <select
-                id="fieldCrop"
-                name="crop"
-                value={field.crop || ''}
-                onChange={handleInputChange}
-              >
-                <option value="">Brak uprawy</option>
-                <option value="pszenica">Pszenica</option>
-                <option value="kukurydza">Kukurydza</option>
-                <option value="rzepak">Rzepak</option>
-                <option value="ziemniaki">Ziemniaki</option>
-                <option value="buraki">Buraki cukrowe</option>
-                <option value="owies">Owies</option>
-                <option value="jęczmień">Jęczmień</option>
-                <option value="żyto">Żyto</option>
-              </select>
+              <div className="custom-select">
+                <div 
+                  className={`select-header ${isCropOpen ? 'open' : ''}`}
+                  onClick={() => setIsCropOpen(!isCropOpen)}
+                >
+                  {getCurrentCropLabel()}
+                  <span className="arrow">▼</span>
+                </div>
+                {isCropOpen && (
+                  <div className="select-options">
+                    {cropOptions.map(option => (
+                      <div
+                        key={option.value}
+                        className={`select-option ${field?.crop === option.value ? 'selected' : ''}`}
+                        onClick={() => handleCustomSelect('crop', option.value)}
+                      >
+                        {option.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
             <div className="form-group">
               <label htmlFor="fieldNotes">Notatki</label>
               <textarea
                 id="fieldNotes"
                 name="notes"
-                value={field.notes || ''}
+                value={field?.notes || ''}
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Dodatkowe informacje o polu..."
               />
             </div>
-            {field.coordinates && field.coordinates.length > 0 && (
+            {field?.coordinates && field.coordinates.length > 0 && (
               <div className="form-group">
                 <label>Informacje o narysowanym polu:</label>
                 <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
