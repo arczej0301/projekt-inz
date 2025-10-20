@@ -12,6 +12,7 @@ import ReportsPage from './components/pages/ReportsPage'
 import MagazinePage from './components/pages/MagazinePage'
 import LoginPage from './components/LoginPage'
 import InactivityWarning from './components/InactivityWarning'
+import GaragePage from './components/pages/GaragePage'
 
 function App() {
   const { user, loading, updateUserActivity } = useAuth()
@@ -73,6 +74,8 @@ function App() {
         return <AnimalsPage />
       case 'magazine':
         return <MagazinePage />
+      case 'garage':
+        return <GaragePage />
       case 'tasks':
         return <TasksPage />
       case 'finance':
