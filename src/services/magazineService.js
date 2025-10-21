@@ -13,7 +13,7 @@ import {
   onSnapshot 
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { MagazineItem, MAGAZINE_CATEGORIES } from '../models/MagazineItem';
+import { MagazineItem } from '../models/MagazineItem';
 
 export const magazineService = {
   // Pobierz wszystkie przedmioty
@@ -113,5 +113,3 @@ export const magazineService = {
     }
   }
 };
-
-export { MAGAZINE_CATEGORIES };

@@ -1,5 +1,5 @@
-// App.jsx
-import { useState, useEffect } from 'react'
+// App.jsx - WERSJA Z DEBUGOWANIEM
+import React, { useState, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
@@ -12,6 +12,7 @@ import ReportsPage from './components/pages/ReportsPage'
 import MagazinePage from './components/pages/MagazinePage'
 import LoginPage from './components/LoginPage'
 import InactivityWarning from './components/InactivityWarning'
+import GaragePage from './components/pages/GaragePages'
 
 function App() {
   const { user, loading, updateUserActivity } = useAuth()
@@ -25,8 +26,11 @@ function App() {
     expenses: 0
   })
 
+  console.log('🔵 App component rendering, activeTab:', activeTab)
+
   // Inicjalizacja danych farmy po zalogowaniu
   useEffect(() => {
+    console.log('🟡 App useEffect - user changed:', user)
     if (user) {
       setTimeout(() => {
         setFarmData({
@@ -49,7 +53,6 @@ function App() {
       updateUserActivity();
     };
 
-    // Dodaj event listeners dla kluczowych akcji w aplikacji
     const events = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
     
     events.forEach(event => {
@@ -63,7 +66,13 @@ function App() {
     };
   }, [user, updateUserActivity]);
 
+  const handleTabChange = (tab) => {
+    console.log('🟢 Changing tab to:', tab)
+    setActiveTab(tab)
+  }
+
   const renderContent = () => {
+    console.log('🟠 Rendering content for tab:', activeTab)
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard farmData={farmData} />
@@ -73,6 +82,8 @@ function App() {
         return <AnimalsPage />
       case 'magazine':
         return <MagazinePage />
+      case 'garage':
+        return <GaragePage />
       case 'tasks':
         return <TasksPage />
       case 'finance':
@@ -100,7 +111,7 @@ function App() {
   return (
     <div className="app">
       <InactivityWarning />
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
       <div className="main-content">
         <Header />
         <div className="content">

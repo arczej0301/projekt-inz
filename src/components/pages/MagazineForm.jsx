@@ -1,6 +1,6 @@
 // src/components/pages/MagazineForm.jsx
 import { useState, useEffect } from 'react';
-import { magazineService, MAGAZINE_CATEGORIES } from '../../services/magazineService';
+import { magazineService } from '../../services/magazineService';
 import './MagazinePage.css';
 
 function MagazineForm({ item, onClose, onSave }) {
@@ -84,20 +84,29 @@ function MagazineForm({ item, onClose, onSave }) {
               />
             </div>
 
-            <div className="form-group">
-              <label>Kategoria *</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Wybierz kategorię</option>
-                {Object.entries(MAGAZINE_CATEGORIES).map(([key, value]) => (
-                  <option key={key} value={value}>{value}</option>
-                ))}
-              </select>
-            </div>
+            {/* TYMCZASOWE ROZWIĄZANIE - ZAMIEN SELECT NA INPUT */}
+<div className="form-group">
+  <label>Kategoria *</label>
+  <select
+  name="category"
+  value={formData.category}
+  onChange={(e) => {
+    const value = e.target.value;
+    console.log('SELECTED CATEGORY:', value);
+    setFormData(prev => ({...prev, category: value}));
+  }}
+  required
+>
+  <option value="">Wybierz kategorię</option>
+  <option value="zboża">Zboża</option>
+  <option value="mleko">Mleko</option>
+  <option value="pasze">Pasze</option>
+  <option value="nawozy">Nawozy</option>
+  <option value="nasiona">Nasiona</option>
+  <option value="narzędzia">Narzędzia</option>
+  <option value="inne">Inne</option>
+</select>
+</div>
           </div>
 
           <div className="form-row">
@@ -219,5 +228,6 @@ function MagazineForm({ item, onClose, onSave }) {
     </div>
   );
 }
+
 
 export default MagazineForm;

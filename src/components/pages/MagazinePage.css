@@ -62,6 +62,7 @@
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 14px;
+  background: white; /* DODANE - upewnij się że tło jest białe */
 }
 
 .search-input {
@@ -70,6 +71,10 @@
 
 .category-filter {
   flex: 1;
+  /* USUŃ WSZYSTKIE pointer-events - mogą blokować */
+  appearance: menulist; /* DODANE - zapewnia natywny wygląd */
+  -webkit-appearance: menulist; /* Dla Safari */
+  -moz-appearance: menulist; /* Dla Firefox */
 }
 
 .btn-primary {
@@ -245,6 +250,7 @@
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 14px;
+  background: white; /* DODANE */
 }
 
 .form-actions {
@@ -291,4 +297,108 @@
   .magazine-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* USUŃ CAŁY TEN BLOK - on może blokować selecty */
+/* 
+.category-filter,
+.magazine-form select {
+  pointer-events: all !important;
+  cursor: pointer !important;
+}
+
+.category-filter option,
+.magazine-form select option {
+  pointer-events: all !important;
+}
+
+select {
+  pointer-events: all !important;
+  cursor: pointer !important;
+}
+*/
+
+/* ZAMIENIĆ NA: */
+select:focus {
+  outline: 2px solid #4CAF50;
+  border-color: #4CAF50;
+}
+
+/* DODAJ SPECJALNIE DLA SELEKTA KATEGORII */
+.controls-left select.category-filter {
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+/* DODAJ DO MagazinePage.css */
+.category-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+
+.category-btn {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.category-btn:hover {
+  background: #f5f5f5;
+}
+
+.category-btn.active {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+/* DODAJ DO MagazinePage.css */
+.select-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.select-wrapper::after {
+  content: "▼";
+  font-size: 12px;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #666;
+}
+
+.category-select {
+  width: 100%;
+  padding: 10px 35px 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.category-select:focus {
+  outline: 2px solid #4CAF50;
+  border-color: #4CAF50;
+}
+
+.category-select:hover {
+  border-color: #999;
+}
+
+/* Usuń stare style jeśli są */
+.category-filter {
+  /* reset starych stylów */
 }
