@@ -45,7 +45,7 @@ const LoginPage = () => {
       <div className="login-container">
         <div className="login-header">
           <h1>AgroFarm</h1>
-          <p>Zaloguj się do systemu zarządzania farmą</p>
+          <p>Zaloguj się do systemu zarządzania gospodarstwem</p>
         </div>
         
         <form onSubmit={handleEmailLogin} className="login-form">
