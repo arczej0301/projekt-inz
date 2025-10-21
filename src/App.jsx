@@ -13,6 +13,7 @@ import MagazinePage from './components/pages/MagazinePage'
 import LoginPage from './components/LoginPage'
 import InactivityWarning from './components/InactivityWarning'
 import GaragePage from './components/pages/GaragePages'
+import TestPage from './components/pages/TestPage';
 
 function App() {
   const { user, loading, updateUserActivity } = useAuth()
@@ -26,7 +27,6 @@ function App() {
     expenses: 0
   })
 
-  console.log('🔵 App component rendering, activeTab:', activeTab)
 
   // Inicjalizacja danych farmy po zalogowaniu
   useEffect(() => {
@@ -72,7 +72,6 @@ function App() {
   }
 
   const renderContent = () => {
-    console.log('🟠 Rendering content for tab:', activeTab)
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard farmData={farmData} />
@@ -90,6 +89,8 @@ function App() {
         return <FinancePage />
       case 'reports':
         return <ReportsPage />
+        case 'test':
+  return <TestPage />;
       default:
         return <Dashboard farmData={farmData} />
     }

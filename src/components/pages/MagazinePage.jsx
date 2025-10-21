@@ -1,213 +1,298 @@
-// src/components/pages/MagazinePage.jsx
-import { useState, useEffect, useRef } from 'react';
-import { magazineService } from '../../services/magazineService';
-import MagazineList from './MagazineList';
-import MagazineForm from './MagazineForm';
-import MagazineStats from './MagazineStats';
-import './MagazinePage.css';
+// components/pages/MagazinePage.jsx
+import { useState } from 'react'
+import { useWarehouse } from '../../hooks/useWarehouse'
+import ProductModal from './ProductModal'
+import './MagazinePage.css'
 
 function MagazinePage() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
+  const [activeCategory, setActiveCategory] = useState('zboza')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState(null)
 
-  useEffect(() => {
-    const unsubscribe = magazineService.subscribeToMagazine((magazineItems) => {
-      setItems(magazineItems);
-      setLoading(false);
-    });
+  const { 
+    warehouseData, 
+    categories, 
+    loading, 
+    error,
+    addProduct,
+    updateProduct,
+    deleteProduct
+  } = useWarehouse()
 
-    return () => unsubscribe();
-  }, []);
+  const filteredItems = warehouseData[activeCategory]?.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || []
 
-  // Zamknij dropdown gdy klikniesz poza nim
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
+  const getStockStatus = (quantity, minStock) => {
+    if (quantity === 0) return 'brak'
+    if (quantity < minStock) return 'niski'
+    if (quantity <= minStock * 1.5) return 'średni'
+    return 'wysoki'
+  }
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'brak': return '#f44336'
+      case 'niski': return '#ff9800'
+      case 'średni': return '#ffeb3b'
+      case 'wysoki': return '#4caf50'
+      default: return '#9e9e9e'
+    }
+  }
+
+  const calculateTotalValue = () => {
+    return Object.values(warehouseData)
+      .flat()
+      .reduce((total, item) => total + (item.quantity * (item.price || 0)), 0)
+  }
+
+  const countLowStockItems = () => {
+    return Object.values(warehouseData)
+      .flat()
+      .filter(item => item.quantity < item.minStock).length
+  }
+
+  const handleAddProduct = () => {
+    setEditingProduct(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product)
+    setIsModalOpen(true)
+  }
+
+  // W MagazinePage.jsx - sprawdź czy masz:
+  const handleSaveProduct = async (productData) => {
+    if (editingProduct) {
+      const result = await updateProduct(editingProduct.id, productData)
+      if (result.success) {
+        setIsModalOpen(false)
+        setEditingProduct(null)
+        // Możesz dodać odświeżenie danych:
+        // loadData(); // jeśli masz taką funkcję
+      } else {
+        alert(`Błąd: ${result.error}`)
       }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleAddItem = () => {
-    setEditingItem(null);
-    setShowForm(true);
-  };
-
-  const handleEditItem = (item) => {
-    setEditingItem(item);
-    setShowForm(true);
-  };
-
-  const handleCloseForm = () => {
-    setShowForm(false);
-    setEditingItem(null);
-  };
-
-  const handleDeleteItem = async (itemId) => {
-    if (window.confirm('Czy na pewno chcesz usunąć ten przedmiot?')) {
-      try {
-        await magazineService.deleteItem(itemId);
-      } catch (error) {
-        alert('Błąd podczas usuwania przedmiotu: ' + error.message);
+    } else {
+      const result = await addProduct({
+        ...productData,
+        category: activeCategory
+      })
+      if (result.success) {
+        setIsModalOpen(false)
+      } else {
+        alert(`Błąd: ${result.error}`)
       }
     }
-  };
+  }
 
-  const handleCategorySelect = (category) => {
-    console.log('Category selected:', category);
-    setSelectedCategory(category);
-    setShowDropdown(false);
-  };
-
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown);
-  };
-
-  // Filtrowanie przedmiotów
-  const filteredItems = items.filter(item => {
-    const matchesCategory = selectedCategory === 'all' || 
-                           (item.category && item.category.toLowerCase() === selectedCategory.toLowerCase());
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.location.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const handleDeleteProduct = async (productId) => {
+    if (window.confirm('Czy na pewno chcesz usunąć ten produkt?')) {
+      const result = await deleteProduct(productId)
+      if (!result.success) {
+        alert(`Błąd: ${result.error}`)
+      }
+    }
+  }
 
   if (loading) {
     return (
-      <div className="magazine-page">
-        <div className="loading">Ładowanie magazynu...</div>
+      <div className="loading">
+        <div className="loading-spinner"></div>
+        <p>Ładowanie danych magazynu...</p>
       </div>
-    );
+    )
   }
 
-  const categories = [
-    { value: 'all', label: 'Wszystkie kategorie' },
-    { value: 'zboża', label: 'Zboża' },
-    { value: 'mleko', label: 'Mleko' },
-    { value: 'pasze', label: 'Pasze' },
-    { value: 'nawozy', label: 'Nawozy' },
-    { value: 'nasiona', label: 'Nasiona' },
-    { value: 'narzędzia', label: 'Narzędzia' },
-    { value: 'inne', label: 'Inne' }
-  ];
-
-  const getCurrentCategoryLabel = () => {
-    const category = categories.find(cat => cat.value === selectedCategory);
-    return category ? category.label : 'Wszystkie kategorie';
-  };
+  if (error) {
+    return (
+      <div className="error-container">
+        <h2>❌ Błąd</h2>
+        <p>{error}</p>
+        <button onClick={() => window.location.reload()}>Odśwież stronę</button>
+      </div>
+    )
+  }
 
   return (
     <div className="magazine-page">
       <div className="magazine-header">
-        <h2>Magazyn Gospodarstwa</h2>
-        <p>Zarządzanie zasobami i surowcami</p>
+        <h2>📦 Magazyn Gospodarstwa</h2>
+        <p>Zarządzanie zapasami i towarami w gospodarstwie</p>
       </div>
 
-      <MagazineStats items={items} />
-
-      <div className="magazine-controls">
-        <div className="controls-left">
-          <input
-            type="text"
-            placeholder="Szukaj po nazwie lub lokalizacji..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-          
-          {/* CUSTOM DROPDOWN */}
-          <div className="custom-dropdown" ref={dropdownRef}>
-            <div 
-              className="dropdown-header"
-              onClick={toggleDropdown}
-              style={{
-                padding: '10px 15px',
-                border: '2px solid #4CAF50',
-                borderRadius: '5px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                fontSize: '16px',
-                minWidth: '200px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
-            >
-              <span>{getCurrentCategoryLabel()}</span>
-              <span style={{fontSize: '12px'}}>▼</span>
-            </div>
-            
-            {showDropdown && (
-              <div 
-                className="dropdown-list"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  backgroundColor: 'white',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                  zIndex: 1000,
-                  maxHeight: '200px',
-                  overflowY: 'auto'
-                }}
-              >
-                {categories.map(category => (
-                  <div
-                    key={category.value}
-                    onClick={() => handleCategorySelect(category.value)}
-                    style={{
-                      padding: '10px 15px',
-                      cursor: 'pointer',
-                      borderBottom: '1px solid #f0f0f0',
-                      backgroundColor: selectedCategory === category.value ? '#f0f0f0' : 'white'
-                    }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = selectedCategory === category.value ? '#f0f0f0' : 'white'}
-                  >
-                    {category.label}
-                  </div>
-                ))}
-              </div>
-            )}
+      <div className="magazine-stats">
+        <div className="stat-card">
+          <div className="stat-icon">💰</div>
+          <div className="stat-info">
+            <h3>Łączna wartość</h3>
+            <p>{calculateTotalValue().toFixed(2)} zł</p>
           </div>
         </div>
-
-        <button onClick={handleAddItem} className="btn-primary">
-          + Dodaj nowy przedmiot
-        </button>
+        <div className="stat-card">
+          <div className="stat-icon">📦</div>
+          <div className="stat-info">
+            <h3>Łączna ilość produktów</h3>
+            <p>{Object.values(warehouseData).flat().length}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">⚠️</div>
+          <div className="stat-info">
+            <h3>Niskie stany</h3>
+            <p>{countLowStockItems()}</p>
+          </div>
+        </div>
       </div>
 
-      <div style={{textAlign: 'center', margin: '10px 0', color: '#666'}}>
-        Aktualna kategoria: <strong>{getCurrentCategoryLabel()}</strong>
+      <div className="magazine-content">
+        <div className="categories-sidebar">
+          <div className="sidebar-header">
+            <h3>Kategorie</h3>
+            <button 
+              className="add-product-btn"
+              onClick={handleAddProduct}
+              title="Dodaj nowy produkt"
+            >
+              +
+            </button>
+          </div>
+          {categories.map(category => (
+            <button
+              key={category.id}
+              className={`category-btn ${activeCategory === category.id ? 'active' : ''}`}
+              onClick={() => setActiveCategory(category.id)}
+              style={{ borderLeftColor: category.color }}
+            >
+              <span className="category-icon">{category.icon}</span>
+              <span className="category-name">{category.name}</span>
+              <span className="category-count">
+                ({warehouseData[category.id]?.length || 0})
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="products-section">
+          <div className="products-header">
+            <h3>
+              {categories.find(cat => cat.id === activeCategory)?.icon}
+              {categories.find(cat => cat.id === activeCategory)?.name}
+            </h3>
+            <div className="products-controls">
+              <div className="search-box">
+                <input
+                  type="text"
+                  placeholder="Szukaj produktu..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <span className="search-icon">🔍</span>
+              </div>
+              <button 
+                className="btn-primary"
+                onClick={handleAddProduct}
+              >
+                + Dodaj produkt
+              </button>
+            </div>
+          </div>
+
+          <div className="products-grid">
+            {filteredItems.map(item => {
+              const stockStatus = getStockStatus(item.quantity, item.minStock)
+              return (
+                <div key={item.id} className="product-card">
+                  <div className="product-header">
+                    <h4>{item.name}</h4>
+                    <div 
+                      className="stock-status"
+                      style={{ backgroundColor: getStatusColor(stockStatus) }}
+                    >
+                      {stockStatus}
+                    </div>
+                  </div>
+                  
+                  <div className="product-details">
+                    <div className="detail-row">
+                      <span className="label">Ilość:</span>
+                      <span className="value">{item.quantity} {item.unit}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Minimalny stan:</span>
+                      <span className="value">{item.minStock} {item.unit}</span>
+                    </div>
+                    {item.price && (
+                      <>
+                        <div className="detail-row">
+                          <span className="label">Cena:</span>
+                          <span className="value">{item.price} zł/{item.unit}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Wartość:</span>
+                          <span className="value">{(item.quantity * item.price).toFixed(2)} zł</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="detail-row">
+                      <span className="label">Ostatnia aktualizacja:</span>
+                      <span className="value">
+                        {item.lastUpdate?.toDate ? 
+                          item.lastUpdate.toDate().toLocaleDateString('pl-PL') : 
+                          'Brak danych'
+                        }
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="product-actions">
+                    <button 
+                      className="btn-primary"
+                      onClick={() => handleEditProduct(item)}
+                    >
+                      Edytuj
+                    </button>
+                    <button 
+                      className="btn-secondary"
+                      onClick={() => handleDeleteProduct(item.id)}
+                    >
+                      Usuń
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {filteredItems.length === 0 && (
+            <div className="no-products">
+              <p>📭 Brak produktów w tej kategorii</p>
+              <button 
+                className="btn-primary"
+                onClick={handleAddProduct}
+              >
+                Dodaj pierwszy produkt
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <MagazineList
-        items={filteredItems}
-        onEdit={handleEditItem}
-        onDelete={handleDeleteItem}
-      />
-
-      {showForm && (
-        <MagazineForm
-          item={editingItem}
-          onClose={handleCloseForm}
-          onSave={handleCloseForm}
+      {isModalOpen && (
+        <ProductModal
+          product={editingProduct}
+          category={activeCategory}
+          onSave={handleSaveProduct}
+          onClose={() => {
+            setIsModalOpen(false)
+            setEditingProduct(null)
+          }}
         />
       )}
     </div>
-  );
+  )
 }
 
-export default MagazinePage;
+export default MagazinePage
