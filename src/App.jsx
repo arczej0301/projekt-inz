@@ -12,7 +12,7 @@ import ReportsPage from './components/pages/ReportsPage'
 import MagazinePage from './components/pages/MagazinePage'
 import LoginPage from './components/LoginPage'
 import InactivityWarning from './components/InactivityWarning'
-import GaragePage from './components/pages/GaragePages'
+import GaragePage from './components/pages/GaragePage'
 import TestPage from './components/pages/TestPage';
 
 function App() {
@@ -30,7 +30,7 @@ function App() {
 
   // Inicjalizacja danych farmy po zalogowaniu
   useEffect(() => {
-    console.log('🟡 App useEffect - user changed:', user)
+    //console.log('🟡 App useEffect - user changed:', user)
     if (user) {
       setTimeout(() => {
         setFarmData({
@@ -45,29 +45,8 @@ function App() {
     }
   }, [user])
 
-  // Dodatkowe śledzenie aktywności
-  useEffect(() => {
-    if (!user) return;
-
-    const handleUserActivity = () => {
-      updateUserActivity();
-    };
-
-    const events = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
-    
-    events.forEach(event => {
-      document.addEventListener(event, handleUserActivity, { passive: true });
-    });
-
-    return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleUserActivity);
-      });
-    };
-  }, [user, updateUserActivity]);
-
   const handleTabChange = (tab) => {
-    console.log('🟢 Changing tab to:', tab)
+    //console.log('🟢 Changing tab to:', tab)
     setActiveTab(tab)
   }
 
