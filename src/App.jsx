@@ -14,6 +14,7 @@ import LoginPage from './components/LoginPage'
 import InactivityWarning from './components/InactivityWarning'
 import GaragePage from './components/pages/GaragePage'
 import TestPage from './components/pages/TestPage';
+import { LoadScript } from '@react-google-maps/api';
 
 function App() {
   const { user, loading, updateUserActivity } = useAuth()
@@ -89,16 +90,21 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <InactivityWarning />
-      <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
-      <div className="main-content">
-        <Header />
-        <div className="content">
-          {renderContent()}
+    <LoadScript 
+      googleMapsApiKey="AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA"
+      libraries={['geometry']}
+    >
+      <div className="app">
+        <InactivityWarning />
+        <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
+        <div className="main-content">
+          <Header />
+          <div className="content">
+            {renderContent()}
+          </div>
         </div>
       </div>
-    </div>
+    </LoadScript>
   )
 }
 

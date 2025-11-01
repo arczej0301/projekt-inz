@@ -273,10 +273,6 @@
   border: 1px solid #e1e8ed;
 }
 
-.material-select,
-.material-unit {
-  /* CustomSelect ma własne style */
-}
 
 .material-quantity {
   padding: 8px;

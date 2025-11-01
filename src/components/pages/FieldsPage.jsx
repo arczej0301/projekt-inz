@@ -461,13 +461,7 @@ const FieldsPage = () => {
           
           {/* Mapa */}
           <div className={`map-container ${isDrawing ? 'drawing-active' : ''}`}>
-            <LoadScript 
-              googleMapsApiKey="AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA"
-              libraries={['geometry']}
-              onLoad={(google) => {
-                googleRef.current = google;
-              }}
-            >
+            
               <GoogleMap
                 mapContainerStyle={mapContainerStyle}
                 center={mapCenter}
@@ -580,7 +574,7 @@ const FieldsPage = () => {
                   </InfoWindow>
                 )}
               </GoogleMap>
-            </LoadScript>
+           
             
             {/* Instrukcja rysowania */}
             {isDrawing && (
