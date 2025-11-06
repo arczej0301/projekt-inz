@@ -421,7 +421,7 @@ const FieldsPage = () => {
 
   return (
     <div className="fields-page">
-      <div className="main-content">
+      
         <div className="header">
           <h2>Zarządzanie polami</h2>
         </div>
@@ -666,7 +666,7 @@ const FieldsPage = () => {
             )}
           </div>
         </div>
-      </div>
+     
       
       {/* Modal */}
       {isModalOpen && currentField && (

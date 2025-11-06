@@ -4,6 +4,7 @@ import StatCard from './StatCard'
 import { useFinance } from '../hooks/useFinance'
 import { useTasks } from '../hooks/useTasks'
 import { useAnalytics } from '../hooks/useAnalytics'
+import './Dashboard.css';
 
 function Dashboard() {
   const { getFinancialSummary, transactions } = useFinance()

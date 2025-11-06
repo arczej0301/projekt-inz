@@ -13,11 +13,13 @@ import MagazinePage from './components/pages/MagazinePage'
 import LoginPage from './components/LoginPage'
 import InactivityWarning from './components/InactivityWarning'
 import GaragePage from './components/pages/GaragePage'
-import TestPage from './components/pages/TestPage';
-import { LoadScript } from '@react-google-maps/api';
+import SettingsPage from './components/Settings/SettingsPage'
+import TestPage from './components/pages/TestPage'
+import { LoadScript } from '@react-google-maps/api'
+
 
 function App() {
-  const { user, loading, updateUserActivity } = useAuth()
+  const { user, loading } = useAuth()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [farmData, setFarmData] = useState({
     area: 0,
@@ -69,8 +71,10 @@ function App() {
         return <FinancePage />
       case 'reports':
         return <ReportsPage />
-        case 'test':
-  return <TestPage />;
+      case 'settings':
+        return <SettingsPage />;
+      case 'test':
+        return <TestPage />;
       default:
         return <Dashboard farmData={farmData} />
     }

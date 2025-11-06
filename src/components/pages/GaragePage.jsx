@@ -327,7 +327,6 @@ const handleFilterStatusChange = (value) => {
 
   return (
     <div className="garage-page">
-      <div className="main-content">
         <div className="header">
           <h2>Zarządzanie garażem</h2>
         </div>
@@ -399,8 +398,8 @@ const handleFilterStatusChange = (value) => {
             <div className="list-header">
               <h3>Lista maszyn ({filteredMachines.length})</h3>
               <div className="filter-controls">
-  <div className="custom-select">
-    <div 
+        <div className="custom-select">
+      <div 
       className={`select-header ${isFilterStatusOpen ? 'open' : ''}`}
       onClick={() => setIsFilterStatusOpen(!isFilterStatusOpen)}
     >
@@ -441,8 +440,8 @@ const handleFilterStatusChange = (value) => {
         </div>
       </div>
     )}
-  </div>
-</div>
+      </div>
+    </div>
             </div>
             
             {filteredMachines.length === 0 ? (
@@ -542,7 +541,7 @@ const handleFilterStatusChange = (value) => {
             )}
           </div>
         </div>
-      </div>
+      
       
       {/* Modal dodawania/edycji maszyny */}
       {showForm && (

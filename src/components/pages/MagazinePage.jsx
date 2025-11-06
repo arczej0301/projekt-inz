@@ -119,8 +119,7 @@ function MagazinePage() {
   return (
     <div className="magazine-page">
       <div className="magazine-header">
-        <h2>📦 Magazyn Gospodarstwa</h2>
-        <p>Zarządzanie zapasami i towarami w gospodarstwie</p>
+        <h2>Magazyn Gospodarstwa</h2>
       </div>
 
       <div className="magazine-stats">

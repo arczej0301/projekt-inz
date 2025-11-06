@@ -218,12 +218,12 @@ function AnimalsPage() {
 
   if (loading) {
     return (
-      <div className="animals-page">
+      
         <div className="loading">
           <div className="loading-spinner"></div>
           <p>Ładowanie zwierząt...</p>
         </div>
-      </div>
+      
     );
   }
 

@@ -1,8 +1,18 @@
-/* GaragePage.css */
+/* GaragePage.css - POPRAWIONA */
 .garage-page {
-  padding: 20px;
+  padding: 0; /* USUŃ PADDING */
   background-color: #f5f5f5;
   min-height: 100vh;
+  width: 100%;
+}
+
+/* DODAJ NOWĄ KLASĘ DLA WEWNĘTRZNYCH ODSTĘPÓW */
+.garage-content {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 /* Nagłówek */
@@ -20,9 +30,10 @@
   font-size: 1.8rem;
 }
 
-/* Zawartość */
+/* Zawartość - USUŃ PADDING */
 .content {
   padding: 0;
+  width: 100%;
 }
 
 /* Pasek akcji */
@@ -581,7 +592,11 @@
 /* Responsywność */
 @media (max-width: 768px) {
   .garage-page {
-    padding: 10px;
+    padding: 0;
+  }
+  
+  .garage-content {
+    padding: 15px;
   }
   
   .actions-bar {

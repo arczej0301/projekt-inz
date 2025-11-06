@@ -1,0 +1,81 @@
+.settings-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.settings-header {
+  margin-bottom: 30px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 20px;
+}
+
+.settings-header h1 {
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  font-size: 2rem;
+}
+
+.settings-header p {
+  color: #7f8c8d;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.settings-container {
+  display: flex;
+  gap: 30px;
+  min-height: 500px;
+}
+
+.settings-sidebar {
+  flex: 0 0 250px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.settings-tab {
+  width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  color: #495057;
+}
+
+.settings-tab:hover {
+  background: #e9ecef;
+  color: #2c3e50;
+}
+
+.settings-tab.active {
+  background: #3498db;
+  color: white;
+  font-weight: 500;
+}
+
+.settings-content {
+  flex: 1;
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+  .settings-container {
+    flex-direction: column;
+  }
+  
+  .settings-sidebar {
+    flex: none;
+  }
+}
