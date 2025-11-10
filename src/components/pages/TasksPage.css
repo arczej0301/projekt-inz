@@ -1,11 +1,17 @@
 /* src/pages/TasksPage.css */
 .tasks-page {
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0; 
+  box-sizing: border-box;
 }
 
 .tasks-header {
+  background-color: white;
+  padding: 15px 30px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;

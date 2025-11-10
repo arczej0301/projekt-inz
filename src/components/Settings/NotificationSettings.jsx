@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSettings } from '../../hooks/useSettings';
+import './NotificationSettings.css';
 
 const NotificationSettings = () => {
+  const { notificationSettings, saveNotificationSettings, loading } = useSettings();
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
     smsNotifications: false,
@@ -9,10 +12,30 @@ const NotificationSettings = () => {
     reportAlerts: false,
     lowStockAlerts: true,
   });
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const handleSave = (e) => {
+  // Załaduj ustawienia powiadomień
+  useEffect(() => {
+    if (notificationSettings) {
+      setNotifications(notificationSettings);
+    }
+  }, [notificationSettings]);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Ustawienia powiadomień zostały zapisane!');
+    setSaving(true);
+    setMessage('');
+
+    const result = await saveNotificationSettings(notifications);
+    
+    if (result.success) {
+      setMessage('Ustawienia powiadomień zostały zapisane!');
+    } else {
+      setMessage(`Błąd: ${result.error}`);
+    }
+    
+    setSaving(false);
   };
 
   const handleToggle = (key) => {
@@ -22,9 +45,19 @@ const NotificationSettings = () => {
     }));
   };
 
+  if (loading) {
+    return <div className="loading">Ładowanie ustawień powiadomień...</div>;
+  }
+
   return (
     <div className="notification-settings">
       <h2>Ustawienia Powiadomień</h2>
+      
+      {message && (
+        <div className={`message ${message.includes('Błąd') ? 'error' : 'success'}`}>
+          {message}
+        </div>
+      )}
       
       <form onSubmit={handleSave}>
         <div className="notification-group">
@@ -89,8 +122,8 @@ const NotificationSettings = () => {
           </div>
         </div>
 
-        <button type="submit" className="save-btn">
-          Zapisz ustawienia
+        <button type="submit" className="save-btn" disabled={saving}>
+          {saving ? 'Zapisywanie...' : 'Zapisz ustawienia'}
         </button>
       </form>
     </div>

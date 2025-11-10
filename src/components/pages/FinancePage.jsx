@@ -48,22 +48,6 @@ function FinancePage() {
     <div className="finance-page">
       <div className="finance-header">
         <h2>Zarządzanie finansami</h2>
-        <div className="financial-overview">
-          <div className="overview-item">
-            <span className="label">Bilans miesięczny:</span>
-            <span className={`amount ${financialSummary.monthlyBalance >= 0 ? 'positive' : 'negative'}`}>
-              {financialSummary.monthlyBalance.toFixed(2)} zł
-            </span>
-          </div>
-          <div className="overview-item">
-            <span className="label">Przychody:</span>
-            <span className="amount positive">{financialSummary.monthlyIncome.toFixed(2)} zł</span>
-          </div>
-          <div className="overview-item">
-            <span className="label">Koszty:</span>
-            <span className="amount negative">{financialSummary.monthlyExpenses.toFixed(2)} zł</span>
-          </div>
-        </div>
       </div>
 
       <div className="finance-tabs">

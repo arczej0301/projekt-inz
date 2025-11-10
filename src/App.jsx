@@ -1,4 +1,4 @@
-// App.jsx - WERSJA Z DEBUGOWANIEM
+// App.jsx - POPRAWIONA WERSJA BEZ CONSOLE.LOG
 import React, { useState, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
 import Sidebar from './components/Sidebar'
@@ -17,6 +17,7 @@ import SettingsPage from './components/Settings/SettingsPage'
 import TestPage from './components/pages/TestPage'
 import { LoadScript } from '@react-google-maps/api'
 
+const GOOGLE_MAPS_API_KEY = "AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA";
 
 function App() {
   const { user, loading } = useAuth()
@@ -29,11 +30,9 @@ function App() {
     income: 0,
     expenses: 0
   })
+  const [mapsLoaded, setMapsLoaded] = useState(false)
 
-
-  // Inicjalizacja danych farmy po zalogowaniu
   useEffect(() => {
-    //console.log('🟡 App useEffect - user changed:', user)
     if (user) {
       setTimeout(() => {
         setFarmData({
@@ -49,16 +48,29 @@ function App() {
   }, [user])
 
   const handleTabChange = (tab) => {
-    //console.log('🟢 Changing tab to:', tab)
     setActiveTab(tab)
   }
 
   const renderContent = () => {
+    if (!mapsLoaded && activeTab === 'fields') {
+      return (
+        <div className="loading">
+          <div className="loading-spinner"></div>
+          <p>Ładowanie map...</p>
+        </div>
+      )
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard farmData={farmData} />
       case 'fields':
-        return <FieldsPage />
+        return mapsLoaded ? <FieldsPage /> : (
+          <div className="loading">
+            <div className="loading-spinner"></div>
+            <p>Ładowanie map...</p>
+          </div>
+        )
       case 'animals':
         return <AnimalsPage />
       case 'magazine':
@@ -72,9 +84,9 @@ function App() {
       case 'reports':
         return <ReportsPage />
       case 'settings':
-        return <SettingsPage />;
+        return <SettingsPage />
       case 'test':
-        return <TestPage />;
+        return <TestPage />
       default:
         return <Dashboard farmData={farmData} />
     }
@@ -84,7 +96,7 @@ function App() {
     return (
       <div className="loading">
         <div className="loading-spinner"></div>
-        <p>Ładowanie...</p>
+        <p>Ładowanie aplikacji...</p>
       </div>
     )
   }
@@ -95,8 +107,10 @@ function App() {
 
   return (
     <LoadScript 
-      googleMapsApiKey="AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA"
+      googleMapsApiKey={GOOGLE_MAPS_API_KEY}
       libraries={['geometry']}
+      onLoad={() => setMapsLoaded(true)}
+      onError={() => setMapsLoaded(false)}
     >
       <div className="app">
         <InactivityWarning />

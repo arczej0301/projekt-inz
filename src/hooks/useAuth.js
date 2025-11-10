@@ -1,46 +1,102 @@
-// hooks/useAuth.js - PRZEPISANA WERSJA BEZ PROBLEMÓW
+// hooks/useAuth.js - POPRAWIONA WERSJA BEZ CONSOLE.LOG
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updateProfile
 } from 'firebase/auth';
-import { auth, googleProvider } from '../config/firebase';
+import { 
+  doc, 
+  getDoc, 
+  setDoc,
+  onSnapshot
+} from 'firebase/firestore';
+import { auth, googleProvider, db } from '../config/firebase';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showWarning, setShowWarning] = useState(false);
   const [countdown, setCountdown] = useState(0);
   
   const lastActivityRef = useRef(Date.now());
-  const showWarningRef = useRef(false); // Dodajemy ref dla showWarning
+  const showWarningRef = useRef(false);
+  const unsubscribeRef = useRef(null);
 
-  // Sprawdzanie statusu autentykacji - TEN EFFECT NIE MA PROBLEMÓW
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-      if (user) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUserData(userDoc.data());
+          } else {
+            const defaultUserData = {
+              name: firebaseUser.displayName || '',
+              email: firebaseUser.email || '',
+              phone: '',
+              position: '',
+              language: 'pl',
+              createdAt: new Date().toISOString()
+            };
+            await setDoc(doc(db, 'users', firebaseUser.uid), defaultUserData);
+            setUserData(defaultUserData);
+          }
+        } catch (error) {
+          // Cichy handling błędu
+        }
+        
         lastActivityRef.current = Date.now();
         setShowWarning(false);
         showWarningRef.current = false;
+      } else {
+        setUserData(null);
       }
+      
+      setLoading(false);
     });
 
-    return unsubscribe;
+    unsubscribeRef.current = unsubscribe;
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
   }, []);
 
-  // SYSTEM NIEAKTYWNOŚCI - UPROSZCZONY BEZ SETSTATE W EFFECT
   useEffect(() => {
-    if (!user) {
-      return;
-    }
+    if (!user) return;
 
-    const INACTIVITY_TIMEOUT = 600000; // 10 minut
-    const WARNING_TIME = 540000; // 9 minut
-    const CHECK_INTERVAL = 5000; // Sprawdzaj co 5 sekund (zamiast co 1s)
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', user.uid),
+      (doc) => {
+        if (doc.exists()) {
+          setUserData(doc.data());
+        }
+      },
+      () => {
+        // Cichy handling błędu
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const INACTIVITY_TIMEOUT = 600000;
+    const WARNING_TIME = 540000;
+    const CHECK_INTERVAL = 5000;
 
     const activityEvents = [
       'mousedown', 'mousemove', 'keypress', 'scroll', 
@@ -55,20 +111,17 @@ export const useAuth = () => {
       }
     };
 
-    // Dodaj event listeners
     activityEvents.forEach(event => {
       document.addEventListener(event, updateActivity);
     });
 
     let inactivityCheck;
     
-    // Opóźnione uruchomienie checkera (daje czas na inicjalizację)
     const startInactivityCheck = setTimeout(() => {
       inactivityCheck = setInterval(() => {
         const now = Date.now();
         const inactiveTime = now - lastActivityRef.current;
         
-        // Pokazuj ostrzeżenie
         if (inactiveTime > WARNING_TIME && inactiveTime < INACTIVITY_TIMEOUT) {
           const timeLeft = Math.ceil((INACTIVITY_TIMEOUT - inactiveTime) / 1000);
           setCountdown(timeLeft);
@@ -77,21 +130,18 @@ export const useAuth = () => {
             showWarningRef.current = true;
           }
         } 
-        // Wyloguj po timeout
         else if (inactiveTime >= INACTIVITY_TIMEOUT) {
-          console.log('Automatyczne wylogowanie z powodu nieaktywności');
           setShowWarning(false);
           showWarningRef.current = false;
-          logout();
+          handleLogout();
           clearInterval(inactivityCheck);
         }
-        // Ukryj ostrzeżenie jeśli użytkownik jest aktywny
         else if (showWarningRef.current && inactiveTime < WARNING_TIME) {
           setShowWarning(false);
           showWarningRef.current = false;
         }
       }, CHECK_INTERVAL);
-    }, 1000); // Opóźnienie 1 sekunda
+    }, 1000);
 
     return () => {
       activityEvents.forEach(event => {
@@ -104,14 +154,19 @@ export const useAuth = () => {
       setShowWarning(false);
       showWarningRef.current = false;
     };
-  }, [user]); // TYLKO user w zależnościach
+  }, [user]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      // Cichy handling błędu
+    }
+  };
 
   const loginWithEmail = async (email, password) => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      lastActivityRef.current = Date.now();
-      setShowWarning(false);
-      showWarningRef.current = false;
       return { success: true, user: result.user };
     } catch (error) {
       let errorMessage = 'Błąd logowania';
@@ -140,9 +195,6 @@ export const useAuth = () => {
   const loginWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      lastActivityRef.current = Date.now();
-      setShowWarning(false);
-      showWarningRef.current = false;
       return { success: true, user: result.user };
     } catch (error) {
       let errorMessage = 'Błąd logowania przez Google';
@@ -158,16 +210,56 @@ export const useAuth = () => {
   const logout = async () => {
     try {
       await signOut(auth);
-      setUser(null);
-      setShowWarning(false);
-      showWarningRef.current = false;
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }
   };
 
-  // Funkcja do ręcznej aktualizacji aktywności
+  const updateUserProfile = async (profileData) => {
+    if (!user) return { success: false, error: 'Brak użytkownika' };
+    
+    try {
+      await setDoc(doc(db, 'users', user.uid), profileData, { merge: true });
+      
+      if (profileData.name && profileData.name !== user.displayName) {
+        await updateProfile(user, {
+          displayName: profileData.name
+        });
+      }
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    if (!user) return { success: false, error: 'Brak użytkownika' };
+    
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+      return { success: true };
+    } catch (error) {
+      let errorMessage = 'Błąd zmiany hasła';
+      
+      switch (error.code) {
+        case 'auth/wrong-password':
+          errorMessage = 'Aktualne hasło jest nieprawidłowe';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Nowe hasło jest zbyt słabe';
+          break;
+        default:
+          errorMessage = error.message;
+      }
+      
+      return { success: false, error: errorMessage };
+    }
+  };
+
   const updateUserActivity = useCallback(() => {
     if (user) {
       lastActivityRef.current = Date.now();
@@ -180,12 +272,15 @@ export const useAuth = () => {
 
   return {
     user,
+    userData,
     loading,
     loginWithEmail,
     loginWithGoogle,
     logout,
     updateUserActivity,
     showWarning,
-    countdown
+    countdown,
+    updateUserProfile,
+    changePassword
   };
 };

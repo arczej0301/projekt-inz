@@ -24,31 +24,34 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
   return (
     <div className="finance-dashboard">
       <div className="dashboard-grid">
-        {/* Kafelki z podsumowaniem */}
+        {/* Kafelki z podsumowaniem - ZAKTUALIZOWANE */}
         <div className="summary-cards">
-          <div className="summary-card income">
-            <div className="card-icon">💰</div>
-            <div className="card-content">
-              <div className="card-label">Przychody (miesięczne)</div>
-              <div className="card-amount">{summary.monthlyIncome.toFixed(2)} zł</div>
-            </div>
-          </div>
-          
-          <div className="summary-card expenses">
-            <div className="card-icon">📉</div>
-            <div className="card-content">
-              <div className="card-label">Koszty (miesięczne)</div>
-              <div className="card-amount">{summary.monthlyExpenses.toFixed(2)} zł</div>
-            </div>
-          </div>
-          
+          {/* Bilans miesięczny */}
           <div className="summary-card balance">
             <div className="card-icon">⚖️</div>
             <div className="card-content">
-              <div className="card-label">Bilans (miesięczny)</div>
+              <div className="card-label">Bilans miesięczny</div>
               <div className={`card-amount ${summary.monthlyBalance >= 0 ? 'positive' : 'negative'}`}>
                 {summary.monthlyBalance.toFixed(2)} zł
               </div>
+            </div>
+          </div>
+          
+          {/* Przychody */}
+          <div className="summary-card income">
+            <div className="card-icon">💰</div>
+            <div className="card-content">
+              <div className="card-label">Przychody</div>
+              <div className="card-amount positive">{summary.monthlyIncome.toFixed(2)} zł</div>
+            </div>
+          </div>
+          
+          {/* Koszty */}
+          <div className="summary-card expenses">
+            <div className="card-icon">📉</div>
+            <div className="card-content">
+              <div className="card-label">Koszty</div>
+              <div className="card-amount negative">{summary.monthlyExpenses.toFixed(2)} zł</div>
             </div>
           </div>
         </div>

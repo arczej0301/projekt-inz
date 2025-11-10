@@ -1,33 +1,75 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import './SecuritySettings.css';
 
 const SecuritySettings = () => {
-  const [securityData, setSecurityData] = useState({
+  const { changePassword } = useAuth();
+  const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
-    twoFactorAuth: false,
   });
+  const [changing, setChanging] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const handleSave = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (securityData.newPassword !== securityData.confirmPassword) {
-      alert('Hasła nie są identyczne!');
+    setChanging(true);
+    setMessage('');
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setMessage('Hasła nie są identyczne!');
+      setChanging(false);
       return;
     }
-    alert('Ustawienia bezpieczeństwa zostały zaktualizowane!');
+
+    if (formData.newPassword.length < 6) {
+      setMessage('Hasło musi mieć co najmniej 6 znaków!');
+      setChanging(false);
+      return;
+    }
+
+    const result = await changePassword(formData.currentPassword, formData.newPassword);
+    
+    if (result.success) {
+      setMessage('Hasło zostało zmienione!');
+      setFormData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } else {
+      setMessage(`Błąd: ${result.error}`);
+    }
+    
+    setChanging(false);
+  };
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
     <div className="security-settings">
       <h2>Bezpieczeństwo</h2>
       
-      <form onSubmit={handleSave} className="security-form">
+      {message && (
+        <div className={`message ${message.includes('Błąd') ? 'error' : 'success'}`}>
+          {message}
+        </div>
+      )}
+      
+      <form onSubmit={handleChangePassword} className="security-form">
         <div className="form-group">
           <label>Aktualne hasło</label>
           <input
             type="password"
-            value={securityData.currentPassword}
-            onChange={(e) => setSecurityData({...securityData, currentPassword: e.target.value})}
+            value={formData.currentPassword}
+            onChange={(e) => handleChange('currentPassword', e.target.value)}
+            required
           />
         </div>
 
@@ -35,8 +77,10 @@ const SecuritySettings = () => {
           <label>Nowe hasło</label>
           <input
             type="password"
-            value={securityData.newPassword}
-            onChange={(e) => setSecurityData({...securityData, newPassword: e.target.value})}
+            value={formData.newPassword}
+            onChange={(e) => handleChange('newPassword', e.target.value)}
+            required
+            minLength="6"
           />
         </div>
 
@@ -44,38 +88,16 @@ const SecuritySettings = () => {
           <label>Potwierdź nowe hasło</label>
           <input
             type="password"
-            value={securityData.confirmPassword}
-            onChange={(e) => setSecurityData({...securityData, confirmPassword: e.target.value})}
+            value={formData.confirmPassword}
+            onChange={(e) => handleChange('confirmPassword', e.target.value)}
+            required
           />
         </div>
 
-        <div className="checkbox-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={securityData.twoFactorAuth}
-              onChange={(e) => setSecurityData({...securityData, twoFactorAuth: e.target.checked})}
-            />
-            Włącz uwierzytelnianie dwuskładnikowe
-          </label>
-        </div>
-
-        <button type="submit" className="save-btn">
-          Zaktualizuj hasło
+        <button type="submit" className="save-btn" disabled={changing}>
+          {changing ? 'Zmienianie hasła...' : 'Zmień hasło'}
         </button>
       </form>
-
-      <div className="security-info">
-        <h3>Ostatnie logowania</h3>
-        <div className="login-session">
-          <span>📱 Chrome, Windows</span>
-          <span>Dzisiaj, 14:30</span>
-        </div>
-        <div className="login-session">
-          <span>📱 Safari, iPhone</span>
-          <span>Wczoraj, 09:15</span>
-        </div>
-      </div>
     </div>
   );
 };
