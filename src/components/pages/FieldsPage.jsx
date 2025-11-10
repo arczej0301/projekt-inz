@@ -5,21 +5,34 @@ import {
   addField, 
   updateField, 
   deleteField,
-  subscribeToFields 
+  subscribeToFields,
+  // DODANE FUNKCJE DLA STATUSÓW
+  getFieldStatus,
+  updateFieldStatus,
+  addFieldStatus
 } from '../../services/fieldsService';
 import './FieldsPage.css';
 
 const FieldsPage = () => { 
   const [fields, setFields] = useState([]);
+  const [fieldStatuses, setFieldStatuses] = useState({}); // { fieldId: statusData }
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false); // NOWY MODAL
   const [currentField, setCurrentField] = useState(null);
+  const [currentStatus, setCurrentStatus] = useState(null); // NOWY STAN
   const [isDrawing, setIsDrawing] = useState(false);
   const [tempPolygon, setTempPolygon] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [hoveredField, setHoveredField] = useState(null);
+
+  // NOWE STANY DLA SORTOWANIA
+  const [sortConfig, setSortConfig] = useState({
+    key: 'name',
+    direction: 'asc'
+  });
 
   // Lokalizacja gospodarstwa: 53°12'46.9"N 22°09'42.6"E
   const [mapCenter] = useState({ lat: 53.29684935063282, lng: 21.431474045415577 });
@@ -91,13 +104,97 @@ const FieldsPage = () => {
     }
   };
 
-  // Pobierz pola z Firebase
+   // Funkcja do sortowania pól
+  const sortFields = (fieldsToSort) => {
+    if (!sortConfig.key) return fieldsToSort;
+
+    return [...fieldsToSort].sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+
+      // Specjalna obsługa dla statusu (pobieramy z fieldStatuses)
+      if (sortConfig.key === 'status') {
+        aValue = getStatusDisplay(a.id);
+        bValue = getStatusDisplay(b.id);
+      }
+
+      // Dla wartości tekstowych
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Dla wartości liczbowych
+      if (sortConfig.key === 'area') {
+        aValue = parseFloat(aValue);
+        bValue = parseFloat(bValue);
+      }
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Funkcja do zmiany sortowania
+  const handleSort = (key) => {
+    let direction = 'asc';
+    
+    // Jeśli klikamy ten sam klucz, zmieniamy kierunek
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    
+    setSortConfig({ key, direction });
+  };
+
+  // POPRAWIONA FUNKCJA: Renderowanie strzałek sortowania
+  const renderSortArrow = (key) => {
+    if (sortConfig.key !== key) {
+      return (
+        <span className="sort-arrows" style={{ marginLeft: '8px', fontSize: '14px' }}>
+          <i className="fas fa-sort" style={{ color: '#95a5a6' }}></i>
+        </span>
+      );
+    }
+
+    return (
+      <span className="sort-arrows" style={{ marginLeft: '8px', fontSize: '16px' }}>
+        {sortConfig.direction === 'asc' ? (
+          <i className="fas fa-sort-up" style={{ color: '#e74c3c', fontWeight: 'bold' }}></i>
+        ) : (
+          <i className="fas fa-sort-down" style={{ color: '#e74c3c', fontWeight: 'bold' }}></i>
+        )}
+      </span>
+    );
+  };
+
+  // Pobierz pola i ich statusy z Firebase - POPRAWIONA WERSJA
   useEffect(() => {
-    const loadFields = async () => {
+    const loadFieldsAndStatuses = async () => {
       try {
         setLoading(true);
         const fieldsData = await getFields();
         setFields(fieldsData);
+
+        // Pobierz statusy dla każdego pola osobno
+        const statuses = {};
+        for (const field of fieldsData) {
+          try {
+            const status = await getFieldStatus(field.id);
+            if (status) {
+              statuses[field.id] = status;
+            }
+          } catch (statusError) {
+            console.error(`Error loading status for field ${field.id}:`, statusError);
+            // Kontynuuj ładowanie innych pól nawet jeśli jeden status się nie udał
+          }
+        }
+        setFieldStatuses(statuses);
       } catch (error) {
         console.error('Error loading fields:', error);
         alert('Błąd podczas ładowania pól: ' + error.message);
@@ -106,10 +203,25 @@ const FieldsPage = () => {
       }
     };
 
-    loadFields();
+    loadFieldsAndStatuses();
 
-    const unsubscribe = subscribeToFields((fieldsData) => {
+    const unsubscribe = subscribeToFields(async (fieldsData) => {
       setFields(fieldsData);
+      
+      // Aktualizuj statusy dla załadowanych pól
+      const statuses = {};
+      for (const field of fieldsData) {
+        try {
+          const status = await getFieldStatus(field.id);
+          if (status) {
+            statuses[field.id] = status;
+          }
+        } catch (statusError) {
+          console.error(`Error loading status for field ${field.id}:`, statusError);
+        }
+      }
+      setFieldStatuses(statuses);
+      
       setLoading(false);
     });
 
@@ -194,27 +306,6 @@ const FieldsPage = () => {
     const areaM2 = total * earthRadius * earthRadius / 2;
     
     return (areaM2 / 10000).toFixed(2); // hektary
-  };
-
-  // Funkcja do obliczania przybliżonej powierzchni
-  const calculateApproximateArea = (coordinates) => {
-    if (coordinates.length < 3) return 0;
-    
-    let area = 0;
-    const n = coordinates.length;
-    
-    for (let i = 0; i < n - 1; i++) {
-      area += coordinates[i].lng * coordinates[i + 1].lat - coordinates[i + 1].lng * coordinates[i].lat;
-    }
-    
-    area = Math.abs(area) / 2;
-    
-    const earthRadius = 6371000;
-    const centerLat = coordinates[0].lat * Math.PI / 180;
-    const latCorrection = Math.cos(centerLat);
-    const areaM2 = area * (Math.PI/180) * earthRadius * (Math.PI/180) * earthRadius * latCorrection;
-    
-    return (areaM2 / 10000).toFixed(2);
   };
 
   // Kliknięcie na mapę podczas rysowania
@@ -319,6 +410,40 @@ const FieldsPage = () => {
     setSaveLoading(false);
   };
 
+  // NOWA FUNKCJA: Otwórz modal statusu
+  const openStatusModal = (field = null) => {
+    if (field) {
+      setCurrentField(field);
+      // Załaduj istniejący status lub utwórz nowy
+      const existingStatus = fieldStatuses[field.id];
+      setCurrentStatus(existingStatus || {
+        field_id: field.id,
+        status: '',
+        crop: field.crop || '',
+        notes: '',
+        date_created: new Date().toISOString()
+      });
+    } else {
+      setCurrentField(null);
+      setCurrentStatus({
+        field_id: '',
+        status: '',
+        crop: '',
+        notes: '',
+        date_created: new Date().toISOString()
+      });
+    }
+    setIsStatusModalOpen(true);
+  };
+
+  // NOWA FUNKCJA: Zamknij modal statusu
+  const closeStatusModal = () => {
+    setIsStatusModalOpen(false);
+    setCurrentField(null);
+    setCurrentStatus(null);
+    setSaveLoading(false);
+  };
+
   // Zapis pola do Firebase
   const saveField = async () => {
     if (!currentField?.name || !currentField?.area || !currentField?.soil) {
@@ -348,6 +473,36 @@ const FieldsPage = () => {
     } catch (error) {
       console.error('Error saving field:', error);
       alert('Błąd podczas zapisywania pola: ' + error.message);
+      setSaveLoading(false);
+    }
+  };
+
+  // NOWA FUNKCJA: Zapisz status pola
+  const saveFieldStatus = async () => {
+    if (!currentStatus?.status) {
+      alert('Proszę wybrać stan pola!');
+      return;
+    }
+
+    try {
+      setSaveLoading(true);
+      
+      if (currentStatus.id) {
+        await updateFieldStatus(currentStatus.id, currentStatus);
+      } else {
+        await addFieldStatus(currentStatus);
+      }
+      
+      // Aktualizuj lokalny stan
+      setFieldStatuses(prev => ({
+        ...prev,
+        [currentStatus.field_id]: currentStatus
+      }));
+      
+      closeStatusModal();
+    } catch (error) {
+      console.error('Error saving field status:', error);
+      alert('Błąd podczas zapisywania stanu pola: ' + error.message);
       setSaveLoading(false);
     }
   };
@@ -412,16 +567,50 @@ const FieldsPage = () => {
     setHoveredField(null);
   };
 
-  // Filtrowanie pól
+   // Funkcja pomocnicza do wyświetlania statusu
+  const getStatusDisplay = (fieldId) => {
+    const status = fieldStatuses[fieldId];
+    if (!status || !status.status) return 'Brak danych';
+    
+    const statusLabels = {
+      'sown': 'Zasiane',
+      'harvested': 'Zebrane',
+      'ready_for_sowing': 'Przygotowane do siewu',
+      'fallow': 'Ugór',
+      'pasture': 'Pastwisko/Łąka'
+    };
+    
+    return statusLabels[status.status] || status.status;
+  };
+
+  // Funkcja pomocnicza do kolorowania statusu
+  const getStatusColor = (fieldId) => {
+    const status = fieldStatuses[fieldId];
+    if (!status || !status.status) return '#95a5a6';
+    
+    const statusColors = {
+      'sown': '#27ae60',
+      'harvested': '#e74c3c',
+      'ready_for_sowing': '#3498db',
+      'fallow': '#f39c12',
+      'pasture': '#2ecc71'
+    };
+    
+    return statusColors[status.status] || '#95a5a6';
+  };
+
+  // Filtrowanie i sortowanie pól
   const filteredFields = fields.filter(field =>
     field.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     field.soil.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (field.crop && field.crop.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const sortedAndFilteredFields = sortFields(filteredFields);
+
+  
   return (
-    <div className="fields-page">
-      
+      <div className="fields-page">
         <div className="header">
           <h2>Zarządzanie polami</h2>
         </div>
@@ -431,6 +620,12 @@ const FieldsPage = () => {
             <div className="action-buttons">
               <button className="btn btn-primary" onClick={() => openFieldModal()}>
                 <i className="fas fa-plus"></i> Dodaj pole
+              </button>
+              <button 
+                className="btn btn-info"
+                onClick={() => openStatusModal()}
+              >
+                <i className="fas fa-seedling"></i> Zarządzaj stanem pól
               </button>
               <button 
                 className={`btn ${isDrawing ? 'btn-danger' : 'btn-secondary'}`}
@@ -549,6 +744,10 @@ const FieldsPage = () => {
                           <i className="fas fa-seedling"></i> 
                           <strong>Uprawa:</strong> {selectedField.crop || 'Brak'}
                         </p>
+                        <p>
+                          <i className="fas fa-chart-line"></i> 
+                          <strong>Stan:</strong> {getStatusDisplay(selectedField.id)}
+                        </p>
                         {selectedField.notes && (
                           <p>
                             <i className="fas fa-sticky-note"></i> 
@@ -564,6 +763,12 @@ const FieldsPage = () => {
                           <i className="fas fa-edit"></i> Edytuj
                         </button>
                         <button 
+                          className="action-btn btn-info"
+                          onClick={() => openStatusModal(selectedField)}
+                        >
+                          <i className="fas fa-seedling"></i> Stan
+                        </button>
+                        <button 
                           className="action-btn btn-danger"
                           onClick={() => handleDeleteField(selectedField.id)}
                         >
@@ -574,7 +779,6 @@ const FieldsPage = () => {
                   </InfoWindow>
                 )}
               </GoogleMap>
-           
             
             {/* Instrukcja rysowania */}
             {isDrawing && (
@@ -596,10 +800,10 @@ const FieldsPage = () => {
             )}
           </div>
           
-          {/* Lista pól */}
+           {/* Lista pól - ZAKTUALIZOWANA Z SORTOWANIEM */}
           <div className="fields-list">
-            <h3>Lista pól ({filteredFields.length})</h3>
-            {filteredFields.length === 0 ? (
+            <h3>Lista pól ({sortedAndFilteredFields.length})</h3>
+            {sortedAndFilteredFields.length === 0 ? (
               <div className="no-fields">
                 <p>Brak pól do wyświetlenia</p>
               </div>
@@ -607,15 +811,56 @@ const FieldsPage = () => {
               <table className="fields-table">
                 <thead>
                   <tr>
-                    <th>Nazwa</th>
-                    <th>Powierzchnia (ha)</th>
-                    <th>Typ gleby</th>
-                    <th>Uprawa</th>
+                    <th 
+                      className="sortable" 
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="th-content">
+                        Nazwa
+                        {renderSortArrow('name')}
+                      </div>
+                    </th>
+                    <th 
+                      className="sortable" 
+                      onClick={() => handleSort('area')}
+                    >
+                      <div className="th-content">
+                        Powierzchnia (ha)
+                        {renderSortArrow('area')}
+                      </div>
+                    </th>
+                    <th 
+                      className="sortable" 
+                      onClick={() => handleSort('soil')}
+                    >
+                      <div className="th-content">
+                        Typ gleby
+                        {renderSortArrow('soil')}
+                      </div>
+                    </th>
+                    <th 
+                      className="sortable" 
+                      onClick={() => handleSort('crop')}
+                    >
+                      <div className="th-content">
+                        Uprawa
+                        {renderSortArrow('crop')}
+                      </div>
+                    </th>
+                    <th 
+                      className="sortable" 
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="th-content">
+                        Stan
+                        {renderSortArrow('status')}
+                      </div>
+                    </th>
                     <th>Akcje</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredFields.map(field => (
+                  {sortedAndFilteredFields.map(field => (
                     <tr 
                       key={field.id}
                       className={`field-row ${
@@ -639,6 +884,25 @@ const FieldsPage = () => {
                       <td>{field.area}</td>
                       <td>{field.soil}</td>
                       <td>{field.crop || 'Brak'}</td>
+                      <td>
+                        <span 
+                          className="status-badge"
+                          style={{
+                            backgroundColor: getStatusColor(field.id),
+                            color: 'white',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openStatusModal(field);
+                          }}
+                        >
+                          {getStatusDisplay(field.id)}
+                        </span>
+                      </td>
                       <td className="action-buttons">
                         <button 
                           className="action-btn btn-primary" 
@@ -648,6 +912,15 @@ const FieldsPage = () => {
                           }}
                         >
                           <i className="fas fa-edit"></i> Edytuj
+                        </button>
+                        <button 
+                          className="action-btn btn-info" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openStatusModal(field);
+                          }}
+                        >
+                          <i className="fas fa-seedling"></i> Stan
                         </button>
                         <button 
                           className="action-btn btn-danger" 
@@ -666,9 +939,8 @@ const FieldsPage = () => {
             )}
           </div>
         </div>
-     
       
-      {/* Modal */}
+      {/* Modal dodawania/edycji pola */}
       {isModalOpen && currentField && (
         <FieldModal
           field={currentField}
@@ -678,9 +950,22 @@ const FieldsPage = () => {
           saveLoading={saveLoading}
         />
       )}
+
+      {/* Modal statusu pola */}
+      {isStatusModalOpen && currentStatus && (
+        <FieldStatusModal
+          field={currentField}
+          status={currentStatus}
+          onStatusChange={setCurrentStatus}
+          onSave={saveFieldStatus}
+          onClose={closeStatusModal}
+          saveLoading={saveLoading}
+        />
+      )}
     </div>
   );
 };
+
 
 // Komponent modala (POPRAWIONA WERSJA)
 const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
@@ -860,6 +1145,169 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
             disabled={saveLoading}
           >
             {saveLoading ? 'Zapisywanie...' : 'Zapisz pole'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// NOWY KOMPONENT: Modal statusu pola
+const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, saveLoading }) => {
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    if (typeof onStatusChange === 'function') {
+      onStatusChange(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleCustomSelect = (name, value) => {
+    if (typeof onStatusChange === 'function') {
+      onStatusChange(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    if (name === 'status') setIsStatusOpen(false);
+    if (name === 'crop') setIsCropOpen(false);
+  };
+
+  const statusOptions = [
+    { value: 'sown', label: 'Zasiane' },
+    { value: 'harvested', label: 'Zebrane' },
+    { value: 'ready_for_sowing', label: 'Przygotowane do siewu' },
+    { value: 'fallow', label: 'Ugór' },
+    { value: 'pasture', label: 'Pastwisko/Łąka' }
+  ];
+
+  const cropOptions = [
+    { value: '', label: 'Brak uprawy' },
+    { value: 'pszenica', label: 'Pszenica' },
+    { value: 'kukurydza', label: 'Kukurydza' },
+    { value: 'rzepak', label: 'Rzepak' },
+    { value: 'ziemniaki', label: 'Ziemniaki' },
+    { value: 'buraki', label: 'Buraki cukrowe' },
+    { value: 'owies', label: 'Owies' },
+    { value: 'jęczmień', label: 'Jęczmień' },
+    { value: 'żyto', label: 'Żyto' }
+  ];
+
+  const getCurrentStatusLabel = () => {
+    const option = statusOptions.find(opt => opt.value === (status?.status || ''));
+    return option ? option.label : 'Wybierz stan pola';
+  };
+
+  const getCurrentCropLabel = () => {
+    const option = cropOptions.find(opt => opt.value === (status?.crop || ''));
+    return option ? option.label : 'Brak uprawy';
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>
+            {field ? `Stan pola: ${field.name}` : 'Zarządzaj stanem pola'}
+          </h3>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
+            {field && (
+              <div className="form-group">
+                <label>Pole</label>
+                <input
+                  type="text"
+                  value={field.name}
+                  disabled
+                  style={{ backgroundColor: '#f8f9fa', color: '#495057' }}
+                />
+              </div>
+            )}
+            
+            {/* SELECT dla stanu pola */}
+            <div className="form-group">
+              <label>Stan pola *</label>
+              <div className="custom-select">
+                <div 
+                  className={`select-header ${isStatusOpen ? 'open' : ''}`}
+                  onClick={() => setIsStatusOpen(!isStatusOpen)}
+                >
+                  {getCurrentStatusLabel()}
+                  <span className="arrow">▼</span>
+                </div>
+                {isStatusOpen && (
+                  <div className="select-options">
+                    {statusOptions.map(option => (
+                      <div
+                        key={option.value}
+                        className={`select-option ${status?.status === option.value ? 'selected' : ''}`}
+                        onClick={() => handleCustomSelect('status', option.value)}
+                      >
+                        {option.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* SELECT dla uprawy */}
+            <div className="form-group">
+              <label>Aktualna uprawa</label>
+              <div className="custom-select">
+                <div 
+                  className={`select-header ${isCropOpen ? 'open' : ''}`}
+                  onClick={() => setIsCropOpen(!isCropOpen)}
+                >
+                  {getCurrentCropLabel()}
+                  <span className="arrow">▼</span>
+                </div>
+                {isCropOpen && (
+                  <div className="select-options">
+                    {cropOptions.map(option => (
+                      <div
+                        key={option.value}
+                        className={`select-option ${status?.crop === option.value ? 'selected' : ''}`}
+                        onClick={() => handleCustomSelect('crop', option.value)}
+                      >
+                        {option.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="statusNotes">Notatki</label>
+              <textarea
+                id="statusNotes"
+                name="notes"
+                value={status?.notes || ''}
+                onChange={handleInputChange}
+                rows="3"
+                placeholder="Dodatkowe informacje o stanie pola..."
+              />
+            </div>
+          </form>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>
+            Anuluj
+          </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={onSave}
+            disabled={saveLoading}
+          >
+            {saveLoading ? 'Zapisywanie...' : 'Zapisz stan'}
           </button>
         </div>
       </div>

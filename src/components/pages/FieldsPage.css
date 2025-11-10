@@ -1,4 +1,4 @@
-/* FieldsPage.css - POPRAWIONA WERSJA */
+/* FieldsPage.css - ZAKTUALIZOWANA WERSJA */
 * {
   margin: 0;
   padding: 0;
@@ -195,6 +195,15 @@ body {
   background-color: #2980b9;
 }
 
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #138496;
+}
+
 .btn-danger {
   background-color: #e74c3c;
   color: white;
@@ -202,6 +211,15 @@ body {
 
 .btn-danger:hover {
   background-color: #c0392b;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #218838;
 }
 
 .search-box {
@@ -233,6 +251,7 @@ body {
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   min-height: 400px;
   width: 100%;
+  position: relative;
 }
 
 /* Lista pól */
@@ -289,6 +308,21 @@ body {
 
 .action-btn i {
   margin-right: 4px;
+}
+
+.action-btn.btn-primary {
+  background-color: #27ae60;
+  color: white;
+}
+
+.action-btn.btn-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.action-btn.btn-danger {
+  background-color: #e74c3c;
+  color: white;
 }
 
 /* Modal */
@@ -471,6 +505,67 @@ body {
   box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
+/* NOWE STYLE DLA STATUSÓW */
+.status-badge {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.status-badge:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
+/* InfoWindow styles */
+.field-info-window {
+  min-width: 250px;
+}
+
+.field-info-details p {
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+}
+
+.field-info-details i {
+  margin-right: 8px;
+  width: 16px;
+  text-align: center;
+}
+
+.field-info-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* Drawing instruction */
+.drawing-instruction {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  max-width: 300px;
+}
+
+.instruction-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.instruction-content i {
+  color: #3498db;
+  font-size: 18px;
+  margin-top: 2px;
+}
+
 /* Responsywność */
 @media (max-width: 992px) {
   .container {
@@ -506,4 +601,79 @@ body {
   .fields-content {
     padding: 15px;
   }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    margin-bottom: 5px;
+  }
 }
+
+/* Style dla sortowania - ZAKTUALIZOWANE WIĘKSZE STRZAŁKI */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sort-arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #6c757d;
+  font-size: 16px; /* ZWIĘKSZONO ROZMIAR */
+  font-weight: bold;
+  min-width: 20px;
+  height: 24px;
+  transition: all 0.3s ease;
+}
+
+/* Aktywne strzałki - WIĘKSZE I BARDZIEJ WIDOCZNE */
+.sort-arrows .active {
+  color: #e74c3c; /* CZERWONY KOLOR DLA AKTYWNYCH */
+  font-size: 18px; /* WIĘKSZE STRZAŁKI */
+}
+
+/* Hover efekt tylko dla strzałek */
+.th-content:hover .sort-arrows {
+  color: #495057;
+  transform: scale(1.1);
+}
+
+/* Style dla Unicode strzałek */
+.sort-arrows span {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.th-content:hover .sort-arrows span {
+  transform: scale(1.2);
+}
+
+/* Responsywność dla sortowania */
+@media (max-width: 768px) {
+  .th-content {
+    flex-direction: row;
+    gap: 6px;
+  }
+  
+  .sort-arrows {
+    font-size: 14px;
+    min-width: 18px;
+  }
+  
+  .sort-arrows .active {
+    font-size: 16px;
+  }
+}
+
