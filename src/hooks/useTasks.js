@@ -1,4 +1,4 @@
-// src/hooks/useTasks.js
+// src/hooks/useTasks.js - ZASTĄP CAŁY PLIK TYM KODEM
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -8,7 +8,6 @@ import {
   doc, 
   getDocs, 
   query, 
-  where, 
   orderBy,
   Timestamp 
 } from 'firebase/firestore';
@@ -49,7 +48,7 @@ export const useTasks = () => {
     { value: 'critical', label: 'Krytyczny' }
   ];
 
-  // Pobierz wszystkie zadania
+  // Pobierz wszystkie zadania i filtruj po stronie klienta
   const fetchTasks = async (filters = {}) => {
     if (!user) return;
     
@@ -57,35 +56,111 @@ export const useTasks = () => {
     setError(null);
     
     try {
-      let q = query(collection(db, 'tasks'), orderBy('dueDate', 'asc'));
-      
-      // Filtrowanie
-      if (filters.status) {
-        q = query(q, where('status', '==', filters.status));
-      }
-      if (filters.type) {
-        q = query(q, where('type', '==', filters.type));
-      }
-      if (filters.priority) {
-        q = query(q, where('priority', '==', filters.priority));
-      }
-      if (filters.assignedTo) {
-        q = query(q, where('assignedTo', '==', filters.assignedTo));
-      }
-
+      // Pobierz WSZYSTKIE zadania (bez filtrów Firestore)
+      const q = query(collection(db, 'tasks'), orderBy('dueDate', 'asc'));
       const querySnapshot = await getDocs(q);
-      const tasksData = querySnapshot.docs.map(doc => ({
+      let tasksData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       
+      console.log('All tasks loaded from Firestore:', tasksData.length);
+
+      // FILTROWANIE PO STRONIE KLIENTA
+      if (filters.status && filters.status !== '') {
+        tasksData = tasksData.filter(task => task.status === filters.status);
+        console.log(`Filtered by status "${filters.status}": ${tasksData.length} tasks`);
+      }
+      
+      if (filters.type && filters.type !== '') {
+        tasksData = tasksData.filter(task => task.type === filters.type);
+        console.log(`Filtered by type "${filters.type}": ${tasksData.length} tasks`);
+      }
+      
+      if (filters.priority && filters.priority !== '') {
+        tasksData = tasksData.filter(task => task.priority === filters.priority);
+        console.log(`Filtered by priority "${filters.priority}": ${tasksData.length} tasks`);
+      }
+      
+      if (filters.assignedTo && filters.assignedTo !== '') {
+        tasksData = tasksData.filter(task => 
+          task.assignedTo && task.assignedTo.toLowerCase().includes(filters.assignedTo.toLowerCase())
+        );
+        console.log(`Filtered by assignedTo "${filters.assignedTo}": ${tasksData.length} tasks`);
+      }
+
+      // Filtrowanie zakresów dat
+      if (filters.dateRange && filters.dateRange !== '') {
+        tasksData = filterTasksByDateRange(tasksData, filters.dateRange);
+        console.log(`Filtered by dateRange "${filters.dateRange}": ${tasksData.length} tasks`);
+      }
+
       setTasks(tasksData);
+      
     } catch (err) {
-      setError('Błąd podczas pobierania zadań: ' + err.message);
       console.error('Error fetching tasks:', err);
+      setError('Błąd podczas pobierania zadań: ' + err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Funkcja pomocnicza do filtrowania po zakresach dat
+  const filterTasksByDateRange = (tasks, dateRange) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    return tasks.filter(task => {
+      if (!task.dueDate) return false;
+      
+      try {
+        // Konwersja Firestore Timestamp na Date
+        let taskDate;
+        if (task.dueDate && task.dueDate.toDate) {
+          taskDate = task.dueDate.toDate();
+        } else if (task.dueDate && task.dueDate.seconds) {
+          taskDate = new Date(task.dueDate.seconds * 1000);
+        } else {
+          taskDate = new Date(task.dueDate);
+        }
+
+        // Normalizuj czas - ustaw na początek dnia
+        taskDate = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
+
+        switch (dateRange) {
+          case 'today':
+            return taskDate.getTime() === today.getTime();
+            
+          case 'tomorrow':
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            return taskDate.getTime() === tomorrow.getTime();
+            
+          case 'this_week':
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 7);
+            return taskDate >= startOfWeek && taskDate < endOfWeek;
+            
+          case 'next_week':
+            const startOfNextWeek = new Date(today);
+            startOfNextWeek.setDate(today.getDate() + (7 - today.getDay()));
+            const endOfNextWeek = new Date(startOfNextWeek);
+            endOfNextWeek.setDate(startOfNextWeek.getDate() + 7);
+            return taskDate >= startOfNextWeek && taskDate < endOfNextWeek;
+            
+          case 'overdue':
+            return taskDate < today && task.status !== 'completed';
+            
+          default:
+            return true;
+        }
+      } catch (error) {
+        console.error('Error processing task date:', error, task);
+        return false;
+      }
+    });
   };
 
   // Dodaj nowe zadanie
@@ -97,10 +172,10 @@ export const useTasks = () => {
         ...taskData,
         createdBy: user.uid,
         createdAt: Timestamp.now(),
-        status: 'pending'
+        status: taskData.status || 'pending'
       };
 
-      // Konwersja dat na Timestamp
+      // Konwersja daty na Timestamp
       if (taskWithMetadata.dueDate) {
         taskWithMetadata.dueDate = Timestamp.fromDate(new Date(taskWithMetadata.dueDate));
       }

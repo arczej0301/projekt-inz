@@ -1,5 +1,5 @@
 // src/pages/TasksPage.jsx - dodaj obsługę czyszczenia błędów
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; 
 import { useTasks } from '../../hooks/useTasks';
 import TaskList from '../../components/TaskList';
 import TaskModal from '../../components/TaskModal';
@@ -12,6 +12,7 @@ const TasksPage = () => {
   const [editingTask, setEditingTask] = useState(null);
   const [activeView, setActiveView] = useState('list');
   const [filters, setFilters] = useState({});
+  const filterTimeoutRef = useRef(null);
   
   const { 
     tasks, 
@@ -52,9 +53,17 @@ const TasksPage = () => {
     fetchTasks(filters);
   };
 
-  const handleFilterChange = (newFilters) => {
+const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
-    fetchTasks(newFilters);
+    
+    // Debouncing - unikaj zbyt wielu zapytań
+    if (filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current);
+    }
+    
+    filterTimeoutRef.current = setTimeout(() => {
+      fetchTasks(newFilters);
+    }, 500);
   };
 
   const handleClearError = () => {
