@@ -1,4 +1,3 @@
-// src/services/magazineService.js
 import { 
   collection, 
   addDoc, 

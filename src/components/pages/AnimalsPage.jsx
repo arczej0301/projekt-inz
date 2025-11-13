@@ -15,6 +15,7 @@ function AnimalsPage() {
   const [currentAnimal, setCurrentAnimal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('wszystkie');
+  const [sortOrder, setSortOrder] = useState('name-asc'); // name-asc lub name-desc
   const [saveLoading, setSaveLoading] = useState(false);
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -180,13 +181,28 @@ function AnimalsPage() {
     }
   };
 
-  // Filtrowanie zwierząt
-  const filteredAnimals = animals.filter(animal => {
+  // Filtrowanie i sortowanie zwierząt
+const filteredAndSortedAnimals = animals
+  .filter(animal => {
     const matchesSearch = animal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          animal.earTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (animal.breed && animal.breed.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = filterType === 'wszystkie' || animal.type === filterType;
     return matchesSearch && matchesType;
+  })
+  .sort((a, b) => {
+    switch(sortOrder) {
+      case 'name-asc':
+        return a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' });
+      case 'name-desc':
+        return b.name.localeCompare(a.name, 'pl', { sensitivity: 'base' });
+      case 'date-desc':
+        return b.id.localeCompare(a.id);
+      case 'date-asc':
+        return a.id.localeCompare(b.id);
+      default:
+        return 0;
+    }
   });
 
   const getHealthColor = (health) => {
@@ -243,15 +259,21 @@ function AnimalsPage() {
 
       <div className="animals-content">
         <div className="filters-bar">
-          <div className="search-box">
-            <i className="fas fa-search"></i>
-            <input
-              type="text"
-              placeholder="Szukaj zwierząt..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          {/* NOWE: Label dla wyszukiwarki */}
+          <div className="search-group">
+            <label>Wyszukiwarka</label>
+            <div className="search-box">
+              <i className="fas fa-search"></i>
+              <input
+                type="text"
+                placeholder="Szukaj zwierząt..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
+          
+          {/* Filtrowanie według typu */}
           <div className="filter-group">
             <label>Filtruj według typu:</label>
             <select
@@ -266,6 +288,20 @@ function AnimalsPage() {
               ))}
             </select>
           </div>
+          
+          {/* NOWE: Sortowanie po nazwie i dacie */}
+<div className="filter-group">
+  <label>Sortuj:</label>
+  <select
+    value={sortOrder}
+    onChange={(e) => setSortOrder(e.target.value)}
+  >
+    <option value="name-asc">Nazwa A-Z</option>
+    <option value="name-desc">Nazwa Z-A</option>
+    <option value="date-desc">Ostatnio dodane (najnowsze)</option>
+    <option value="date-asc">Najstarsze</option>
+  </select>
+</div>
         </div>
 
         <div className="animals-stats">
@@ -288,34 +324,44 @@ function AnimalsPage() {
         </div>
 
         <div className="animals-list">
-          <h3>Lista zwierząt ({filteredAnimals.length})</h3>
-          {filteredAnimals.length === 0 ? (
+          <h3>Lista zwierząt ({filteredAndSortedAnimals.length})</h3>
+          {filteredAndSortedAnimals.length === 0 ? (
             <div className="no-animals">
               <p>Brak zwierząt do wyświetlenia</p>
             </div>
           ) : (
-            <div className="animals-grid">
-              {filteredAnimals.map(animal => (
-                <div key={animal.id} className="animal-card">
-                  <div className="animal-header">
-                    <h4>{animal.name}</h4>
-                    <span 
-                      className="health-badge"
-                      style={{ backgroundColor: getHealthColor(animal.health) }}
-                    >
-                      {animal.health}
-                    </span>
+            <div className="animals-list-view">
+              {filteredAndSortedAnimals.map(animal => (
+                <div key={animal.id} className="animal-list-item">
+                  <div className="animal-list-info">
+                    <div className="animal-list-main">
+                      <h4 className="animal-list-name">{animal.name}</h4>
+                      <span 
+                        className="health-badge"
+                        style={{ backgroundColor: getHealthColor(animal.health) }}
+                      >
+                        {animal.health}
+                      </span>
+                    </div>
+                    <div className="animal-list-details">
+  <div className="detail-row">
+    <span className="animal-list-detail"><strong>Typ:</strong> {animal.type}</span>
+    <span className="animal-list-detail"><strong>Rasa:</strong> {animal.breed || 'Brak'}</span>
+    <span className="animal-list-detail"><strong>Kolczyk:</strong> {animal.earTag}</span>
+  </div>
+  <div className="detail-row">
+    <span className="animal-list-detail"><strong>Waga:</strong> {animal.weight ? `${animal.weight} kg` : 'Brak'}</span>
+    <span className="animal-list-detail"><strong>Status:</strong> {animal.status}</span>
+    <span className="animal-list-detail"><strong>Data urodzenia:</strong> {animal.birthDate ? new Date(animal.birthDate).toLocaleDateString('pl-PL') : 'Nieznana'}</span>
+  </div>
+</div>
+                    {animal.notes && (
+                      <div className="animal-list-notes">
+                        <strong>Notatki:</strong> {animal.notes}
+                      </div>
+                    )}
                   </div>
-                  <div className="animal-details">
-                    <p><strong>Typ:</strong> {animal.type}</p>
-                    <p><strong>Rasa:</strong> {animal.breed}</p>
-                    <p><strong>Kolczyk:</strong> {animal.earTag}</p>
-                    <p><strong>Waga:</strong> {animal.weight} kg</p>
-                    <p><strong>Status:</strong> {animal.status}</p>
-                    <p><strong>Data urodzenia:</strong> {animal.birthDate ? new Date(animal.birthDate).toLocaleDateString('pl-PL') : 'Nieznana'}</p>
-                    {animal.notes && <p><strong>Notatki:</strong> {animal.notes}</p>}
-                  </div>
-                  <div className="animal-actions">
+                  <div className="animal-list-actions">
                     <button 
                       className="btn btn-primary btn-sm"
                       onClick={() => openAnimalModal(animal)}

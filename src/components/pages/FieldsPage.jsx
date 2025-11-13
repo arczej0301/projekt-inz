@@ -153,25 +153,16 @@ const FieldsPage = () => {
   };
 
   // POPRAWIONA FUNKCJA: Renderowanie strzałek sortowania
-  const renderSortArrow = (key) => {
-    if (sortConfig.key !== key) {
-      return (
-        <span className="sort-arrows" style={{ marginLeft: '8px', fontSize: '14px' }}>
-          <i className="fas fa-sort" style={{ color: '#95a5a6' }}></i>
-        </span>
-      );
-    }
-
-    return (
-      <span className="sort-arrows" style={{ marginLeft: '8px', fontSize: '16px' }}>
-        {sortConfig.direction === 'asc' ? (
-          <i className="fas fa-sort-up" style={{ color: '#e74c3c', fontWeight: 'bold' }}></i>
-        ) : (
-          <i className="fas fa-sort-down" style={{ color: '#e74c3c', fontWeight: 'bold' }}></i>
-        )}
-      </span>
-    );
-  };
+const renderSortArrow = (key) => {
+  if (sortConfig.key !== key) {
+    return <span style={{ marginLeft: '8px', color: '#95a5a6', fontSize: '12px' }}>▲▼</span>;
+  }
+  return (
+    <span style={{ marginLeft: '8px', color: '#e74c3c', fontWeight: 'bold' }}>
+      {sortConfig.direction === 'asc' ? '▲' : '▼'}
+    </span>
+  );
+};
 
   // Pobierz pola i ich statusy z Firebase - POPRAWIONA WERSJA
   useEffect(() => {
