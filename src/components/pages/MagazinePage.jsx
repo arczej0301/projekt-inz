@@ -9,6 +9,7 @@ function MagazinePage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [sortOrder, setSortOrder] = useState('name-asc')
 
   const { 
     warehouseData, 
@@ -20,9 +21,34 @@ function MagazinePage() {
     deleteProduct
   } = useWarehouse()
 
-  const filteredItems = warehouseData[activeCategory]?.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || []
+  // Filtrowanie i sortowanie produktów
+  const filteredItems = (warehouseData[activeCategory] || [])
+    .filter(item =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortOrder) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name)
+        case 'name-desc':
+          return b.name.localeCompare(a.name)
+        case 'date-desc':
+          // Zakładając, że masz pole createdAt lub lastUpdate
+          const dateA = a.createdAt || a.lastUpdate || new Date(0)
+          const dateB = b.createdAt || b.lastUpdate || new Date(0)
+          return new Date(dateB) - new Date(dateA)
+        case 'date-asc':
+          const dateA2 = a.createdAt || a.lastUpdate || new Date(0)
+          const dateB2 = b.createdAt || b.lastUpdate || new Date(0)
+          return new Date(dateA2) - new Date(dateB2)
+        case 'quantity-asc':
+          return a.quantity - b.quantity
+        case 'quantity-desc':
+          return b.quantity - a.quantity
+        default:
+          return 0
+      }
+    })
 
   const getStockStatus = (quantity, minStock) => {
     if (quantity === 0) return 'brak'
@@ -63,15 +89,12 @@ function MagazinePage() {
     setIsModalOpen(true)
   }
 
-  // W MagazinePage.jsx - sprawdź czy masz:
   const handleSaveProduct = async (productData) => {
     if (editingProduct) {
       const result = await updateProduct(editingProduct.id, productData)
       if (result.success) {
         setIsModalOpen(false)
         setEditingProduct(null)
-        // Możesz dodać odświeżenie danych:
-        // loadData(); // jeśli masz taką funkcję
       } else {
         alert(`Błąd: ${result.error}`)
       }
@@ -181,22 +204,41 @@ function MagazinePage() {
               {categories.find(cat => cat.id === activeCategory)?.name}
             </h3>
             <div className="products-controls">
-              <div className="search-box">
-                <input
-                  type="text"
-                  placeholder="Szukaj produktu..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <span className="search-icon">🔍</span>
-              </div>
-              <button 
-                className="btn-primary"
-                onClick={handleAddProduct}
-              >
-                + Dodaj produkt
-              </button>
-            </div>
+  {/* Najpierw sortowanie */}
+  <div className="filter-group">
+    <label>Sortuj:</label>
+    <select
+      value={sortOrder}
+      onChange={(e) => setSortOrder(e.target.value)}
+    >
+      <option value="name-asc">Nazwa A-Z</option>
+      <option value="name-desc">Nazwa Z-A</option>
+      <option value="quantity-asc">Ilość (najniższe)</option>
+      <option value="quantity-desc">Ilość (najwyższe)</option>
+      <option value="date-desc">Ostatnio dodane (najnowsze)</option>
+      <option value="date-asc">Najstarsze</option>
+    </select>
+  </div>
+  
+  {/* Potem wyszukiwanie */}
+  <div className="search-box">
+    <input
+      type="text"
+      placeholder="Szukaj produktu..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+    />
+    <span className="search-icon">🔍</span>
+  </div>
+  
+  {/* Na końcu przycisk dodaj produkt */}
+  <button 
+    className="btn-primary"
+    onClick={handleAddProduct}
+  >
+    + Dodaj produkt
+  </button>
+</div>
           </div>
 
           <div className="products-grid">
