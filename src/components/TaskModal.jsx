@@ -1,4 +1,4 @@
-// src/components/TaskModal.jsx
+// src/components/TaskModal.jsx - ZASTĄP CAŁY PLIK
 import React, { useState, useEffect } from 'react';
 import { useTasks } from '../hooks/useTasks';
 import { useAuth } from '../hooks/useAuth';
@@ -6,7 +6,7 @@ import CustomSelect from './CustomSelect';
 import './TaskModal.css';
 
 const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
-  const { addTask, updateTask } = useTasks();
+  const { addTask, updateTask, fields, machines, materials } = useTasks();
   const { user } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -18,7 +18,6 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     assignedTo: '',
     dueDate: '',
     fieldId: '',
-    animalId: '',
     machineId: '',
     materialId: '',
     materials: []
@@ -27,55 +26,69 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Custom lists dla powiązań (tutaj będą dynamiczne dane z innych modułów)
+  // Przygotuj opcje z rzeczywistych danych - DOSTOSOWANE DO STRUKTURY GARAGE
   const FIELD_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
-    { value: 'field1', label: 'Pole A - Kukurydza' },
-    { value: 'field2', label: 'Pole B - Pszenica' },
-    { value: 'field3', label: 'Pole C - Rzepak' }
+    ...fields.map(field => ({
+      value: field.id,
+      label: `${field.name || 'Pole'} ${field.area ? `(${field.area} ha)` : ''}`
+    }))
   ];
 
-  const ANIMAL_OPTIONS = [
-    { value: '', label: 'Brak powiązania' },
-    { value: 'cattle', label: 'Bydło' },
-    { value: 'pigs', label: 'Świnie' },
-    { value: 'poultry', label: 'Drób' }
-  ];
-
+  // DOSTOSOWANE DO STRUKTURY GARAGE
   const MACHINE_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
-    { value: 'tractor1', label: 'Ciągnik URSUS 1234' },
-    { value: 'tractor2', label: 'Ciągnik JOHN DEERE' },
-    { value: 'combine', label: 'Kombajn zbożowy' }
+    ...machines.map(machine => ({
+      value: machine.id,
+      label: `${machine.brand || ''} ${machine.model || ''} ${machine.name ? `- ${machine.name}` : ''}`.trim() || `Maszyna ${machine.id}`
+    }))
   ];
 
   const MATERIAL_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
-    { value: 'seed1', label: 'Nasiona kukurydzy' },
-    { value: 'seed2', label: 'Nasiona pszenicy' },
-    { value: 'fertilizer1', label: 'Nawóz NPK' },
-    { value: 'fertilizer2', label: 'Nawóz azotowy' }
+    ...materials.map(material => ({
+      value: material.id,
+      label: `${material.name || 'Material'} ${material.quantity ? `(${material.quantity} ${material.unit || 'szt'})` : ''}`
+    }))
   ];
 
   const PRODUCT_OPTIONS = [
     { value: '', label: 'Wybierz produkt' },
-    { value: 'product1', label: 'Nasiona kukurydzy' },
-    { value: 'product2', label: 'Nawóz azotowy' },
-    { value: 'product3', label: 'Środek ochrony roślin' },
-    { value: 'product4', label: 'Paszka dla bydła' }
+    ...materials.map(material => ({
+      value: material.id,
+      label: `${material.name || 'Material'} - ${material.quantity || 0} ${material.unit || 'szt'}`
+    }))
   ];
 
   const UNIT_OPTIONS = [
     { value: 'kg', label: 'kg' },
     { value: 'l', label: 'l' },
     { value: 'szt', label: 'szt' },
-    { value: 'opak', label: 'opak' }
+    { value: 'opak', label: 'opak' },
+    { value: 'ha', label: 'ha' }
   ];
+
+  // Debug: sprawdź czy dane są ładowane
+  useEffect(() => {
+    console.log('Fields loaded:', fields);
+    console.log('Machines loaded:', machines);
+    console.log('Materials loaded:', materials);
+    console.log('Machine options:', MACHINE_OPTIONS);
+  }, [fields, machines, materials]);
 
   // Inicjalizacja formularza danymi zadania (tryb edycji)
   useEffect(() => {
     if (task) {
-      const dueDate = task.dueDate ? new Date(task.dueDate.seconds * 1000).toISOString().split('T')[0] : '';
+      let dueDate = '';
+      if (task.dueDate) {
+        if (task.dueDate.toDate) {
+          dueDate = task.dueDate.toDate().toISOString().split('T')[0];
+        } else if (task.dueDate.seconds) {
+          dueDate = new Date(task.dueDate.seconds * 1000).toISOString().split('T')[0];
+        } else {
+          dueDate = task.dueDate;
+        }
+      }
       
       setFormData({
         title: task.title || '',
@@ -86,7 +99,6 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
         assignedTo: task.assignedTo || '',
         dueDate: dueDate,
         fieldId: task.fieldId || '',
-        animalId: task.animalId || '',
         machineId: task.machineId || '',
         materialId: task.materialId || '',
         materials: task.materials || []
@@ -135,32 +147,38 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     }));
   };
 
-  // W funkcji handleSubmit w TaskModal.jsx zaktualizuj końcówkę:
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  try {
-    if (!formData.title.trim()) {
-      throw new Error('Tytuł jest wymagany');
-    }
+    try {
+      if (!formData.title.trim()) {
+        throw new Error('Tytuł jest wymagany');
+      }
 
-    if (task) {
-      await updateTask(task.id, formData);
-    } else {
-      await addTask(formData);
+      // Przygotuj dane do zapisu
+      const taskData = {
+        ...formData,
+        // Upewnij się, że puste wartości są null
+        fieldId: formData.fieldId || null,
+        machineId: formData.machineId || null,
+        materialId: formData.materialId || null,
+      };
+
+      if (task) {
+        await updateTask(task.id, taskData);
+      } else {
+        await addTask(taskData);
+      }
+      
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    
-    // Modal zamknie się automatycznie po udanej operacji
-    // a lista zadań odświeży się przez aktualizację stanu w hooku
-    onClose();
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="modal-overlay">
@@ -251,6 +269,7 @@ const handleSubmit = async (e) => {
 
           <div className="form-section">
             <h3>Powiązania</h3>
+            
             <div className="form-row">
               <div className="form-group">
                 <label>Pole</label>
@@ -259,19 +278,11 @@ const handleSubmit = async (e) => {
                   onChange={(value) => handleSelectChange('fieldId', value)}
                   options={FIELD_OPTIONS}
                 />
+                <div className="select-info">
+                  {fields.length === 0 && 'Brak pól w bazie danych'}
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Zwierze/Grupa</label>
-                <CustomSelect
-                  value={formData.animalId}
-                  onChange={(value) => handleSelectChange('animalId', value)}
-                  options={ANIMAL_OPTIONS}
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
               <div className="form-group">
                 <label>Maszyna</label>
                 <CustomSelect
@@ -279,15 +290,21 @@ const handleSubmit = async (e) => {
                   onChange={(value) => handleSelectChange('machineId', value)}
                   options={MACHINE_OPTIONS}
                 />
+                <div className="select-info">
+                  {machines.length === 0 ? 'Brak maszyn w garażu' : `${machines.length} maszyn dostępnych`}
+                </div>
               </div>
+            </div>
 
-              <div className="form-group">
-                <label>Materiał</label>
-                <CustomSelect
-                  value={formData.materialId}
-                  onChange={(value) => handleSelectChange('materialId', value)}
-                  options={MATERIAL_OPTIONS}
-                />
+            <div className="form-group">
+              <label>Material z magazynu</label>
+              <CustomSelect
+                value={formData.materialId}
+                onChange={(value) => handleSelectChange('materialId', value)}
+                options={MATERIAL_OPTIONS}
+              />
+              <div className="select-info">
+                {materials.length === 0 && 'Brak materiałów w magazynie'}
               </div>
             </div>
           </div>
@@ -315,6 +332,8 @@ const handleSubmit = async (e) => {
                   onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
                   placeholder="Ilość"
                   className="material-quantity"
+                  min="0"
+                  step="0.01"
                 />
                 
                 <CustomSelect

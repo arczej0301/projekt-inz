@@ -18,7 +18,16 @@ export const useTasks = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [fields, setFields] = useState([]);
+  const [machines, setMachines] = useState([]);
+  const [materials, setMaterials] = useState([]);
   const { user } = useAuth();
+
+  // Sprawdź czy db jest dostępny
+  if (!db) {
+    console.error('Firestore db is not initialized');
+    setError('Błąd konfiguracji bazy danych');
+  }
 
   // Custom lists dla selectów
   const TASK_TYPES = [
@@ -48,9 +57,74 @@ export const useTasks = () => {
     { value: 'critical', label: 'Krytyczny' }
   ];
 
+  // Pobierz wszystkie dane powiązane
+  const fetchRelatedData = async () => {
+    if (!user || !db) {
+      console.log('User not logged in or db not available');
+      return;
+    }
+
+    try {
+      console.log('Pobieranie powiązanych danych...');
+      
+      // Pobierz pola - zakładam że kolekcja fields istnieje
+      try {
+        const fieldsQuery = query(collection(db, 'fields'));
+        const fieldsSnapshot = await getDocs(fieldsQuery);
+        const fieldsData = fieldsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setFields(fieldsData);
+        console.log('Pola załadowane:', fieldsData.length);
+      } catch (err) {
+        console.warn('Brak kolekcji fields:', err);
+        setFields([]);
+      }
+
+      // Pobierz maszyny z kolekcji GARAGE (poprawione!)
+      try {
+        const machinesQuery = query(collection(db, 'garage')); // ZMIENIONE Z 'machines' NA 'garage'
+        const machinesSnapshot = await getDocs(machinesQuery);
+        const machinesData = machinesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMachines(machinesData);
+        console.log('Maszyny załadowane z garage:', machinesData.length);
+        console.log('Przykładowa maszyna:', machinesData[0]);
+      } catch (err) {
+        console.warn('Brak kolekcji garage:', err);
+        setMachines([]);
+      }
+
+      // Pobierz materiały - zakładam że kolekcja materials istnieje
+      try {
+        const materialsQuery = query(collection(db, 'materials'));
+        const materialsSnapshot = await getDocs(materialsQuery);
+        const materialsData = materialsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMaterials(materialsData);
+        console.log('Materiały załadowane:', materialsData.length);
+      } catch (err) {
+        console.warn('Brak kolekcji materials:', err);
+        setMaterials([]);
+      }
+
+    } catch (err) {
+      console.error('Error fetching related data:', err);
+      setError('Błąd podczas pobierania danych powiązanych: ' + err.message);
+    }
+  };
+
   // Pobierz wszystkie zadania i filtruj po stronie klienta
   const fetchTasks = async (filters = {}) => {
-    if (!user) return;
+    if (!user || !db) {
+      console.log('User not logged in or db not available');
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -165,7 +239,7 @@ export const useTasks = () => {
 
   // Dodaj nowe zadanie
   const addTask = async (taskData) => {
-    if (!user) throw new Error('Użytkownik nie jest zalogowany');
+    if (!user || !db) throw new Error('Użytkownik nie jest zalogowany lub baza nie jest dostępna');
 
     try {
       const taskWithMetadata = {
@@ -179,6 +253,11 @@ export const useTasks = () => {
       if (taskWithMetadata.dueDate) {
         taskWithMetadata.dueDate = Timestamp.fromDate(new Date(taskWithMetadata.dueDate));
       }
+
+      // Upewnij się, że puste wartości są null
+      taskWithMetadata.fieldId = taskWithMetadata.fieldId || null;
+      taskWithMetadata.machineId = taskWithMetadata.machineId || null;
+      taskWithMetadata.materialId = taskWithMetadata.materialId || null;
 
       const docRef = await addDoc(collection(db, 'tasks'), taskWithMetadata);
       
@@ -200,6 +279,8 @@ export const useTasks = () => {
 
   // Aktualizuj zadanie
   const updateTask = async (taskId, updates) => {
+    if (!db) throw new Error('Baza danych nie jest dostępna');
+
     try {
       // Konwersja dat na Timestamp jeśli istnieją
       const processedUpdates = { ...updates };
@@ -210,6 +291,11 @@ export const useTasks = () => {
       if (processedUpdates.status === 'completed' && !updates.completedAt) {
         processedUpdates.completedAt = Timestamp.now();
       }
+
+      // Upewnij się, że puste wartości są null
+      processedUpdates.fieldId = processedUpdates.fieldId || null;
+      processedUpdates.machineId = processedUpdates.machineId || null;
+      processedUpdates.materialId = processedUpdates.materialId || null;
 
       await updateDoc(doc(db, 'tasks', taskId), processedUpdates);
       
@@ -229,6 +315,8 @@ export const useTasks = () => {
 
   // Usuń zadanie
   const deleteTask = async (taskId) => {
+    if (!db) throw new Error('Baza danych nie jest dostępna');
+
     try {
       await deleteDoc(doc(db, 'tasks', taskId));
       
@@ -244,7 +332,7 @@ export const useTasks = () => {
 
   // Dodaj komentarz do zadania
   const addComment = async (taskId, commentText, images = []) => {
-    if (!user) throw new Error('Użytkownik nie jest zalogowany');
+    if (!user || !db) throw new Error('Użytkownik nie jest zalogowany lub baza nie jest dostępna');
 
     try {
       const comment = {
@@ -289,8 +377,9 @@ export const useTasks = () => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && db) {
       fetchTasks();
+      fetchRelatedData();
     }
   }, [user]);
 
@@ -298,6 +387,9 @@ export const useTasks = () => {
     tasks,
     loading,
     error,
+    fields,
+    machines,
+    materials,
     fetchTasks,
     addTask,
     updateTask,

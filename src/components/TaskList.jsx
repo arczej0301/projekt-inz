@@ -1,8 +1,11 @@
-// src/components/TaskList.jsx
+// src/components/TaskList.jsx - ZASTĄP CAŁY PLIK
 import React from 'react';
+import { useTasks } from '../hooks/useTasks';
 import './TaskList.css';
 
-const TaskList = ({ tasks, onEditTask }) => {
+const TaskList = ({ tasks, onEditTask, TASK_TYPES }) => {
+  const { fields, machines, materials } = useTasks();
+
   const getStatusClass = (status) => {
     switch (status) {
       case 'completed': return 'status-completed';
@@ -23,8 +26,34 @@ const TaskList = ({ tasks, onEditTask }) => {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Brak terminu';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('pl-PL');
+    
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleDateString('pl-PL');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Błędna data';
+    }
+  };
+
+  // Znajdź nazwę powiązanego elementu - DOSTOSOWANE DO GARAGE
+  const getReferenceName = (id, collection, field = 'name') => {
+    if (!id) return null;
+    const item = collection.find(item => item.id === id);
+    
+    // Specjalna obsługa maszyn z garage
+    if (field === 'name' && collection === machines) {
+      return item ? `${item.brand || ''} ${item.model || ''} ${item.name || ''}`.trim() : null;
+    }
+    
+    return item ? item[field] : null;
+  };
+
+  // Znajdź etykietę typu zadania
+  const getTaskTypeLabel = (typeValue) => {
+    if (!typeValue) return 'Nie określono';
+    const type = TASK_TYPES.find(t => t.value === typeValue);
+    return type ? type.label : 'Nieznany typ';
   };
 
   if (tasks.length === 0) {
@@ -64,7 +93,7 @@ const TaskList = ({ tasks, onEditTask }) => {
           <div className="task-details">
             <div className="task-info">
               <span className="info-item">
-                <strong>Typ:</strong> {task.type || 'Nie określono'}
+                <strong>Typ:</strong> {getTaskTypeLabel(task.type)}
               </span>
               <span className="info-item">
                 <strong>Termin:</strong> {formatDate(task.dueDate)}
@@ -78,16 +107,19 @@ const TaskList = ({ tasks, onEditTask }) => {
 
             <div className="task-references">
               {task.fieldId && (
-                <span className="reference-tag field-tag">Pole</span>
-              )}
-              {task.animalId && (
-                <span className="reference-tag animal-tag">Zwierzęta</span>
+                <span className="reference-tag field-tag" title={getReferenceName(task.fieldId, fields)}>
+                  Pole: {getReferenceName(task.fieldId, fields) || 'Nieznane'}
+                </span>
               )}
               {task.machineId && (
-                <span className="reference-tag machine-tag">Maszyna</span>
+                <span className="reference-tag machine-tag" title={getReferenceName(task.machineId, machines, 'model')}>
+                  Maszyna: {getReferenceName(task.machineId, machines, 'model') || getReferenceName(task.machineId, machines, 'brand') || 'Nieznana'}
+                </span>
               )}
               {task.materialId && (
-                <span className="reference-tag material-tag">Materiał</span>
+                <span className="reference-tag material-tag" title={getReferenceName(task.materialId, materials)}>
+                  Material: {getReferenceName(task.materialId, materials) || 'Nieznany'}
+                </span>
               )}
             </div>
           </div>

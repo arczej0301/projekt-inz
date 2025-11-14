@@ -21,25 +21,25 @@ export const useFinance = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Kategorie transakcji
+  // Kategorie transakcji - ZMIENIONE NA POLSKIE IDENTYFIKATORY
   const incomeCategories = [
-    { id: 'crop_sales', name: 'Sprzedaż plonów', icon: '🌾', color: '#4caf50' },
-    { id: 'animal_sales', name: 'Sprzedaż zwierząt', icon: '🐄', color: '#8bc34a' },
-    { id: 'animal_products', name: 'Produkty zwierzęce', icon: '🥛', color: '#2196f3' },
-    { id: 'subsidies', name: 'Dotacje', icon: '💰', color: '#ffc107' },
-    { id: 'other_income', name: 'Inne przychody', icon: '📈', color: '#9c27b0' }
+    { id: 'sprzedaz_plonow', name: 'Sprzedaż plonów', icon: '🌾', color: '#4caf50' },
+    { id: 'sprzedaz_zwierzat', name: 'Sprzedaż zwierząt', icon: '🐄', color: '#8bc34a' },
+    { id: 'produkty_zwierzece', name: 'Produkty zwierzęce', icon: '🥛', color: '#2196f3' },
+    { id: 'dotacje', name: 'Dotacje', icon: '💰', color: '#ffc107' },
+    { id: 'inne_przychody', name: 'Inne przychody', icon: '📈', color: '#9c27b0' }
   ]
 
   const expenseCategories = [
-    { id: 'seeds', name: 'Nasiona', icon: '🌱', color: '#4caf50' },
-    { id: 'fertilizers', name: 'Nawozy', icon: '🧪', color: '#ff9800' },
-    { id: 'animal_feed', name: 'Pasze', icon: '🌿', color: '#8bc34a' },
-    { id: 'fuel', name: 'Paliwo', icon: '⛽', color: '#f44336' },
-    { id: 'equipment', name: 'Sprzęt i części', icon: '🛠️', color: '#607d8b' },
-    { id: 'animals', name: 'Zakup zwierząt', icon: '🐄', color: '#795548' },
-    { id: 'maintenance', name: 'Naprawy i konserwacja', icon: '🔧', color: '#ff5722' },
-    { id: 'taxes', name: 'Podatki i opłaty', icon: '🏛️', color: '#3f51b5' },
-    { id: 'other_expenses', name: 'Inne koszty', icon: '📉', color: '#e91e63' }
+    { id: 'nasiona', name: 'Nasiona', icon: '🌱', color: '#4caf50' },
+    { id: 'nawozy', name: 'Nawozy', icon: '🧪', color: '#ff9800' },
+    { id: 'pasze', name: 'Pasze', icon: '🌿', color: '#8bc34a' },
+    { id: 'paliwo', name: 'Paliwo', icon: '⛽', color: '#f44336' },
+    { id: 'sprzet_czesci', name: 'Sprzęt i części', icon: '🛠️', color: '#607d8b' },
+    { id: 'zakup_zwierzat', name: 'Zakup zwierząt', icon: '🐄', color: '#795548' },
+    { id: 'naprawy_konserwacja', name: 'Naprawy i konserwacja', icon: '🔧', color: '#ff5722' },
+    { id: 'podatki_oplaty', name: 'Podatki i opłaty', icon: '🏛️', color: '#3f51b5' },
+    { id: 'inne_koszty', name: 'Inne koszty', icon: '📉', color: '#e91e63' }
   ]
 
   // Pobieranie transakcji w czasie rzeczywistym

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './ProductModal.css'
 
-function ProductModal({ product, category, onSave, onClose }) {
+function ProductModal({ product, category, categories, onCategoryChange, onSave, onClose }) {
   const [formData, setFormData] = useState({
     name: '',
     quantity: 0,
@@ -13,7 +13,9 @@ function ProductModal({ product, category, onSave, onClose }) {
   })
 
   const [isUnitSelectOpen, setIsUnitSelectOpen] = useState(false)
+  const [isCategorySelectOpen, setIsCategorySelectOpen] = useState(false)
   const unitSelectRef = useRef(null)
+  const categorySelectRef = useRef(null)
 
   useEffect(() => {
     if (product) {
@@ -28,11 +30,14 @@ function ProductModal({ product, category, onSave, onClose }) {
     }
   }, [product, category])
 
-  // Zamknij dropdown gdy kliknięto poza nim
+  // Zamknij dropdowny gdy kliknięto poza nimi
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (unitSelectRef.current && !unitSelectRef.current.contains(event.target)) {
         setIsUnitSelectOpen(false)
+      }
+      if (categorySelectRef.current && !categorySelectRef.current.contains(event.target)) {
+        setIsCategorySelectOpen(false)
       }
     }
 
@@ -61,6 +66,20 @@ function ProductModal({ product, category, onSave, onClose }) {
       unit: unitValue
     }))
     setIsUnitSelectOpen(false)
+  }
+
+  const handleCategorySelect = (categoryId) => {
+    onCategoryChange(categoryId)
+    setFormData(prev => ({
+      ...prev,
+      category: categoryId
+    }))
+    setIsCategorySelectOpen(false)
+  }
+
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(cat => cat.id === categoryId)
+    return category ? `${category.icon} ${category.name}` : 'Wybierz kategorię'
   }
 
   const units = [
@@ -172,13 +191,33 @@ function ProductModal({ product, category, onSave, onClose }) {
           </div>
 
           <div className="form-group">
-            <label>Kategoria</label>
-            <input
-              type="text"
-              value={category}
-              disabled
-              className="disabled-input"
-            />
+            <label>Kategoria *</label>
+            <div className="custom-select" ref={categorySelectRef}>
+              <div 
+                className={`select-header ${category ? 'has-value' : ''}`}
+                onClick={() => setIsCategorySelectOpen(!isCategorySelectOpen)}
+              >
+                <span className="select-value">{getCategoryName(category)}</span>
+                <span className={`select-arrow ${isCategorySelectOpen ? 'open' : ''}`}>
+                  ▼
+                </span>
+              </div>
+              
+              {isCategorySelectOpen && (
+                <div className="select-dropdown">
+                  {categories.map(cat => (
+                    <div
+                      key={cat.id}
+                      className={`select-option ${category === cat.id ? 'selected' : ''}`}
+                      onClick={() => handleCategorySelect(cat.id)}
+                    >
+                      <span style={{ marginRight: '8px' }}>{cat.icon}</span>
+                      {cat.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="form-actions">

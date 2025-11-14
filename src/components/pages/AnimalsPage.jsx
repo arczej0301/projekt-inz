@@ -363,7 +363,7 @@ const filteredAndSortedAnimals = animals
                   </div>
                   <div className="animal-list-actions">
                     <button 
-                      className="btn btn-primary btn-sm"
+                      className="btn btn-primary btn-sm " 
                       onClick={() => openAnimalModal(animal)}
                     >
                       <i className="fas fa-edit"></i> Edytuj

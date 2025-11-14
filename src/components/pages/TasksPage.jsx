@@ -1,4 +1,4 @@
-// src/pages/TasksPage.jsx - dodaj obsługę czyszczenia błędów
+// src/pages/TasksPage.jsx - ZASTĄP CAŁY PLIK
 import React, { useState, useEffect, useRef } from 'react'; 
 import { useTasks } from '../../hooks/useTasks';
 import TaskList from '../../components/TaskList';
@@ -53,7 +53,7 @@ const TasksPage = () => {
     fetchTasks(filters);
   };
 
-const handleFilterChange = (newFilters) => {
+  const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
     
     // Debouncing - unikaj zbyt wielu zapytań
@@ -118,6 +118,7 @@ const handleFilterChange = (newFilters) => {
           <TaskList 
             tasks={tasks}
             onEditTask={handleEditTask}
+            TASK_TYPES={TASK_TYPES}
           />
         ) : (
           <TaskCalendar 

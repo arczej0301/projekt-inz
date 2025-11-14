@@ -11,6 +11,11 @@ function MagazinePage() {
   const [editingProduct, setEditingProduct] = useState(null)
   const [sortOrder, setSortOrder] = useState('name-asc')
 
+  // Funkcja do formatowania liczb z odstępami tysięcy
+  const formatNumber = (number) => {
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  }
+
   const { 
     warehouseData, 
     categories, 
@@ -33,7 +38,6 @@ function MagazinePage() {
         case 'name-desc':
           return b.name.localeCompare(a.name)
         case 'date-desc':
-          // Zakładając, że masz pole createdAt lub lastUpdate
           const dateA = a.createdAt || a.lastUpdate || new Date(0)
           const dateB = b.createdAt || b.lastUpdate || new Date(0)
           return new Date(dateB) - new Date(dateA)
@@ -150,21 +154,24 @@ function MagazinePage() {
           <div className="stat-icon">💰</div>
           <div className="stat-info">
             <h3>Łączna wartość</h3>
-            <p>{calculateTotalValue().toFixed(2)} zł</p>
+            {/* Zastosowanie formatowania dla wartości całkowitej */}
+            <p>{formatNumber(calculateTotalValue().toFixed(2))} zł</p>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon">📦</div>
           <div className="stat-info">
             <h3>Łączna ilość produktów</h3>
-            <p>{Object.values(warehouseData).flat().length}</p>
+            {/* Zastosowanie formatowania dla liczby produktów */}
+            <p>{formatNumber(Object.values(warehouseData).flat().length)}</p>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon">⚠️</div>
           <div className="stat-info">
             <h3>Niskie stany</h3>
-            <p>{countLowStockItems()}</p>
+            {/* Zastosowanie formatowania dla niskich stanów */}
+            <p>{formatNumber(countLowStockItems())}</p>
           </div>
         </div>
       </div>
@@ -204,41 +211,41 @@ function MagazinePage() {
               {categories.find(cat => cat.id === activeCategory)?.name}
             </h3>
             <div className="products-controls">
-  {/* Najpierw sortowanie */}
-  <div className="filter-group">
-    <label>Sortuj:</label>
-    <select
-      value={sortOrder}
-      onChange={(e) => setSortOrder(e.target.value)}
-    >
-      <option value="name-asc">Nazwa A-Z</option>
-      <option value="name-desc">Nazwa Z-A</option>
-      <option value="quantity-asc">Ilość (najniższe)</option>
-      <option value="quantity-desc">Ilość (najwyższe)</option>
-      <option value="date-desc">Ostatnio dodane (najnowsze)</option>
-      <option value="date-asc">Najstarsze</option>
-    </select>
-  </div>
-  
-  {/* Potem wyszukiwanie */}
-  <div className="search-box">
-    <input
-      type="text"
-      placeholder="Szukaj produktu..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-    />
-    <span className="search-icon">🔍</span>
-  </div>
-  
-  {/* Na końcu przycisk dodaj produkt */}
-  <button 
-    className="btn-primary"
-    onClick={handleAddProduct}
-  >
-    + Dodaj produkt
-  </button>
-</div>
+              {/* Najpierw sortowanie */}
+              <div className="filter-group">
+                <label>Sortuj:</label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                >
+                  <option value="name-asc">Nazwa A-Z</option>
+                  <option value="name-desc">Nazwa Z-A</option>
+                  <option value="quantity-asc">Ilość (najniższe)</option>
+                  <option value="quantity-desc">Ilość (najwyższe)</option>
+                  <option value="date-desc">Ostatnio dodane (najnowsze)</option>
+                  <option value="date-asc">Najstarsze</option>
+                </select>
+              </div>
+              
+              {/* Potem wyszukiwanie */}
+              <div className="search-box">
+                <input
+                  type="text"
+                  placeholder="Szukaj produktu..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <span className="search-icon">🔍</span>
+              </div>
+              
+              {/* Na końcu przycisk dodaj produkt */}
+              <button 
+                className="btn-primary"
+                onClick={handleAddProduct}
+              >
+                + Dodaj produkt
+              </button>
+            </div>
           </div>
 
           <div className="products-grid">
@@ -259,21 +266,24 @@ function MagazinePage() {
                   <div className="product-details">
                     <div className="detail-row">
                       <span className="label">Ilość:</span>
-                      <span className="value">{item.quantity} {item.unit}</span>
+                      {/* Zastosowanie formatowania dla ilości produktu */}
+                      <span className="value">{formatNumber(item.quantity)} {item.unit}</span>
                     </div>
                     <div className="detail-row">
                       <span className="label">Minimalny stan:</span>
-                      <span className="value">{item.minStock} {item.unit}</span>
+                      {/* Zastosowanie formatowania dla minimalnego stanu */}
+                      <span className="value">{formatNumber(item.minStock)} {item.unit}</span>
                     </div>
                     {item.price && (
                       <>
                         <div className="detail-row">
                           <span className="label">Cena:</span>
-                          <span className="value">{item.price} zł/{item.unit}</span>
+                          <span className="value">{formatNumber(item.price)} zł/{item.unit}</span>
                         </div>
                         <div className="detail-row">
                           <span className="label">Wartość:</span>
-                          <span className="value">{(item.quantity * item.price).toFixed(2)} zł</span>
+                          {/* Zastosowanie formatowania dla wartości produktu */}
+                          <span className="value">{formatNumber((item.quantity * item.price).toFixed(2))} zł</span>
                         </div>
                       </>
                     )}

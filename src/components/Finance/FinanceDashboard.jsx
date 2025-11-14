@@ -6,16 +6,41 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
   // Ostatnie transakcje
   const recentTransactions = transactions.slice(0, 5)
   
+  // Mapowanie kategorii z angielskiego na polski
+  const categoryTranslations = {
+    'salary': 'Wynagrodzenie',
+    'freelance': 'Freelance',
+    'investment': 'Inwestycje',
+    'business': 'Biznes',
+    'other-income': 'Inne przychody',
+    'food': 'Jedzenie',
+    'transport': 'Transport',
+    'housing': 'Mieszkanie',
+    'entertainment': 'Rozrywka',
+    'health': 'Zdrowie',
+    'shopping': 'Zakupy',
+    'education': 'Edukacja',
+    'bills': 'Rachunki',
+    'other-expenses': 'Inne wydatki'
+  }
+
+  // Funkcja do tłumaczenia kategorii
+  const translateCategory = (category) => {
+    return categoryTranslations[category] || category
+  }
+  
   // Podsumowanie kategorii
   const categorySummary = transactions.reduce((acc, transaction) => {
-    if (!acc[transaction.category]) {
-      acc[transaction.category] = { income: 0, expenses: 0 }
+    const translatedCategory = translateCategory(transaction.category)
+    
+    if (!acc[translatedCategory]) {
+      acc[translatedCategory] = { income: 0, expenses: 0 }
     }
     
     if (transaction.type === 'income') {
-      acc[transaction.category].income += transaction.amount
+      acc[translatedCategory].income += transaction.amount
     } else {
-      acc[transaction.category].expenses += transaction.amount
+      acc[translatedCategory].expenses += transaction.amount
     }
     
     return acc
@@ -24,7 +49,7 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
   return (
     <div className="finance-dashboard">
       <div className="dashboard-grid">
-        {/* Kafelki z podsumowaniem - ZAKTUALIZOWANE */}
+        {/* Kafelki z podsumowaniem */}
         <div className="summary-cards">
           {/* Bilans miesięczny */}
           <div className="summary-card balance">
@@ -74,7 +99,7 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
                         {transaction.description}
                       </div>
                       <div className="transaction-category">
-                        {transaction.category}
+                        {translateCategory(transaction.category)}
                       </div>
                     </div>
                   </div>
