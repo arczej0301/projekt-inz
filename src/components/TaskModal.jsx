@@ -1,4 +1,4 @@
-// src/components/TaskModal.jsx - ZASTĄP CAŁY PLIK
+// src/components/TaskModal.jsx - POPRAWIONA WERSJA (SPÓJNE ETYKIETY)
 import React, { useState, useEffect } from 'react';
 import { useTasks } from '../hooks/useTasks';
 import { useAuth } from '../hooks/useAuth';
@@ -6,7 +6,7 @@ import CustomSelect from './CustomSelect';
 import './TaskModal.css';
 
 const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
-  const { addTask, updateTask, fields, machines, materials } = useTasks();
+  const { addTask, updateTask, fields, tractors, machines, warehouseItems } = useTasks();
   const { user } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -18,6 +18,7 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     assignedTo: '',
     dueDate: '',
     fieldId: '',
+    tractorId: '',
     machineId: '',
     materialId: '',
     materials: []
@@ -26,7 +27,6 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Przygotuj opcje z rzeczywistych danych - DOSTOSOWANE DO STRUKTURY GARAGE
   const FIELD_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
     ...fields.map(field => ({
@@ -35,28 +35,37 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     }))
   ];
 
-  // DOSTOSOWANE DO STRUKTURY GARAGE
+  // POPRAWIONE: Używa name zamiast model
+  const TRACTOR_OPTIONS = [
+    { value: '', label: 'Brak powiązania' },
+    ...tractors.map(tractor => ({
+      value: tractor.id,
+      label: tractor.name || `${tractor.brand || ''} ${tractor.model || ''}`.trim() || `Ciągnik ${tractor.id}`
+    }))
+  ];
+
+  // POPRAWIONE: Używa name zamiast model
   const MACHINE_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
     ...machines.map(machine => ({
       value: machine.id,
-      label: `${machine.brand || ''} ${machine.model || ''} ${machine.name ? `- ${machine.name}` : ''}`.trim() || `Maszyna ${machine.id}`
+      label: machine.name || `${machine.brand || ''} ${machine.model || ''}`.trim() || `Maszyna ${machine.id}`
     }))
   ];
 
-  const MATERIAL_OPTIONS = [
+  const WAREHOUSE_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
-    ...materials.map(material => ({
-      value: material.id,
-      label: `${material.name || 'Material'} ${material.quantity ? `(${material.quantity} ${material.unit || 'szt'})` : ''}`
+    ...warehouseItems.map(item => ({
+      value: item.id,
+      label: `${item.name || 'Produkt'} ${item.quantity ? `(${item.quantity} ${item.unit || 'szt'})` : ''}`
     }))
   ];
 
   const PRODUCT_OPTIONS = [
     { value: '', label: 'Wybierz produkt' },
-    ...materials.map(material => ({
-      value: material.id,
-      label: `${material.name || 'Material'} - ${material.quantity || 0} ${material.unit || 'szt'}`
+    ...warehouseItems.map(item => ({
+      value: item.id,
+      label: `${item.name || 'Produkt'} - ${item.quantity || 0} ${item.unit || 'szt'}`
     }))
   ];
 
@@ -68,15 +77,13 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     { value: 'ha', label: 'ha' }
   ];
 
-  // Debug: sprawdź czy dane są ładowane
   useEffect(() => {
     console.log('Fields loaded:', fields);
-    console.log('Machines loaded:', machines);
-    console.log('Materials loaded:', materials);
-    console.log('Machine options:', MACHINE_OPTIONS);
-  }, [fields, machines, materials]);
+    console.log('Ciągniki załadowane:', tractors);
+    console.log('Maszyny załadowane:', machines);
+    console.log('Nasiona i nawozy z magazynu:', warehouseItems);
+  }, [fields, tractors, machines, warehouseItems]);
 
-  // Inicjalizacja formularza danymi zadania (tryb edycji)
   useEffect(() => {
     if (task) {
       let dueDate = '';
@@ -99,6 +106,7 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
         assignedTo: task.assignedTo || '',
         dueDate: dueDate,
         fieldId: task.fieldId || '',
+        tractorId: task.tractorId || '',
         machineId: task.machineId || '',
         materialId: task.materialId || '',
         materials: task.materials || []
@@ -157,11 +165,10 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
         throw new Error('Tytuł jest wymagany');
       }
 
-      // Przygotuj dane do zapisu
       const taskData = {
         ...formData,
-        // Upewnij się, że puste wartości są null
         fieldId: formData.fieldId || null,
+        tractorId: formData.tractorId || null,
         machineId: formData.machineId || null,
         materialId: formData.materialId || null,
       };
@@ -284,6 +291,20 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
               </div>
 
               <div className="form-group">
+                <label>Ciagnik/Kombajn</label>
+                <CustomSelect
+                  value={formData.tractorId}
+                  onChange={(value) => handleSelectChange('tractorId', value)}
+                  options={TRACTOR_OPTIONS}
+                />
+                <div className="select-info">
+                  {tractors.length === 0 ? 'Brak ciągników w garażu' : `${tractors.length} ciągników dostępnych`}
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
                 <label>Maszyna</label>
                 <CustomSelect
                   value={formData.machineId}
@@ -294,26 +315,26 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
                   {machines.length === 0 ? 'Brak maszyn w garażu' : `${machines.length} maszyn dostępnych`}
                 </div>
               </div>
-            </div>
 
-            <div className="form-group">
-              <label>Material z magazynu</label>
-              <CustomSelect
-                value={formData.materialId}
-                onChange={(value) => handleSelectChange('materialId', value)}
-                options={MATERIAL_OPTIONS}
-              />
-              <div className="select-info">
-                {materials.length === 0 && 'Brak materiałów w magazynie'}
+              <div className="form-group">
+                <label>Nasiona i Nawozy</label>
+                <CustomSelect
+                  value={formData.materialId}
+                  onChange={(value) => handleSelectChange('materialId', value)}
+                  options={WAREHOUSE_OPTIONS}
+                />
+                <div className="select-info">
+                  {warehouseItems.length === 0 ? 'Brak nasion i nawozów w magazynie' : `${warehouseItems.length} produktów dostępnych`}
+                </div>
               </div>
             </div>
           </div>
 
           <div className="form-section">
             <div className="section-header">
-              <h3>Materiały do zużycia</h3>
+              <h3>Nasiona i nawozy do zużycia</h3>
               <button type="button" onClick={addMaterial} className="btn-secondary">
-                + Dodaj materiał
+                + Dodaj produkt
               </button>
             </div>
             

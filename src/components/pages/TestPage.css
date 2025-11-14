@@ -246,3 +246,161 @@ select.test-select {
   margin-bottom: 10px;
   color: #856404;
 }
+
+.tasks-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.tasks-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tasks-section-header {
+  padding: 0 8px;
+}
+
+.tasks-section-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.completed-section {
+  opacity: 0.85;
+}
+
+.tasks-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 10px 0 20px 0;
+  padding: 0 8px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ddd, transparent);
+}
+
+.divider-text {
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.no-tasks-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+}
+
+.no-tasks-message p {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+}
+
+/* Styl dla zakończonych zadań - opcjonalne dodatkowe formatowanie */
+.completed-section .task-card {
+  background: #f8f9fa;
+  border-color: #e9ecef;
+}
+
+.completed-section .task-card:hover {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.completed-section .task-title {
+  color: #6c757d;
+}
+
+.completed-section .task-description {
+  color: #868e96;
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+  .tasks-section-divider {
+    gap: 10px;
+    margin: 5px 0 15px 0;
+  }
+  
+  .divider-text {
+    font-size: 0.8rem;
+  }
+  
+  .tasks-section-header h3 {
+    font-size: 1rem;
+  }
+}
+
+.tasks-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #e8f4fd;
+  border: 1px solid #b6d4fe;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  color: #0d6efd;
+}
+
+.info-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.info-content {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.info-content strong {
+  font-weight: 600;
+}
+
+/* Powiadomienie o zakończonych zadaniach */
+.completed-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #856404;
+}
+
+.completed-icon {
+  font-size: 14px;
+}
+
+/* Subtitle dla sekcji */
+.section-subtitle {
+  font-size: 12px;
+  color: #6c757d;
+  margin-left: 8px;
+  font-weight: 400;
+}
+
+/* Liczba dni temu */
+.days-ago {
+  font-size: 11px;
+  color: #6c757d;
+  margin-left: 4px;
+  font-style: italic;
+}

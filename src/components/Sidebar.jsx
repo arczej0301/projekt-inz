@@ -4,7 +4,7 @@ function Sidebar({ activeTab, setActiveTab }) {
       { id: 'fields', label: 'Pola uprawne', icon: '🌾' },
       { id: 'animals', label: 'Zwierzęta', icon: '🐄' },
       { id: 'magazine', label: 'Magazyn', icon: '📦' },
-      { id: 'garage', label: 'Garaz', icon: '🚜' },
+      { id: 'garage', label: 'Garaż', icon: '🚜' },
       { id: 'tasks', label: 'Zadania', icon: '✅' },
       { id: 'finance', label: 'Finanse', icon: '💰' },
       { id: 'reports', label: 'Raporty', icon: '📈' },
