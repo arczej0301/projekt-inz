@@ -22,13 +22,13 @@ function AnimalsPage() {
   const [isHealthOpen, setIsHealthOpen] = useState(false);
 
   const animalTypes = [
-    { value: 'krowa', label: 'Krowa' },
-    { value: 'byk', label: 'Byk' },
-    { value: 'świnia', label: 'Świnia' },
-    { value: 'koń', label: 'Koń' },
-    { value: 'owca', label: 'Owca' },
-    { value: 'koza', label: 'Koza' },
-    { value: 'kura', label: 'Kura' }
+    { value: 'krowa', label: 'Krowy' },
+    { value: 'byk', label: 'Byki' },
+    { value: 'świnia', label: 'Świnie' },
+    { value: 'koń', label: 'Konie' },
+    { value: 'owca', label: 'Owce' },
+    { value: 'koza', label: 'Kozy' },
+    { value: 'kura', label: 'Kury' }
   ];
 
   const healthStatuses = [

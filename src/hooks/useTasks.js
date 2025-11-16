@@ -1,4 +1,4 @@
-// src/hooks/useTasks.js - POPRAWIONA WERSJA (Z CIĄGNIKAMI)
+// src/hooks/useTasks.js - ZASTĄP CAŁY PLIK TYM KODEM
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -9,7 +9,6 @@ import {
   getDocs, 
   query, 
   orderBy,
-  where,
   Timestamp 
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -21,15 +20,16 @@ export const useTasks = () => {
   const [error, setError] = useState(null);
   const [fields, setFields] = useState([]);
   const [machines, setMachines] = useState([]);
-  const [tractors, setTractors] = useState([]); // NOWE: ciągniki i kombajny
-  const [warehouseItems, setWarehouseItems] = useState([]);
+  const [materials, setMaterials] = useState([]);
   const { user } = useAuth();
 
+  // Sprawdź czy db jest dostępny
   if (!db) {
     console.error('Firestore db is not initialized');
     setError('Błąd konfiguracji bazy danych');
   }
 
+  // Custom lists dla selectów
   const TASK_TYPES = [
     { value: 'sowing', label: 'Siew/Zasiew' },
     { value: 'harvest', label: 'Zbiór' },
@@ -57,15 +57,17 @@ export const useTasks = () => {
     { value: 'critical', label: 'Krytyczny' }
   ];
 
-  // Pobierz wszystkie dane powiązane - POPRAWIONE: Z CIĄGNIKAMI
+  // Pobierz wszystkie dane powiązane
   const fetchRelatedData = async () => {
     if (!user || !db) {
+      console.log('User not logged in or db not available');
       return;
     }
 
     try {
+      console.log('Pobieranie powiązanych danych...');
       
-      // Pobierz pola
+      // Pobierz pola - zakładam że kolekcja fields istnieje
       try {
         const fieldsQuery = query(collection(db, 'fields'));
         const fieldsSnapshot = await getDocs(fieldsQuery);
@@ -74,74 +76,41 @@ export const useTasks = () => {
           ...doc.data()
         }));
         setFields(fieldsData);
+        console.log('Pola załadowane:', fieldsData.length);
       } catch (err) {
         console.warn('Brak kolekcji fields:', err);
         setFields([]);
       }
 
-      // Pobierz wszystkie maszyny z garażu
+      // Pobierz maszyny z kolekcji GARAGE (poprawione!)
       try {
-        const machinesQuery = query(collection(db, 'garage'));
+        const machinesQuery = query(collection(db, 'garage')); // ZMIENIONE Z 'machines' NA 'garage'
         const machinesSnapshot = await getDocs(machinesQuery);
-        const allMachines = machinesSnapshot.docs.map(doc => ({
+        const machinesData = machinesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-
-        // Filtruj ciągniki i kombajny
-        const tractorsData = allMachines.filter(machine => {
-          const category = machine.category?.toLowerCase() || '';
-          const type = machine.type?.toLowerCase() || '';
-          const name = machine.name?.toLowerCase() || '';
-          const model = machine.model?.toLowerCase() || '';
-          
-          return category.includes('ciągnik') || 
-                 category.includes('tractor') ||
-                 category.includes('kombajn') || 
-                 category.includes('combine') ||
-                 type.includes('ciągnik') ||
-                 type.includes('tractor') ||
-                 type.includes('kombajn') ||
-                 type.includes('combine') ||
-                 name.includes('ciągnik') ||
-                 name.includes('tractor') ||
-                 name.includes('kombajn') ||
-                 name.includes('combine') ||
-                 model.includes('ciągnik') ||
-                 model.includes('tractor') ||
-                 model.includes('kombajn') ||
-                 model.includes('combine');
-        });
-
-        // Pozostałe maszyny (bez ciągników i kombajnów)
-        const otherMachines = allMachines.filter(machine => 
-          !tractorsData.some(tractor => tractor.id === machine.id)
-        );
-
-        setTractors(tractorsData);
-        setMachines(otherMachines);
-        
+        setMachines(machinesData);
+        console.log('Maszyny załadowane z garage:', machinesData.length);
+        console.log('Przykładowa maszyna:', machinesData[0]);
       } catch (err) {
         console.warn('Brak kolekcji garage:', err);
-        setTractors([]);
         setMachines([]);
       }
 
-      // Pobierz tylko produkty z kategorii "Nasiona i Nawozy"
+      // Pobierz materiały - zakładam że kolekcja materials istnieje
       try {
-        const warehouseQuery = query(
-          collection(db, 'warehouse'),
-          where('category', '==', 'nawozy')
-        );
-        const warehouseSnapshot = await getDocs(warehouseQuery);
-        const warehouseData = warehouseSnapshot.docs.map(doc => ({
+        const materialsQuery = query(collection(db, 'materials'));
+        const materialsSnapshot = await getDocs(materialsQuery);
+        const materialsData = materialsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        setWarehouseItems(warehouseData);
+        setMaterials(materialsData);
+        console.log('Materiały załadowane:', materialsData.length);
       } catch (err) {
-        console.warn('Brak kolekcji warehouse lub kategorii "nawozy":', err);
-        setWarehouseItems([]);
+        console.warn('Brak kolekcji materials:', err);
+        setMaterials([]);
       }
 
     } catch (err) {
@@ -150,9 +119,10 @@ export const useTasks = () => {
     }
   };
 
-  // Reszta funkcji pozostaje bez zmian
+  // Pobierz wszystkie zadania i filtruj po stronie klienta
   const fetchTasks = async (filters = {}) => {
     if (!user || !db) {
+      console.log('User not logged in or db not available');
       return;
     }
     
@@ -160,33 +130,43 @@ export const useTasks = () => {
     setError(null);
     
     try {
+      // Pobierz WSZYSTKIE zadania (bez filtrów Firestore)
       const q = query(collection(db, 'tasks'), orderBy('dueDate', 'asc'));
       const querySnapshot = await getDocs(q);
       let tasksData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      console.log('All tasks loaded from Firestore:', tasksData.length);
 
+      // FILTROWANIE PO STRONIE KLIENTA
       if (filters.status && filters.status !== '') {
         tasksData = tasksData.filter(task => task.status === filters.status);
+        console.log(`Filtered by status "${filters.status}": ${tasksData.length} tasks`);
       }
       
       if (filters.type && filters.type !== '') {
         tasksData = tasksData.filter(task => task.type === filters.type);
+        console.log(`Filtered by type "${filters.type}": ${tasksData.length} tasks`);
       }
       
       if (filters.priority && filters.priority !== '') {
         tasksData = tasksData.filter(task => task.priority === filters.priority);
+        console.log(`Filtered by priority "${filters.priority}": ${tasksData.length} tasks`);
       }
       
       if (filters.assignedTo && filters.assignedTo !== '') {
         tasksData = tasksData.filter(task => 
           task.assignedTo && task.assignedTo.toLowerCase().includes(filters.assignedTo.toLowerCase())
         );
+        console.log(`Filtered by assignedTo "${filters.assignedTo}": ${tasksData.length} tasks`);
       }
 
+      // Filtrowanie zakresów dat
       if (filters.dateRange && filters.dateRange !== '') {
         tasksData = filterTasksByDateRange(tasksData, filters.dateRange);
+        console.log(`Filtered by dateRange "${filters.dateRange}": ${tasksData.length} tasks`);
       }
 
       setTasks(tasksData);
@@ -199,6 +179,7 @@ export const useTasks = () => {
     }
   };
 
+  // Funkcja pomocnicza do filtrowania po zakresach dat
   const filterTasksByDateRange = (tasks, dateRange) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -207,6 +188,7 @@ export const useTasks = () => {
       if (!task.dueDate) return false;
       
       try {
+        // Konwersja Firestore Timestamp na Date
         let taskDate;
         if (task.dueDate && task.dueDate.toDate) {
           taskDate = task.dueDate.toDate();
@@ -216,29 +198,35 @@ export const useTasks = () => {
           taskDate = new Date(task.dueDate);
         }
 
+        // Normalizuj czas - ustaw na początek dnia
         taskDate = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
 
         switch (dateRange) {
           case 'today':
             return taskDate.getTime() === today.getTime();
+            
           case 'tomorrow':
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
             return taskDate.getTime() === tomorrow.getTime();
+            
           case 'this_week':
             const startOfWeek = new Date(today);
             startOfWeek.setDate(today.getDate() - today.getDay());
             const endOfWeek = new Date(startOfWeek);
             endOfWeek.setDate(startOfWeek.getDate() + 7);
             return taskDate >= startOfWeek && taskDate < endOfWeek;
+            
           case 'next_week':
             const startOfNextWeek = new Date(today);
             startOfNextWeek.setDate(today.getDate() + (7 - today.getDay()));
             const endOfNextWeek = new Date(startOfNextWeek);
             endOfNextWeek.setDate(startOfNextWeek.getDate() + 7);
             return taskDate >= startOfNextWeek && taskDate < endOfNextWeek;
+            
           case 'overdue':
             return taskDate < today && task.status !== 'completed';
+            
           default:
             return true;
         }
@@ -249,6 +237,7 @@ export const useTasks = () => {
     });
   };
 
+  // Dodaj nowe zadanie
   const addTask = async (taskData) => {
     if (!user || !db) throw new Error('Użytkownik nie jest zalogowany lub baza nie jest dostępna');
 
@@ -260,17 +249,19 @@ export const useTasks = () => {
         status: taskData.status || 'pending'
       };
 
+      // Konwersja daty na Timestamp
       if (taskWithMetadata.dueDate) {
         taskWithMetadata.dueDate = Timestamp.fromDate(new Date(taskWithMetadata.dueDate));
       }
 
+      // Upewnij się, że puste wartości są null
       taskWithMetadata.fieldId = taskWithMetadata.fieldId || null;
-      taskWithMetadata.tractorId = taskWithMetadata.tractorId || null; // NOWE
       taskWithMetadata.machineId = taskWithMetadata.machineId || null;
       taskWithMetadata.materialId = taskWithMetadata.materialId || null;
 
       const docRef = await addDoc(collection(db, 'tasks'), taskWithMetadata);
       
+      // Natychmiastowe odświeżenie listy zadań
       const newTask = {
         id: docRef.id,
         ...taskWithMetadata
@@ -286,10 +277,12 @@ export const useTasks = () => {
     }
   };
 
+  // Aktualizuj zadanie
   const updateTask = async (taskId, updates) => {
     if (!db) throw new Error('Baza danych nie jest dostępna');
 
     try {
+      // Konwersja dat na Timestamp jeśli istnieją
       const processedUpdates = { ...updates };
       if (processedUpdates.dueDate) {
         processedUpdates.dueDate = Timestamp.fromDate(new Date(processedUpdates.dueDate));
@@ -299,13 +292,14 @@ export const useTasks = () => {
         processedUpdates.completedAt = Timestamp.now();
       }
 
+      // Upewnij się, że puste wartości są null
       processedUpdates.fieldId = processedUpdates.fieldId || null;
-      processedUpdates.tractorId = processedUpdates.tractorId || null; // NOWE
       processedUpdates.machineId = processedUpdates.machineId || null;
       processedUpdates.materialId = processedUpdates.materialId || null;
 
       await updateDoc(doc(db, 'tasks', taskId), processedUpdates);
       
+      // Natychmiastowa aktualizacja w stanie
       setTasks(prev => prev.map(task => 
         task.id === taskId 
           ? { ...task, ...processedUpdates }
@@ -319,12 +313,16 @@ export const useTasks = () => {
     }
   };
 
+  // Usuń zadanie
   const deleteTask = async (taskId) => {
     if (!db) throw new Error('Baza danych nie jest dostępna');
 
     try {
       await deleteDoc(doc(db, 'tasks', taskId));
+      
+      // Natychmiastowe usunięcie ze stanu
       setTasks(prev => prev.filter(task => task.id !== taskId));
+      
     } catch (err) {
       setError('Błąd podczas usuwania zadania: ' + err.message);
       console.error('Error deleting task:', err);
@@ -332,6 +330,7 @@ export const useTasks = () => {
     }
   };
 
+  // Dodaj komentarz do zadania
   const addComment = async (taskId, commentText, images = []) => {
     if (!user || !db) throw new Error('Użytkownik nie jest zalogowany lub baza nie jest dostępna');
 
@@ -344,6 +343,8 @@ export const useTasks = () => {
       };
 
       const taskRef = doc(db, 'tasks', taskId);
+      
+      // Pobierz aktualne komentarze
       const currentTask = tasks.find(t => t.id === taskId);
       const updatedComments = [...(currentTask?.comments || []), comment];
       
@@ -351,6 +352,7 @@ export const useTasks = () => {
         comments: updatedComments
       });
 
+      // Natychmiastowa aktualizacja w stanie
       setTasks(prev => prev.map(task => 
         task.id === taskId 
           ? { ...task, comments: updatedComments }
@@ -364,10 +366,12 @@ export const useTasks = () => {
     }
   };
 
+  // Pobierz zadania powiązane z konkretnym elementem (polem, zwierzęciem, maszyną)
   const getTasksByReference = (referenceType, referenceId) => {
     return tasks.filter(task => task[referenceType] === referenceId);
   };
 
+  // Reset error
   const clearError = () => {
     setError(null);
   };
@@ -384,9 +388,8 @@ export const useTasks = () => {
     loading,
     error,
     fields,
-    tractors, // NOWE
     machines,
-    warehouseItems,
+    materials,
     fetchTasks,
     addTask,
     updateTask,

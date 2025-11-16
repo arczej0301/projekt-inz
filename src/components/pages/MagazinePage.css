@@ -490,23 +490,3 @@
     width: 100%;
   }
 }
-
-.product-details .value {
-  font-weight: 600;
-  color: var(--dark);
-  text-align: right;
-  min-width: 120px; /* Zapewnia równą szerokość dla wartości */
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  padding: 5px 0;
-  min-height: 24px; /* Zapewnia stałą wysokość wiersza */
-}
-
-.detail-row:not(:last-child) {
-  border-bottom: 1px solid #f0f0f0;
-}
