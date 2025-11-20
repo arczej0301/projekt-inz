@@ -1,5 +1,5 @@
-// src/pages/TasksPage.jsx - ZASTĄP CAŁY PLIK
-import React, { useState, useEffect, useRef } from 'react'; 
+// src/pages/TasksPage.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import { useTasks } from '../../hooks/useTasks';
 import TaskList from '../../components/TaskList';
 import TaskModal from '../../components/TaskModal';
@@ -13,28 +13,51 @@ const TasksPage = () => {
   const [activeView, setActiveView] = useState('list');
   const [filters, setFilters] = useState({});
   const filterTimeoutRef = useRef(null);
-  
-  const { 
-    tasks, 
-    loading, 
-    error, 
+
+  const {
+    tasks,
+    loading,
+    error,
     fetchTasks,
+    deleteTask,
     clearError,
     TASK_TYPES,
     TASK_STATUS,
-    PRIORITIES 
+    PRIORITIES
   } = useTasks();
 
-  // Auto-ukrywanie błędów po 5 sekundach
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
         clearError();
       }, 5000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [error, clearError]);
+
+  useEffect(() => {
+    const checkAndRemoveOldTasks = () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      tasks.forEach(task => {
+        if (task.status === 'completed' && task.completedAt) {
+          const completionDate = task.completedAt?.toDate ? task.completedAt.toDate() : new Date(task.completedAt);
+
+          if (completionDate < thirtyDaysAgo) {
+            console.log(`Automatyczne usuwanie starego zadania: ${task.title}`);
+            deleteTask(task.id);
+          }
+        }
+      });
+    };
+
+    const interval = setInterval(checkAndRemoveOldTasks, 60000);
+    checkAndRemoveOldTasks();
+
+    return () => clearInterval(interval);
+  }, [tasks, deleteTask]);
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -42,6 +65,11 @@ const TasksPage = () => {
   };
 
   const handleEditTask = (task) => {
+    if (task.status === 'completed') {
+      alert('Nie można edytować zadań zakończonych.');
+      return;
+    }
+
     setEditingTask(task);
     setShowModal(true);
   };
@@ -49,18 +77,16 @@ const TasksPage = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingTask(null);
-    // Opcjonalnie: odśwież listę dla pewności
     fetchTasks(filters);
   };
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
-    
-    // Debouncing - unikaj zbyt wielu zapytań
+
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
-    
+
     filterTimeoutRef.current = setTimeout(() => {
       fetchTasks(newFilters);
     }, 500);
@@ -69,6 +95,9 @@ const TasksPage = () => {
   const handleClearError = () => {
     clearError();
   };
+
+  const activeTasks = tasks.filter(task => task.status !== 'completed');
+  const completedTasks = tasks.filter(task => task.status === 'completed');
 
   if (loading && tasks.length === 0) {
     return <div className="loading">Ładowanie zadań...</div>;
@@ -80,13 +109,13 @@ const TasksPage = () => {
         <h1>Zadania</h1>
         <div className="tasks-actions">
           <div className="view-toggle">
-            <button 
+            <button
               className={activeView === 'list' ? 'active' : ''}
               onClick={() => setActiveView('list')}
             >
               Lista
             </button>
-            <button 
+            <button
               className={activeView === 'calendar' ? 'active' : ''}
               onClick={() => setActiveView('calendar')}
             >
@@ -106,7 +135,7 @@ const TasksPage = () => {
         </div>
       )}
 
-      <TaskFilters 
+      <TaskFilters
         onFilterChange={handleFilterChange}
         TASK_TYPES={TASK_TYPES}
         TASK_STATUS={TASK_STATUS}
@@ -115,13 +144,57 @@ const TasksPage = () => {
 
       <div className="tasks-content">
         {activeView === 'list' ? (
-          <TaskList 
-            tasks={tasks}
-            onEditTask={handleEditTask}
-            TASK_TYPES={TASK_TYPES}
-          />
+          <div className="tasks-list-view">
+            {activeTasks.length > 0 && (
+              <div className="tasks-section">
+                <div className="tasks-section-header">
+                  <h3>Aktywne zadania ({activeTasks.length})</h3>
+                  <span className="section-subtitle">Możesz edytować te zadania</span>
+                </div>
+                <TaskList
+                  tasks={activeTasks}
+                  onEditTask={handleEditTask}
+                  TASK_TYPES={TASK_TYPES}
+                />
+              </div>
+            )}
+
+            {completedTasks.length > 0 && (
+              <div className="tasks-section completed-section">
+                <div className="tasks-section-divider">
+                  <span className="divider-line"></span>
+                  <span className="divider-text">
+                    Zakończone ({completedTasks.length})
+                  </span>
+                  <span className="divider-line"></span>
+                </div>
+
+                <div className="tasks-info-banner">
+                  <div className="info-icon">ℹ️</div>
+                  <div className="info-content">
+                    <strong>Informacja:</strong> Zadania zakończone nie mogą być edytowane i są automatycznie usuwane po 30 dniach.
+                  </div>
+                </div>
+
+                <TaskList
+                  tasks={completedTasks}
+                  onEditTask={handleEditTask}
+                  TASK_TYPES={TASK_TYPES}
+                />
+              </div>
+            )}
+
+            {tasks.length === 0 && !loading && (
+              <div className="no-tasks-message">
+                <p>📝 Brak zadań do wyświetlenia</p>
+                <button className="btn-primary" onClick={handleAddTask}>
+                  Utwórz pierwsze zadanie
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
-          <TaskCalendar 
+          <TaskCalendar
             tasks={tasks}
             onEditTask={handleEditTask}
           />

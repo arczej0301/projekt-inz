@@ -1,10 +1,10 @@
-// src/components/TaskList.jsx - ZASTĄP CAŁY PLIK
+// src/components/TaskList.jsx - BEZ MOŻLIWOŚCI KLIKNIĘCIA ZAKOŃCZONYCH ZADAŃ
 import React from 'react';
 import { useTasks } from '../hooks/useTasks';
 import './TaskList.css';
 
 const TaskList = ({ tasks, onEditTask, TASK_TYPES }) => {
-  const { fields, machines, materials } = useTasks();
+  const { fields, tractors, machines, warehouseItems } = useTasks();
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -36,24 +36,38 @@ const TaskList = ({ tasks, onEditTask, TASK_TYPES }) => {
     }
   };
 
-  // Znajdź nazwę powiązanego elementu - DOSTOSOWANE DO GARAGE
-  const getReferenceName = (id, collection, field = 'name') => {
+  const getReferenceName = (id, collection) => {
     if (!id) return null;
     const item = collection.find(item => item.id === id);
     
-    // Specjalna obsługa maszyn z garage
-    if (field === 'name' && collection === machines) {
-      return item ? `${item.brand || ''} ${item.model || ''} ${item.name || ''}`.trim() : null;
+    if (!item) return null;
+    
+    if (collection === tractors || collection === machines) {
+      return item.name || item.model || item.brand || `Maszyna ${item.id}`;
     }
     
-    return item ? item[field] : null;
+    if (collection === fields) {
+      return item.name || `Pole ${item.id}`;
+    }
+    
+    if (collection === warehouseItems) {
+      return item.name || `Produkt ${item.id}`;
+    }
+    
+    return null;
   };
 
-  // Znajdź etykietę typu zadania
   const getTaskTypeLabel = (typeValue) => {
     if (!typeValue) return 'Nie określono';
     const type = TASK_TYPES.find(t => t.value === typeValue);
     return type ? type.label : 'Nieznany typ';
+  };
+
+  const handleTaskClick = (task) => {
+    // Tylko aktywne zadania można edytować
+    if (task.status !== 'completed') {
+      onEditTask(task);
+    }
   };
 
   if (tasks.length === 0) {
@@ -66,71 +80,94 @@ const TaskList = ({ tasks, onEditTask, TASK_TYPES }) => {
 
   return (
     <div className="task-list">
-      {tasks.map(task => (
-        <div key={task.id} className="task-card" onClick={() => onEditTask(task)}>
-          <div className="task-header">
-            <h3 className="task-title">{task.title}</h3>
-            <div className="task-meta">
-              <span className={`status-badge ${getStatusClass(task.status)}`}>
-                {task.status === 'pending' && 'Do zrobienia'}
-                {task.status === 'in_progress' && 'W trakcie'}
-                {task.status === 'completed' && 'Zakończone'}
-                {task.status === 'cancelled' && 'Anulowane'}
-              </span>
-              <span className={`priority-badge ${getPriorityClass(task.priority)}`}>
-                {task.priority === 'low' && 'Niski'}
-                {task.priority === 'normal' && 'Normalny'}
-                {task.priority === 'high' && 'Wysoki'}
-                {task.priority === 'critical' && 'Krytyczny'}
-              </span>
+      {tasks.map(task => {
+        const isCompleted = task.status === 'completed';
+        
+        return (
+          <div 
+            key={task.id} 
+            className={`task-card ${isCompleted ? 'task-completed' : ''}`}
+            onClick={() => handleTaskClick(task)}
+          >
+            <div className="task-header">
+              <h3 className="task-title">{task.title}</h3>
+              <div className="task-meta">
+                <span className={`status-badge ${getStatusClass(task.status)}`}>
+                  {task.status === 'pending' && 'Do zrobienia'}
+                  {task.status === 'in_progress' && 'W trakcie'}
+                  {task.status === 'completed' && 'Zakończone'}
+                  {task.status === 'cancelled' && 'Anulowane'}
+                </span>
+                <span className={`priority-badge ${getPriorityClass(task.priority)}`}>
+                  {task.priority === 'low' && 'Niski'}
+                  {task.priority === 'normal' && 'Normalny'}
+                  {task.priority === 'high' && 'Wysoki'}
+                  {task.priority === 'critical' && 'Krytyczny'}
+                </span>
+              </div>
             </div>
-          </div>
 
-          {task.description && (
-            <p className="task-description">{task.description}</p>
-          )}
+            {task.description && (
+              <p className="task-description">{task.description}</p>
+            )}
 
-          <div className="task-details">
-            <div className="task-info">
-              <span className="info-item">
-                <strong>Typ:</strong> {getTaskTypeLabel(task.type)}
-              </span>
-              <span className="info-item">
-                <strong>Termin:</strong> {formatDate(task.dueDate)}
-              </span>
-              {task.assignedTo && (
+            <div className="task-details">
+              <div className="task-info">
                 <span className="info-item">
-                  <strong>Wykonawca:</strong> {task.assignedTo}
+                  <strong>Typ:</strong> {getTaskTypeLabel(task.type)}
                 </span>
-              )}
+                <span className="info-item">
+                  <strong>Termin:</strong> {formatDate(task.dueDate)}
+                </span>
+                {task.assignedTo && (
+                  <span className="info-item">
+                    <strong>Wykonawca:</strong> {task.assignedTo}
+                  </span>
+                )}
+                {isCompleted && task.completedAt && (
+                  <span className="info-item">
+                    <strong>Zakończono:</strong> {formatDate(task.completedAt)}
+                    {task.completedAt && (
+                      <span className="days-ago">
+                        ({Math.floor((new Date() - (task.completedAt?.toDate ? task.completedAt.toDate() : new Date(task.completedAt))) / (1000 * 60 * 60 * 24))} dni temu)
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+
+              <div className="task-references">
+                {task.fieldId && (
+                  <span className="reference-tag field-tag" title={getReferenceName(task.fieldId, fields)}>
+                    Pole: {getReferenceName(task.fieldId, fields) || 'Nieznane'}
+                  </span>
+                )}
+                {task.tractorId && (
+                  <span className="reference-tag tractor-tag" title={getReferenceName(task.tractorId, tractors)}>
+                    Ciągnik: {getReferenceName(task.tractorId, tractors) || 'Nieznany'}
+                  </span>
+                )}
+                {task.machineId && (
+                  <span className="reference-tag machine-tag" title={getReferenceName(task.machineId, machines)}>
+                    Maszyna: {getReferenceName(task.machineId, machines) || 'Nieznana'}
+                  </span>
+                )}
+                {task.materialId && (
+                  <span className="reference-tag material-tag" title={getReferenceName(task.materialId, warehouseItems)}>
+                    Nasiona/Nawozy: {getReferenceName(task.materialId, warehouseItems) || 'Nieznany'}
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="task-references">
-              {task.fieldId && (
-                <span className="reference-tag field-tag" title={getReferenceName(task.fieldId, fields)}>
-                  Pole: {getReferenceName(task.fieldId, fields) || 'Nieznane'}
-                </span>
-              )}
-              {task.machineId && (
-                <span className="reference-tag machine-tag" title={getReferenceName(task.machineId, machines, 'model')}>
-                  Maszyna: {getReferenceName(task.machineId, machines, 'model') || getReferenceName(task.machineId, machines, 'brand') || 'Nieznana'}
-                </span>
-              )}
-              {task.materialId && (
-                <span className="reference-tag material-tag" title={getReferenceName(task.materialId, materials)}>
-                  Material: {getReferenceName(task.materialId, materials) || 'Nieznany'}
-                </span>
-              )}
-            </div>
+            {task.comments && task.comments.length > 0 && (
+              <div className="task-comments-preview">
+                <span>{task.comments.length} komentarzy</span>
+              </div>
+            )}
           </div>
-
-          {task.comments && task.comments.length > 0 && (
-            <div className="task-comments-preview">
-              <span>{task.comments.length} komentarzy</span>
-            </div>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

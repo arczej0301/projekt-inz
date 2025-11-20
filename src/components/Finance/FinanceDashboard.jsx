@@ -24,6 +24,14 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
     'other-expenses': 'Inne wydatki'
   }
 
+  // Funkcja do formatowania kwot z separatorami tysięcy
+  const formatAmount = (amount) => {
+    return new Intl.NumberFormat('pl-PL', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount)
+  }
+
   // Funkcja do tłumaczenia kategorii
   const translateCategory = (category) => {
     return categoryTranslations[category] || category
@@ -57,7 +65,7 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
             <div className="card-content">
               <div className="card-label">Bilans miesięczny</div>
               <div className={`card-amount ${summary.monthlyBalance >= 0 ? 'positive' : 'negative'}`}>
-                {summary.monthlyBalance.toFixed(2)} zł
+                {formatAmount(summary.monthlyBalance)} zł
               </div>
             </div>
           </div>
@@ -67,7 +75,7 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
             <div className="card-icon">💰</div>
             <div className="card-content">
               <div className="card-label">Przychody</div>
-              <div className="card-amount positive">{summary.monthlyIncome.toFixed(2)} zł</div>
+              <div className="card-amount positive">{formatAmount(summary.monthlyIncome)} zł</div>
             </div>
           </div>
           
@@ -76,7 +84,7 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
             <div className="card-icon">📉</div>
             <div className="card-content">
               <div className="card-label">Koszty</div>
-              <div className="card-amount negative">{summary.monthlyExpenses.toFixed(2)} zł</div>
+              <div className="card-amount negative">{formatAmount(summary.monthlyExpenses)} zł</div>
             </div>
           </div>
         </div>
@@ -104,7 +112,7 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
                     </div>
                   </div>
                   <div className={`transaction-amount ${transaction.type}`}>
-                    {transaction.type === 'income' ? '+' : '-'}{transaction.amount} zł
+                    {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)} zł
                   </div>
                 </div>
               ))}
@@ -120,8 +128,8 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
               <div key={category} className="category-item">
                 <div className="category-name">{category}</div>
                 <div className="category-amounts">
-                  <span className="income-amount">+{data.income.toFixed(2)} zł</span>
-                  <span className="expense-amount">-{data.expenses.toFixed(2)} zł</span>
+                  <span className="income-amount">+{formatAmount(data.income)} zł</span>
+                  <span className="expense-amount">-{formatAmount(data.expenses)} zł</span>
                 </div>
               </div>
             ))}

@@ -20,6 +20,28 @@
   border-color: #3498db;
 }
 
+/* Styl dla zakończonych zadań - bez hover i kursora pointer */
+.task-completed {
+  background: #f8f9fa;
+  border-color: #e9ecef;
+  cursor: default;
+}
+
+.task-completed:hover {
+  background: #f8f9fa;
+  border-color: #e9ecef;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.task-completed .task-title {
+  color: #6c757d;
+}
+
+.task-completed .task-description {
+  color: #868e96;
+}
+
 .task-header {
   display: flex;
   justify-content: space-between;
@@ -135,6 +157,13 @@
   margin-right: 4px;
 }
 
+.days-ago {
+  font-size: 11px;
+  color: #6c757d;
+  margin-left: 4px;
+  font-style: italic;
+}
+
 .task-references {
   display: flex;
   gap: 6px;
@@ -157,10 +186,10 @@
   border: 1px solid #c3e6cb;
 }
 
-.animal-tag {
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
+.tractor-tag {
+  background: #e8f4fd;
+  color: #0d6efd;
+  border: 1px solid #b6d4fe;
 }
 
 .machine-tag {
