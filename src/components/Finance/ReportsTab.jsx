@@ -1,4 +1,3 @@
-// components/Finance/ReportsTab.jsx
 import React, { useState, useMemo } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import './FinanceComponents.css'
@@ -8,6 +7,32 @@ const ReportsTab = ({ transactions, summary }) => {
   const [period, setPeriod] = useState('month')
   const [reportType, setReportType] = useState('income')
 
+  // Poprawiona funkcja do formatowania waluty
+  const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return '0,00 zł'
+    }
+    
+    const numAmount = parseFloat(amount)
+    const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    return `${formatted} zł`
+  }
+
+  // Poprawiona funkcja do formatowania liczb
+  const formatNumber = (number) => {
+    if (number === null || number === undefined || isNaN(number)) return '0'
+    
+    const num = parseFloat(number)
+    
+    // Dla liczb zmiennoprzecinkowych - formatuj z 2 miejscami po przecinku
+    if (num % 1 !== 0) {
+      return num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    }
+    
+    // Dla liczb całkowitych
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  }
+
   // Filtruj transakcje według okresu
   const filteredTransactions = useMemo(() => {
     const now = new Date()
@@ -15,7 +40,7 @@ const ReportsTab = ({ transactions, summary }) => {
 
     switch (period) {
       case 'week':
-        startDate = new Date(now.setDate(now.getDate() - 7))
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
         break
       case 'month':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -28,8 +53,17 @@ const ReportsTab = ({ transactions, summary }) => {
     }
 
     return transactions.filter(transaction => {
-      const transactionDate = transaction.date?.toDate ? transaction.date.toDate() : new Date(transaction.date)
-      return transactionDate >= startDate
+      let transactionDate
+
+      if (transaction.date?.toDate) {
+        transactionDate = transaction.date.toDate()
+      } else if (transaction.date instanceof Date) {
+        transactionDate = transaction.date
+      } else {
+        transactionDate = new Date(transaction.date)
+      }
+
+      return transactionDate >= startDate && transactionDate <= new Date()
     })
   }, [transactions, period])
 
@@ -55,35 +89,61 @@ const ReportsTab = ({ transactions, summary }) => {
 
   // Przygotuj dane dla wybranego typu raportu
   const reportData = useMemo(() => {
-    if (reportType === 'income') {
-      return Object.entries(chartData)
-        .filter(([_, data]) => data.income > 0)
-        .map(([category, data]) => ({
-          category,
-          amount: data.income,
-          type: 'income'
-        }))
-        .sort((a, b) => b.amount - a.amount)
-    } else {
-      return Object.entries(chartData)
-        .filter(([_, data]) => data.expenses > 0)
-        .map(([category, data]) => ({
-          category,
-          amount: data.expenses,
-          type: 'expense'
-        }))
-        .sort((a, b) => b.amount - a.amount)
-    }
+    const data = reportType === 'income'
+      ? Object.entries(chartData).filter(([_, data]) => data.income > 0)
+      : Object.entries(chartData).filter(([_, data]) => data.expenses > 0)
+
+    return data.map(([category, data]) => ({
+      category,
+      amount: reportType === 'income' ? data.income : data.expenses,
+      type: reportType === 'income' ? 'income' : 'expense'
+    }))
+      .sort((a, b) => b.amount - a.amount)
   }, [chartData, reportType])
 
   const totalAmount = reportData.reduce((sum, item) => sum + item.amount, 0)
+
+  // Funkcja do formatowania daty
+  const formatDate = (date) => {
+    if (!date) return ''
+
+    let transactionDate
+    if (date?.toDate) {
+      transactionDate = date.toDate()
+    } else if (date instanceof Date) {
+      transactionDate = date
+    } else {
+      transactionDate = new Date(date)
+    }
+
+    return transactionDate.toLocaleDateString('pl-PL')
+  }
+
+  // Funkcja do znalezienia kategorii
+  const findCategory = (categoryId, type) => {
+    const categories = type === 'income' ? incomeCategories : expenseCategories
+    return categories.find(cat => cat.id === categoryId) || { name: categoryId, icon: '💰' }
+  }
+
+  // Tytuły okresów
+  const periodTitles = {
+    week: 'ostatni tydzień',
+    month: 'ten miesiąc',
+    year: 'ten rok'
+  }
+
+  // Tytuły raportów
+  const reportTitles = {
+    income: 'Przychody',
+    expenses: 'Koszty'
+  }
 
   return (
     <div className="reports-tab">
       <div className="tab-header">
         <h3>Raporty finansowe</h3>
         <div className="report-controls">
-          <select 
+          <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
             className="control-select"
@@ -92,8 +152,8 @@ const ReportsTab = ({ transactions, summary }) => {
             <option value="month">Ten miesiąc</option>
             <option value="year">Ten rok</option>
           </select>
-          
-          <select 
+
+          <select
             value={reportType}
             onChange={(e) => setReportType(e.target.value)}
             className="control-select"
@@ -108,45 +168,56 @@ const ReportsTab = ({ transactions, summary }) => {
       <div className="report-summary">
         <div className="summary-card">
           <div className="summary-title">
-            {reportType === 'income' ? 'Łączne przychody' : 'Łączne koszty'}
+            {reportTitles[reportType]}
           </div>
           <div className={`summary-amount ${reportType === 'income' ? 'positive' : 'negative'}`}>
-            {totalAmount.toFixed(2)} zł
+            {formatCurrency(totalAmount)}
           </div>
           <div className="summary-period">
-            Okres: {period === 'week' ? 'ostatni tydzień' : period === 'month' ? 'ten miesiąc' : 'ten rok'}
+            Okres: {periodTitles[period]}
           </div>
         </div>
       </div>
 
-      {/* Wykres słupkowy (prosty CSS) */}
+ {/* Wykres słupkowy */}
       <div className="chart-container">
         <h4>Rozkład według kategorii</h4>
         <div className="bar-chart">
-          {reportData.map((item, index) => {
-            const percentage = (item.amount / totalAmount) * 100
-            const category = reportType === 'income' 
-              ? incomeCategories.find(cat => cat.id === item.category)
-              : expenseCategories.find(cat => cat.id === item.category)
+          {reportData.length === 0 ? (
+            <div className="no-data">
+              Brak danych dla wybranych kryteriów
+            </div>
+          ) : (
+            reportData.map((item, index) => {
+              const percentage = totalAmount > 0 ? (item.amount / totalAmount) * 100 : 0
+              const category = findCategory(item.category, reportType)
 
-            return (
-              <div key={item.category} className="bar-item">
-                <div className="bar-label">
-                  <span className="category-icon">{category?.icon || '💰'}</span>
-                  <span className="category-name">{category?.name || item.category}</span>
-                  <span className="bar-amount">{item.amount.toFixed(2)} zł</span>
-                </div>
-                <div className="bar-track">
-                  <div 
-                    className={`bar-fill ${item.type}`}
-                    style={{ width: `${percentage}%` }}
-                  >
-                    <span className="bar-percentage">{percentage.toFixed(1)}%</span>
+              return (
+                <div key={item.category} className="bar-item">
+                  <div className="bar-label">
+                    <div className="category-info">
+                      <span className="category-icon">{category.icon}</span>
+                      <span className="category-name">{category.name}</span>
+                    </div>
+                    <span className="bar-amount">{formatCurrency(item.amount)}</span>
+                  </div>
+                  <div className="bar-track">
+                    <div
+                      className={`bar-fill ${item.type}`}
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    >
+                      {percentage >= 15 && (
+                        <span className="bar-percentage">{percentage.toFixed(1)}%</span>
+                      )}
+                    </div>
+                    {percentage < 15 && (
+                      <span className="bar-percentage-outside">{percentage.toFixed(1)}%</span>
+                    )}
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })
+          )}
         </div>
       </div>
 
@@ -166,24 +237,22 @@ const ReportsTab = ({ transactions, summary }) => {
             </thead>
             <tbody>
               {filteredTransactions
-                .filter(t => t.type === reportType.slice(0, -1))
+                .filter(transaction => transaction.type === (reportType === 'income' ? 'income' : 'expense'))
                 .map(transaction => {
-                  const category = reportType === 'income' 
-                    ? incomeCategories.find(cat => cat.id === transaction.category)
-                    : expenseCategories.find(cat => cat.id === transaction.category)
+                  const category = findCategory(transaction.category, transaction.type)
 
                   return (
                     <tr key={transaction.id}>
-                      <td>{transaction.date?.toLocaleDateString?.() || new Date(transaction.date).toLocaleDateString()}</td>
+                      <td>{formatDate(transaction.date)}</td>
                       <td>
                         <span className="category-with-icon">
-                          <span className="icon">{category?.icon || '💰'}</span>
-                          {category?.name || transaction.category}
+                          <span className="icon">{category.icon}</span>
+                          {category.name}
                         </span>
                       </td>
                       <td>{transaction.description}</td>
                       <td className={`amount ${transaction.type}`}>
-                        {transaction.type === 'income' ? '+' : '-'}{transaction.amount.toFixed(2)} zł
+                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                       </td>
                       <td>
                         <span className={`type-badge ${transaction.type}`}>
@@ -193,7 +262,7 @@ const ReportsTab = ({ transactions, summary }) => {
                     </tr>
                   )
                 })}
-              {filteredTransactions.filter(t => t.type === reportType.slice(0, -1)).length === 0 && (
+              {filteredTransactions.filter(t => t.type === (reportType === 'income' ? 'income' : 'expense')).length === 0 && (
                 <tr>
                   <td colSpan="5" className="no-data">
                     Brak transakcji dla wybranych kryteriów
@@ -204,6 +273,9 @@ const ReportsTab = ({ transactions, summary }) => {
           </table>
         </div>
       </div>
+
+     
+
     </div>
   )
 }

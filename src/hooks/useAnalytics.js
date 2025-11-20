@@ -1,4 +1,3 @@
-// hooks/useAnalytics.js
 import { useState, useEffect, useMemo } from 'react'
 import { 
   collection, 
@@ -10,6 +9,28 @@ import {
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 
+// Stałe i konfiguracja
+const COLLECTIONS = {
+  TRANSACTIONS: 'finance_transactions',
+  FIELDS: 'fields',
+  ANIMALS: 'animals',
+  WAREHOUSE: 'warehouse',
+  TASKS: 'tasks',
+  GARAGE: 'garage'
+}
+
+const ALERT_THRESHOLDS = {
+  PROFIT_MARGIN_LOW: 15,
+  PROFIT_MARGIN_HIGH: 25,
+  COST_TO_REVENUE_RATIO: 1.1,
+  FIELD_UTILIZATION_LOW: 80,
+  FIELD_UTILIZATION_HIGH: 95,
+  FIELD_EFFICIENCY_LOW: 60,
+  ANIMAL_HEALTH_LOW: 85,
+  ANIMAL_COST_PER_ANIMAL: 500,
+  LOW_STOCK_ALERT: 3
+}
+
 export const useAnalytics = () => {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState({})
@@ -20,69 +41,33 @@ export const useAnalytics = () => {
     const fetchAllData = async () => {
       try {
         setLoading(true)
+        setError(null)
         
-        // Pobierz transakcje finansowe
-        const transactionsQuery = query(
-          collection(db, 'finance_transactions'),
-          orderBy('date', 'desc')
+        const collections = Object.values(COLLECTIONS)
+        const dataPromises = collections.map(collectionName => 
+          fetchCollectionData(collectionName)
         )
-        const transactionsSnapshot = await getDocs(transactionsQuery)
-        const transactions = transactionsSnapshot.docs.map(doc => {
-          const data = doc.data()
-          return {
-            id: doc.id,
-            ...data,
-            date: data.date?.toDate?.() || data.date
+
+        const results = await Promise.allSettled(dataPromises)
+        
+        const collectedData = {}
+        results.forEach((result, index) => {
+          const collectionName = collections[index]
+          if (result.status === 'fulfilled') {
+            collectedData[collectionName] = result.value
+          } else {
+            console.error(`Error fetching ${collectionName}:`, result.reason)
+            collectedData[collectionName] = []
           }
         })
 
-        // Pobierz dane pól
-        const fieldsQuery = query(collection(db, 'fields'))
-        const fieldsSnapshot = await getDocs(fieldsQuery)
-        const fields = fieldsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-
-        // Pobierz dane zwierząt
-        const animalsQuery = query(collection(db, 'animals'))
-        const animalsSnapshot = await getDocs(animalsQuery)
-        const animals = animalsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-
-        // Pobierz dane magazynu
-        const warehouseQuery = query(collection(db, 'warehouse'))
-        const warehouseSnapshot = await getDocs(warehouseQuery)
-        const warehouse = warehouseSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-
-        // Pobierz dane zadań
-        const tasksQuery = query(collection(db, 'tasks'))
-        const tasksSnapshot = await getDocs(tasksQuery)
-        const tasks = tasksSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-
-        // Pobierz dane garażu
-        const garageQuery = query(collection(db, 'garage'))
-        const garageSnapshot = await getDocs(garageQuery)
-        const garage = garageSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-
         setData({
-          transactions,
-          fields,
-          animals: animals || [],
-          warehouse,
-          tasks,
-          garage
+          transactions: collectedData[COLLECTIONS.TRANSACTIONS],
+          fields: collectedData[COLLECTIONS.FIELDS],
+          animals: collectedData[COLLECTIONS.ANIMALS],
+          warehouse: collectedData[COLLECTIONS.WAREHOUSE],
+          tasks: collectedData[COLLECTIONS.TASKS],
+          garage: collectedData[COLLECTIONS.GARAGE]
         })
 
       } catch (error) {
@@ -96,37 +81,48 @@ export const useAnalytics = () => {
     fetchAllData()
   }, [])
 
+  // Helper do pobierania kolekcji
+  const fetchCollectionData = async (collectionName) => {
+    let collectionQuery
+    if (collectionName === COLLECTIONS.TRANSACTIONS) {
+      collectionQuery = query(collection(db, collectionName), orderBy('date', 'desc'))
+    } else {
+      collectionQuery = query(collection(db, collectionName))
+    }
+
+    const snapshot = await getDocs(collectionQuery)
+    return snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        date: data.date?.toDate?.() || data.date
+      }
+    })
+  }
+
   // Analiza finansowa
   const financialAnalytics = useMemo(() => {
+    const transactions = data.transactions || []
     const currentYear = new Date().getFullYear()
+    const currentMonth = new Date().getMonth()
     
-    const yearlyTransactions = data.transactions?.filter(t => {
+    const yearlyTransactions = transactions.filter(t => {
       if (!t.date) return false
       const transactionDate = t.date?.toDate ? t.date.toDate() : new Date(t.date)
       return transactionDate.getFullYear() === currentYear
-    }) || []
+    })
 
     const monthlyTransactions = yearlyTransactions.filter(t => {
       const transactionDate = t.date?.toDate ? t.date.toDate() : new Date(t.date)
-      return transactionDate.getMonth() === new Date().getMonth()
+      return transactionDate.getMonth() === currentMonth
     })
 
-    const totalRevenue = yearlyTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
-
-    const totalExpenses = yearlyTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
-
-    const monthlyRevenue = monthlyTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
-
-    const monthlyExpenses = monthlyTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
-
+    const totalRevenue = calculateTotalAmount(yearlyTransactions, 'income')
+    const totalExpenses = calculateTotalAmount(yearlyTransactions, 'expense')
+    const monthlyRevenue = calculateTotalAmount(monthlyTransactions, 'income')
+    const monthlyExpenses = calculateTotalAmount(monthlyTransactions, 'expense')
+    
     const netProfit = totalRevenue - totalExpenses
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
@@ -139,9 +135,9 @@ export const useAnalytics = () => {
         monthlyRevenue,
         monthlyExpenses
       },
-      trends: generateRevenueTrends(data.transactions || []),
-      costStructure: analyzeCostStructure(data.transactions || []),
-      categoryPerformance: analyzeCategoryPerformance(data.transactions || [])
+      trends: generateRevenueTrends(transactions),
+      costStructure: analyzeCostStructure(transactions),
+      categoryPerformance: analyzeCategoryPerformance(transactions)
     }
   }, [data.transactions])
 
@@ -151,7 +147,7 @@ export const useAnalytics = () => {
     
     return {
       totalFields: fields.length,
-      totalArea: fields.reduce((sum, field) => sum + (parseFloat(field.area) || 0), 0),
+      totalArea: calculateTotalArea(fields),
       productivity: analyzeFieldProductivity(fields),
       soilEfficiency: analyzeSoilEfficiency(fields),
       cropPerformance: analyzeCropPerformance(fields),
@@ -162,12 +158,13 @@ export const useAnalytics = () => {
   // Analiza zwierząt
   const animalAnalytics = useMemo(() => {
     const animals = data.animals || []
+    const transactions = data.transactions || []
     
     return {
       totalAnimals: animals.length,
-      productivity: analyzeAnimalProductivity(animals, data.transactions || []),
+      productivity: analyzeAnimalProductivity(animals, transactions),
       health: analyzeAnimalHealth(animals),
-      costs: analyzeAnimalCosts(data.transactions || [], animals)
+      costs: analyzeAnimalCosts(transactions, animals)
     }
   }, [data.animals, data.transactions])
 
@@ -185,11 +182,12 @@ export const useAnalytics = () => {
   // Analiza sprzętu
   const equipmentAnalytics = useMemo(() => {
     const garage = data.garage || []
+    const transactions = data.transactions || []
     
     return {
       totalEquipment: garage.length,
       utilization: analyzeEquipmentUtilization(garage),
-      maintenance: analyzeMaintenanceCosts(data.transactions || [])
+      maintenance: analyzeMaintenanceCosts(transactions)
     }
   }, [data.garage, data.transactions])
 
@@ -211,7 +209,18 @@ export const useAnalytics = () => {
   }
 }
 
-// Funkcje pomocnicze do analizy danych
+// Helper functions
+const calculateTotalAmount = (transactions, type) => {
+  return transactions
+    .filter(t => t.type === type)
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+}
+
+const calculateTotalArea = (fields) => {
+  return fields.reduce((sum, field) => sum + (parseFloat(field.area) || 0), 0)
+}
+
+// Pozostałe funkcje analityczne pozostają bez zmian, ale można je również zrefaktoryzować:
 const generateRevenueTrends = (transactions) => {
   const monthlyData = {}
   
@@ -225,16 +234,17 @@ const generateRevenueTrends = (transactions) => {
       monthlyData[monthKey] = { revenue: 0, expenses: 0 }
     }
     
+    const amount = parseFloat(transaction.amount) || 0
     if (transaction.type === 'income') {
-      monthlyData[monthKey].revenue += parseFloat(transaction.amount) || 0
+      monthlyData[monthKey].revenue += amount
     } else {
-      monthlyData[monthKey].expenses += parseFloat(transaction.amount) || 0
+      monthlyData[monthKey].expenses += amount
     }
   })
   
   return Object.entries(monthlyData)
     .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-12) // Ostatnie 12 miesięcy
+    .slice(-12)
     .map(([month, data]) => ({
       month,
       revenue: data.revenue,
@@ -250,10 +260,8 @@ const analyzeCostStructure = (transactions) => {
     .filter(t => t.type === 'expense')
     .forEach(transaction => {
       const category = transaction.category || 'other'
-      if (!costsByCategory[category]) {
-        costsByCategory[category] = 0
-      }
-      costsByCategory[category] += parseFloat(transaction.amount) || 0
+      const amount = parseFloat(transaction.amount) || 0
+      costsByCategory[category] = (costsByCategory[category] || 0) + amount
     })
   
   return Object.entries(costsByCategory)
@@ -270,15 +278,9 @@ const analyzeCategoryPerformance = (transactions) => {
     const amount = parseFloat(transaction.amount) || 0
     
     if (transaction.type === 'income') {
-      if (!incomeByCategory[category]) {
-        incomeByCategory[category] = 0
-      }
-      incomeByCategory[category] += amount
+      incomeByCategory[category] = (incomeByCategory[category] || 0) + amount
     } else {
-      if (!expensesByCategory[category]) {
-        expensesByCategory[category] = 0
-      }
-      expensesByCategory[category] += amount
+      expensesByCategory[category] = (expensesByCategory[category] || 0) + amount
     }
   })
   
@@ -291,6 +293,7 @@ const analyzeCategoryPerformance = (transactions) => {
       .sort((a, b) => b.amount - a.amount)
   }
 }
+
 
 const analyzeFieldProductivity = (fields) => {
   if (!fields.length) return []
@@ -524,7 +527,7 @@ const generateAlerts = (financial, fields, animals, warehouse) => {
   const alerts = []
   
   // Alerty finansowe
-  if (financial.kpis.profitMargin < 15) {
+  if (financial.kpis.profitMargin < ALERT_THRESHOLDS.PROFIT_MARGIN_LOW) {
     alerts.push({
       type: 'warning',
       title: 'Niska marża zysku',
@@ -534,7 +537,7 @@ const generateAlerts = (financial, fields, animals, warehouse) => {
     })
   }
   
-  if (financial.kpis.monthlyExpenses > financial.kpis.monthlyRevenue * 1.1) {
+  if (financial.kpis.monthlyExpenses > financial.kpis.monthlyRevenue * ALERT_THRESHOLDS.COST_TO_REVENUE_RATIO) {
     alerts.push({
       type: 'danger',
       title: 'Wysokie koszty operacyjne',
@@ -544,8 +547,8 @@ const generateAlerts = (financial, fields, animals, warehouse) => {
     })
   }
   
-  // Alerty produkcyjne - pola
-  if (fields.fieldUtilization && fields.fieldUtilization.utilizationRate < 80) {
+  // Alerty produkcyjne
+  if (fields.fieldUtilization?.utilizationRate < ALERT_THRESHOLDS.FIELD_UTILIZATION_LOW) {
     alerts.push({
       type: 'warning',
       title: 'Niskie wykorzystanie pól',
@@ -619,7 +622,7 @@ const generateAlerts = (financial, fields, animals, warehouse) => {
     })
   }
   
-  return alerts.sort((a, b) => {
+ return alerts.sort((a, b) => {
     const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
     return priorityOrder[a.priority] - priorityOrder[b.priority]
   })
