@@ -9,6 +9,7 @@ function MagazinePage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+<<<<<<< HEAD
   const [sortOrder, setSortOrder] = useState('name-asc')
 
   // Poprawiona funkcja do formatowania waluty
@@ -40,6 +41,8 @@ const formatNumber = (number) => {
   const handleCategoryChange = (newCategory) => {
     setActiveCategory(newCategory)
   }
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 
   const { 
     warehouseData, 
@@ -51,6 +54,7 @@ const formatNumber = (number) => {
     deleteProduct
   } = useWarehouse()
 
+<<<<<<< HEAD
   // Filtrowanie i sortowanie produktów
   const filteredItems = (warehouseData[activeCategory] || [])
     .filter(item =>
@@ -78,6 +82,11 @@ const formatNumber = (number) => {
           return 0
       }
     })
+=======
+  const filteredItems = warehouseData[activeCategory]?.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || []
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 
   const getStockStatus = (quantity, minStock) => {
     if (quantity === 0) return 'brak'
@@ -120,6 +129,10 @@ const formatNumber = (number) => {
 
   const handleSaveProduct = async (productData) => {
     if (editingProduct) {
+<<<<<<< HEAD
+=======
+      // Aktualizacja istniejącego produktu
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
       const result = await updateProduct(editingProduct.id, productData)
       if (result.success) {
         setIsModalOpen(false)
@@ -128,6 +141,10 @@ const formatNumber = (number) => {
         alert(`Błąd: ${result.error}`)
       }
     } else {
+<<<<<<< HEAD
+=======
+      // Dodawanie nowego produktu
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
       const result = await addProduct({
         ...productData,
         category: activeCategory
@@ -171,6 +188,7 @@ const formatNumber = (number) => {
   return (
     <div className="magazine-page">
       <div className="magazine-header">
+<<<<<<< HEAD
         <h2>Magazyn Gospodarstwa</h2>
       </div>
 
@@ -201,11 +219,50 @@ const formatNumber = (number) => {
     </div>
   </div>
 </div>
+=======
+        <h2>📦 Magazyn Gospodarstwa</h2>
+        <p>Zarządzanie zapasami i towarami w gospodarstwie</p>
+      </div>
+
+      <div className="magazine-stats">
+        <div className="stat-card">
+          <div className="stat-icon">💰</div>
+          <div className="stat-info">
+            <h3>Łączna wartość</h3>
+            <p>{calculateTotalValue().toFixed(2)} zł</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">📦</div>
+          <div className="stat-info">
+            <h3>Łączna ilość produktów</h3>
+            <p>{Object.values(warehouseData).flat().length}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">⚠️</div>
+          <div className="stat-info">
+            <h3>Niskie stany</h3>
+            <p>{countLowStockItems()}</p>
+          </div>
+        </div>
+      </div>
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 
       <div className="magazine-content">
         <div className="categories-sidebar">
           <div className="sidebar-header">
             <h3>Kategorie</h3>
+<<<<<<< HEAD
+=======
+            <button 
+              className="add-product-btn"
+              onClick={handleAddProduct}
+              title="Dodaj nowy produkt"
+            >
+              +
+            </button>
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
           </div>
           {categories.map(category => (
             <button
@@ -230,6 +287,7 @@ const formatNumber = (number) => {
               {categories.find(cat => cat.id === activeCategory)?.name}
             </h3>
             <div className="products-controls">
+<<<<<<< HEAD
               {/* Najpierw sortowanie */}
               <div className="filter-group">
                 <label>Sortuj:</label>
@@ -247,6 +305,8 @@ const formatNumber = (number) => {
               </div>
               
               {/* Potem wyszukiwanie */}
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
               <div className="search-box">
                 <input
                   type="text"
@@ -256,8 +316,11 @@ const formatNumber = (number) => {
                 />
                 <span className="search-icon">🔍</span>
               </div>
+<<<<<<< HEAD
               
               {/* Na końcu przycisk dodaj produkt */}
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
               <button 
                 className="btn-primary"
                 onClick={handleAddProduct}
@@ -267,6 +330,7 @@ const formatNumber = (number) => {
             </div>
           </div>
 
+<<<<<<< HEAD
           
 <div className="products-grid">
   {filteredItems.map(item => {
@@ -332,6 +396,73 @@ const formatNumber = (number) => {
     )
   })}
 </div>
+=======
+          <div className="products-grid">
+            {filteredItems.map(item => {
+              const stockStatus = getStockStatus(item.quantity, item.minStock)
+              return (
+                <div key={item.id} className="product-card">
+                  <div className="product-header">
+                    <h4>{item.name}</h4>
+                    <div 
+                      className="stock-status"
+                      style={{ backgroundColor: getStatusColor(stockStatus) }}
+                    >
+                      {stockStatus}
+                    </div>
+                  </div>
+                  
+                  <div className="product-details">
+                    <div className="detail-row">
+                      <span className="label">Ilość:</span>
+                      <span className="value">{item.quantity} {item.unit}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Minimalny stan:</span>
+                      <span className="value">{item.minStock} {item.unit}</span>
+                    </div>
+                    {item.price && (
+                      <>
+                        <div className="detail-row">
+                          <span className="label">Cena:</span>
+                          <span className="value">{item.price} zł/{item.unit}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Wartość:</span>
+                          <span className="value">{(item.quantity * item.price).toFixed(2)} zł</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="detail-row">
+                      <span className="label">Ostatnia aktualizacja:</span>
+                      <span className="value">
+                        {item.lastUpdate?.toDate ? 
+                          item.lastUpdate.toDate().toLocaleDateString('pl-PL') : 
+                          'Brak danych'
+                        }
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="product-actions">
+                    <button 
+                      className="btn-primary"
+                      onClick={() => handleEditProduct(item)}
+                    >
+                      Edytuj
+                    </button>
+                    <button 
+                      className="btn-secondary"
+                      onClick={() => handleDeleteProduct(item.id)}
+                    >
+                      Usuń
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 
           {filteredItems.length === 0 && (
             <div className="no-products">
@@ -348,6 +479,7 @@ const formatNumber = (number) => {
       </div>
 
       {isModalOpen && (
+<<<<<<< HEAD
     <ProductModal
       product={editingProduct}
       category={activeCategory}
@@ -360,6 +492,18 @@ const formatNumber = (number) => {
       }}
     />
   )}
+=======
+        <ProductModal
+          product={editingProduct}
+          category={activeCategory}
+          onSave={handleSaveProduct}
+          onClose={() => {
+            setIsModalOpen(false)
+            setEditingProduct(null)
+          }}
+        />
+      )}
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
     </div>
   )
 }

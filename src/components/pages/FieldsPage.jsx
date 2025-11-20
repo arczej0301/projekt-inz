@@ -5,12 +5,17 @@ import {
   addField, 
   updateField, 
   deleteField,
+<<<<<<< HEAD
   subscribeToFields,
   // DODANE FUNKCJE DLA STATUSÓW
   getFieldStatus,
   updateFieldStatus,
   addFieldStatus
 } from '../../services/fieldsService';
+=======
+  subscribeToFields 
+} from '../services/fieldsService';
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 import './FieldsPage.css';
 
 const FieldsPage = () => { 
@@ -35,8 +40,8 @@ const FieldsPage = () => {
   });
 
   // Lokalizacja gospodarstwa: 53°12'46.9"N 22°09'42.6"E
-  const [mapCenter] = useState({ lat: 53.29684935063282, lng: 21.431474045415577 });
-  const [mapZoom] = useState(17);
+  const [mapCenter] = useState({ lat: 53.213027, lng: 22.161833 });
+  const [mapZoom] = useState(14);
 
   const mapRef = useRef();
   const googleRef = useRef();
@@ -323,11 +328,58 @@ const renderSortArrow = (key) => {
     setTempPolygon(prev => [...prev, newPoint]);
   };
 
+<<<<<<< HEAD
+=======
+  // Funkcja do obliczania centroidu polygonu
+const calculateCentroid = (coordinates) => {
+  if (!coordinates || coordinates.length === 0) return null;
+  
+  // Usuń ostatni punkt jeśli jest duplikatem pierwszego (zamknięty polygon)
+  const points = coordinates[0].lat === coordinates[coordinates.length - 1].lat && 
+                 coordinates[0].lng === coordinates[coordinates.length - 1].lng 
+                 ? coordinates.slice(0, -1) 
+                 : coordinates;
+
+  if (points.length === 0) return null;
+
+  let signedArea = 0;
+  let centroidX = 0;
+  let centroidY = 0;
+
+  for (let i = 0; i < points.length; i++) {
+    const current = points[i];
+    const next = points[(i + 1) % points.length];
+    
+    const area = (current.lat * next.lng) - (next.lat * current.lng);
+    signedArea += area;
+    centroidX += (current.lat + next.lat) * area;
+    centroidY += (current.lng + next.lng) * area;
+  }
+
+  signedArea *= 0.5;
+  centroidX /= (6 * signedArea);
+  centroidY /= (6 * signedArea);
+
+  return { lat: centroidX, lng: centroidY };
+};
+
+  // Oblicz odległość między punktami w metrach
+  const calculateDistance = (point1, point2) => {
+    if (!googleRef.current) return Infinity;
+    
+    const latLng1 = new googleRef.current.maps.LatLng(point1.lat, point1.lng);
+    const latLng2 = new googleRef.current.maps.LatLng(point2.lat, point2.lng);
+    
+    return googleRef.current.maps.geometry.spherical.computeDistanceBetween(latLng1, latLng2);
+  };
+
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   // Zakończ rysowanie i oblicz powierzchnię
   const finishDrawing = () => {
     if (tempPolygon.length < 3) {
       alert('Potrzebujesz co najmniej 3 punkty do utworzenia polygonu!');
       return;
+<<<<<<< HEAD
     }
 
     // Zamknij polygon (dodaj pierwszy punkt na koniec)
@@ -361,6 +413,54 @@ const renderSortArrow = (key) => {
     setIsDrawing(false);
     setTempPolygon([]);
     setIsModalOpen(true);
+=======
+    }
+
+    // Zamknij polygon (dodaj pierwszy punkt na koniec)
+    const closedPolygon = [...tempPolygon, tempPolygon[0]];
+    
+    // Oblicz powierzchnię
+    let areaHa = 0;
+    if (googleRef.current && googleRef.current.maps) {
+      try {
+        const areaM2 = googleRef.current.maps.geometry.spherical.computeArea(
+          new googleRef.current.maps.Polygon({ paths: closedPolygon }).getPath()
+        );
+        areaHa = (areaM2 / 10000).toFixed(2);
+      } catch (error) {
+        console.error('Error calculating area:', error);
+        areaHa = calculateApproximateArea(closedPolygon);
+      }
+    } else {
+      areaHa = calculateApproximateArea(closedPolygon);
+    }
+
+    setCurrentField({
+      name: '',
+      area: parseFloat(areaHa),
+      soil: '',
+      crop: '',
+      notes: '',
+      coordinates: closedPolygon
+    });
+
+    setIsDrawing(false);
+    setTempPolygon([]);
+    setIsModalOpen(true);
+  };
+
+  // Prosta funkcja do obliczania przybliżonej powierzchni
+  const calculateApproximateArea = (coordinates) => {
+    let area = 0;
+    const n = coordinates.length;
+    
+    for (let i = 0; i < n - 1; i++) {
+      area += coordinates[i].lat * coordinates[i + 1].lng - coordinates[i + 1].lat * coordinates[i].lng;
+    }
+    
+    area = Math.abs(area) / 2;
+    return (area * 10000).toFixed(2);
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   };
 
   // Anuluj rysowanie

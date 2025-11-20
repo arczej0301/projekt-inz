@@ -3,7 +3,11 @@ function Sidebar({ activeTab, setActiveTab }) {
       { id: 'dashboard', label: 'Pulpit', icon: '📊' },
       { id: 'fields', label: 'Pola uprawne', icon: '🌾' },
       { id: 'animals', label: 'Zwierzęta', icon: '🐄' },
+<<<<<<< HEAD
       { id: 'magazine', label: 'Magazyn', icon: '📦' },
+=======
+      { id: 'magazine', label: 'Magazyn', icon: '' },
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
       { id: 'garage', label: 'Garaż', icon: '🚜' },
       { id: 'tasks', label: 'Zadania', icon: '✅' },
       { id: 'finance', label: 'Finanse', icon: '💰' },

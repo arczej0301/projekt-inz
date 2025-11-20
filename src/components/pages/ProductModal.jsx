@@ -1,8 +1,15 @@
 // components/pages/ProductModal.jsx
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from 'react'
 import './ProductModal.css'
 
 function ProductModal({ product, category, categories, onCategoryChange, onSave, onClose }) {
+=======
+import { useState, useEffect } from 'react'
+import './ProductModal.css'
+
+function ProductModal({ product, category, onSave, onClose }) {
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   const [formData, setFormData] = useState({
     name: '',
     quantity: 0,
@@ -12,11 +19,14 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
     category: category
   })
 
+<<<<<<< HEAD
   const [isUnitSelectOpen, setIsUnitSelectOpen] = useState(false)
   const [isCategorySelectOpen, setIsCategorySelectOpen] = useState(false)
   const unitSelectRef = useRef(null)
   const categorySelectRef = useRef(null)
 
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   useEffect(() => {
     if (product) {
       setFormData({
@@ -30,6 +40,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
     }
   }, [product, category])
 
+<<<<<<< HEAD
   // Zamknij dropdowny gdy kliknięto poza nimi
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -47,6 +58,8 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
     }
   }, [])
 
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   const handleSubmit = (e) => {
     e.preventDefault()
     onSave(formData)
@@ -60,6 +73,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
     }))
   }
 
+<<<<<<< HEAD
   const handleUnitSelect = (unitValue) => {
     setFormData(prev => ({
       ...prev,
@@ -82,6 +96,8 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
     return category ? `${category.icon} ${category.name}` : 'Wybierz kategorię'
   }
 
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   const units = [
     { value: 'kg', label: 'Kilogramy (kg)' },
     { value: 'g', label: 'Gramy (g)' },
@@ -93,11 +109,14 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
     { value: 'paleta', label: 'Palety (paleta)' }
   ]
 
+<<<<<<< HEAD
   const getUnitLabel = (value) => {
     const unit = units.find(u => u.value === value)
     return unit ? unit.label : 'Wybierz jednostkę'
   }
 
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -134,6 +153,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
 
             <div className="form-group">
               <label>Jednostka *</label>
+<<<<<<< HEAD
               <div className="custom-select" ref={unitSelectRef}>
                 <div 
                   className={`select-header ${formData.unit ? 'has-value' : ''}`}
@@ -159,6 +179,20 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
                   </div>
                 )}
               </div>
+=======
+              <select
+                name="unit"
+                value={formData.unit}
+                onChange={handleChange}
+                required
+              >
+                {units.map(unit => (
+                  <option key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </option>
+                ))}
+              </select>
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
             </div>
           </div>
 
@@ -191,6 +225,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
           </div>
 
           <div className="form-group">
+<<<<<<< HEAD
             <label>Kategoria *</label>
             <div className="custom-select" ref={categorySelectRef}>
               <div 
@@ -218,6 +253,15 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
                 </div>
               )}
             </div>
+=======
+            <label>Kategoria</label>
+            <input
+              type="text"
+              value={category}
+              disabled
+              className="disabled-input"
+            />
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
           </div>
 
           <div className="form-actions">

@@ -1,16 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  getAnimals, 
-  addAnimal, 
-  updateAnimal, 
-  deleteAnimal,
-  subscribeToAnimals 
-} from '../../services/animalsService'; 
+import React, { useState } from 'react';
 import './AnimalsPage.css';
 
 function AnimalsPage() {
-  const [animals, setAnimals] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [animals, setAnimals] = useState([
+    {
+      id: 1,
+      name: "Bella",
+      type: "krowa",
+      breed: "Holstein",
+      earTag: "PL-001",
+      birthDate: "2020-03-15",
+      weight: 650,
+      status: "aktywna",
+      health: "zdrowa",
+      notes: "Krowa mleczna, dobra wydajność"
+    },
+    {
+      id: 2,
+      name: "Max",
+      type: "byk",
+      breed: "Limousine",
+      earTag: "PL-002",
+      birthDate: "2019-07-20",
+      weight: 950,
+      status: "aktywny",
+      health: "zdrowy",
+      notes: "Byk hodowlany"
+    },
+    {
+      id: 3,
+      name: "Luna",
+      type: "świnia",
+      breed: "Wielka Biała",
+      earTag: "PL-003",
+      birthDate: "2023-01-10",
+      weight: 120,
+      status: "w tuczu",
+      health: "zdrowa",
+      notes: "Prosię do tuczu"
+    }
+  ]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentAnimal, setCurrentAnimal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,37 +78,12 @@ function AnimalsPage() {
     { value: 'na sprzedaż', label: 'Na sprzedaż' }
   ];
 
-  // Pobierz zwierzęta przy pierwszym renderowaniu
-  useEffect(() => {
-    const loadAnimals = async () => {
-      try {
-        setLoading(true);
-        const animalsData = await getAnimals();
-        setAnimals(animalsData);
-      } catch (error) {
-        console.error('Error loading animals:', error);
-        alert('Błąd podczas ładowania zwierząt: ' + error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAnimals();
-
-    // Subskrybuj real-time updates
-    const unsubscribe = subscribeToAnimals((animalsData) => {
-      setAnimals(animalsData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
   const openAnimalModal = (animal = null) => {
     if (animal) {
       setCurrentAnimal(animal);
     } else {
       setCurrentAnimal({
+        id: Date.now(),
         name: '',
         type: '',
         breed: '',
@@ -130,63 +135,45 @@ function AnimalsPage() {
     setFilterType(e.target.value);
   };
 
+  const saveAnimal = () => {
+    if (!currentAnimal.name || !currentAnimal.type || !currentAnimal.earTag) {
+      alert('Proszę wypełnić wymagane pola!');
   const saveAnimal = async () => {
     if (!currentAnimal?.name || !currentAnimal?.type || !currentAnimal?.earTag) {
       alert('Proszę wypełnić wymagane pola (Imię, Typ i Numer kolczyka)!');
       return;
     }
 
-    try {
-      setSaveLoading(true);
-      
-      // Przygotuj dane do zapisania
-      const animalData = {
-        name: currentAnimal.name,
-        type: currentAnimal.type,
-        breed: currentAnimal.breed,
-        earTag: currentAnimal.earTag,
-        birthDate: currentAnimal.birthDate,
-        weight: currentAnimal.weight ? parseFloat(currentAnimal.weight) : null,
-        status: currentAnimal.status,
-        health: currentAnimal.health,
-        notes: currentAnimal.notes
-      };
+    if (animals.find(a => a.id === currentAnimal.id)) {
+      setAnimals(animals.map(a => a.id === currentAnimal.id ? currentAnimal : a));
+    } else {
+      setAnimals([...animals, currentAnimal]);
+    }
+    closeAnimalModal();
+  };
 
-      if (currentAnimal.id) {
-        // Edycja istniejącego zwierzęcia
-        await updateAnimal(currentAnimal.id, animalData);
-      } else {
-        // Dodanie nowego zwierzęcia
-        await addAnimal(animalData);
-      }
-      
-      closeAnimalModal();
-    } catch (error) {
-      console.error('Error saving animal:', error);
-      alert('Błąd podczas zapisywania zwierzęcia: ' + error.message);
-      setSaveLoading(false);
+  const deleteAnimal = (id) => {
+    if (window.confirm('Czy na pewno chcesz usunąć to zwierzę?')) {
+      setAnimals(animals.filter(a => a.id !== id));
     }
   };
 
-  const handleDeleteAnimal = async (animalId) => {
-    if (!window.confirm('Czy na pewno chcesz usunąć to zwierzę?')) {
-      return;
-    }
-
-    try {
-      await deleteAnimal(animalId);
-    } catch (error) {
-      console.error('Error deleting animal:', error);
-      alert('Błąd podczas usuwania zwierzęcia: ' + error.message);
-    }
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentAnimal({
+      ...currentAnimal,
+      [name]: name === 'weight' ? parseFloat(value) || '' : value
+    });
   };
 
+  // Filtrowanie zwierząt
+  const filteredAnimals = animals.filter(animal => {
   // Filtrowanie i sortowanie zwierząt
 const filteredAndSortedAnimals = animals
   .filter(animal => {
     const matchesSearch = animal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          animal.earTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (animal.breed && animal.breed.toLowerCase().includes(searchTerm.toLowerCase()));
+                         animal.breed.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'wszystkie' || animal.type === filterType;
     return matchesSearch && matchesType;
   })
@@ -324,6 +311,45 @@ const filteredAndSortedAnimals = animals
         </div>
 
         <div className="animals-list">
+          <h3>Lista zwierząt ({filteredAnimals.length})</h3>
+          <div className="animals-grid">
+            {filteredAnimals.map(animal => (
+              <div key={animal.id} className="animal-card">
+                <div className="animal-header">
+                  <h4>{animal.name}</h4>
+                  <span 
+                    className="health-badge"
+                    style={{ backgroundColor: getHealthColor(animal.health) }}
+                  >
+                    {animal.health}
+                  </span>
+                </div>
+                <div className="animal-details">
+                  <p><strong>Typ:</strong> {animal.type}</p>
+                  <p><strong>Rasa:</strong> {animal.breed}</p>
+                  <p><strong>Kolczyk:</strong> {animal.earTag}</p>
+                  <p><strong>Waga:</strong> {animal.weight} kg</p>
+                  <p><strong>Status:</strong> {animal.status}</p>
+                  <p><strong>Data urodzenia:</strong> {new Date(animal.birthDate).toLocaleDateString('pl-PL')}</p>
+                  {animal.notes && <p><strong>Notatki:</strong> {animal.notes}</p>}
+                </div>
+                <div className="animal-actions">
+                  <button 
+                    className="btn btn-primary btn-sm"
+                    onClick={() => openAnimalModal(animal)}
+                  >
+                    <i className="fas fa-edit"></i> Edytuj
+                  </button>
+                  <button 
+                    className="btn btn-danger btn-sm"
+                    onClick={() => deleteAnimal(animal.id)}
+                  >
+                    <i className="fas fa-trash"></i> Usuń
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
           <h3>Lista zwierząt ({filteredAndSortedAnimals.length})</h3>
           {filteredAndSortedAnimals.length === 0 ? (
             <div className="no-animals">
@@ -387,7 +413,7 @@ const filteredAndSortedAnimals = animals
         <div className="modal-overlay" onClick={closeAnimalModal}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{currentAnimal.id ? 'Edytuj zwierzę' : 'Dodaj nowe zwierzę'}</h3>
+              <h3>{currentAnimal.id && animals.find(a => a.id === currentAnimal.id) ? 'Edytuj zwierzę' : 'Dodaj nowe zwierzę'}</h3>
               <button className="close-btn" onClick={closeAnimalModal}>&times;</button>
             </div>
             <div className="modal-body">
@@ -464,7 +490,7 @@ const filteredAndSortedAnimals = animals
                   <input
                     type="number"
                     name="weight"
-                    value={currentAnimal.weight || ''}
+                    value={currentAnimal.weight}
                     onChange={handleInputChange}
                     step="0.1"
                   />
@@ -528,7 +554,7 @@ const filteredAndSortedAnimals = animals
                   <label>Notatki</label>
                   <textarea
                     name="notes"
-                    value={currentAnimal.notes || ''}
+                    value={currentAnimal.notes}
                     onChange={handleInputChange}
                     rows="3"
                     placeholder="Dodatkowe informacje o zwierzęciu..."
@@ -540,12 +566,8 @@ const filteredAndSortedAnimals = animals
               <button className="btn btn-secondary" onClick={closeAnimalModal}>
                 Anuluj
               </button>
-              <button 
-                className="btn btn-primary" 
-                onClick={saveAnimal}
-                disabled={saveLoading}
-              >
-                {saveLoading ? 'Zapisywanie...' : 'Zapisz zwierzę'}
+              <button className="btn btn-primary" onClick={saveAnimal}>
+                Zapisz zwierzę
               </button>
             </div>
           </div>

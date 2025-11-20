@@ -13,11 +13,6 @@ import MagazinePage from './components/pages/MagazinePage'
 import LoginPage from './components/LoginPage'
 import InactivityWarning from './components/InactivityWarning'
 import GaragePage from './components/pages/GaragePage'
-import SettingsPage from './components/Settings/SettingsPage'
-import TestPage from './components/pages/TestPage'
-import { LoadScript } from '@react-google-maps/api'
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA";
 
 function App() {
   const { user, loading } = useAuth()
