@@ -9,7 +9,7 @@ function Sidebar({ activeTab, setActiveTab }) {
       { id: 'finance', label: 'Finanse', icon: '💰' },
       { id: 'reports', label: 'Raporty', icon: '📈' },
       { id: 'settings', label: 'Ustawienia', icon: '⚙️' },
-      { id: 'test', label: '🧪 Test', icon: '🧪' }, // DODANA POZYCJA
+      { id: 'test', label: '🧪 Test', icon: '🧪' }, 
     ]
   
     return (

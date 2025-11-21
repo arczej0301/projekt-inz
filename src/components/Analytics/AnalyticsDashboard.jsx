@@ -3,7 +3,17 @@ import React, { useState } from 'react'  // DODAJ useState
 import CustomSelect from '../CustomSelect'
 import './AnalyticsComponents.css'
 
-const AnalyticsDashboard = ({ financialAnalytics, fieldAnalytics, animalAnalytics, alerts }) => {
+const AnalyticsDashboard = ({ 
+  financialAnalytics, 
+  fieldAnalytics, 
+  animalAnalytics, 
+  warehouseAnalytics, 
+  equipmentAnalytics, 
+  alerts,
+  formatCurrency,
+  formatNumber
+ }) => {
+  
   const [timeRange, setTimeRange] = useState('month')
   const [viewType, setViewType] = useState('overview')
 
@@ -61,30 +71,29 @@ const AnalyticsDashboard = ({ financialAnalytics, fieldAnalytics, animalAnalytic
 
       {/* KPI Cards */}
       <div className="kpi-section">
-        <h3>Kluczowe Wskaźniki</h3>
+        <h3>Kluczowe Wskaźniki Wydajności</h3>
         <div className="kpi-grid">
+          {/* Karta Przychodu */}
           <div className="kpi-card revenue">
             <div className="kpi-icon">💰</div>
             <div className="kpi-content">
               <div className="kpi-value">
-                {financialAnalytics.kpis.totalRevenue.toFixed(2)} zł
+                {formatCurrency ? formatCurrency(financialAnalytics.kpis.totalRevenue) : financialAnalytics.kpis.totalRevenue}
               </div>
               <div className="kpi-label">Przychód roczny</div>
-              <div className="kpi-trend positive">+8.3%</div>
             </div>
           </div>
-
+          
+          {/* Karta Zysku */}
           <div className="kpi-card profit">
             <div className="kpi-icon">📈</div>
             <div className="kpi-content">
               <div className="kpi-value">
-                {financialAnalytics.kpis.netProfit.toFixed(2)} zł
+                {formatCurrency ? formatCurrency(financialAnalytics.kpis.netProfit) : financialAnalytics.kpis.netProfit}
               </div>
               <div className="kpi-label">Zysk netto</div>
-              <div className="kpi-trend positive">+12.1%</div>
             </div>
           </div>
-
           <div className="kpi-card margin">
             <div className="kpi-icon">⚖️</div>
             <div className="kpi-content">

@@ -1,4 +1,4 @@
-// pages/ReportsPage.jsx
+// pages/ReportsPage.jsx - poprawiona wersja formatowania
 import React, { useState } from 'react'
 import { useAnalytics } from '../../hooks/useAnalytics'
 import AnalyticsDashboard from '../../components/Analytics/AnalyticsDashboard'
@@ -22,6 +22,40 @@ const ReportsPage = () => {
   
   const [activeTab, setActiveTab] = useState('dashboard')
 
+  // Funkcje do formatowania
+  const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return '0,00 zł'
+    }
+    
+    const numAmount = parseFloat(amount)
+    const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    return `${formatted} zł`
+  }
+
+  const formatNumber = (number) => {
+    if (number === null || number === undefined || isNaN(number)) return '0'
+    
+    const num = parseFloat(number)
+    
+    // Dla liczb zmiennoprzecinkowych - formatuj z 2 miejscami po przecinku
+    if (num % 1 !== 0) {
+      return num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    }
+    
+    // Dla liczb całkowitych
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  }
+
+  const formatPercentage = (number) => {
+    if (number === null || number === undefined || isNaN(number)) return '0%'
+    
+    const num = parseFloat(number)
+    return num.toFixed(1).replace('.', ',') + '%'
+  }
+
+  // Przygotuj dane - NIE formatuj pól które są używane w obliczeniach
+  // Zamiast tego przekaż oryginalne dane + funkcje formatujące
   const tabs = [
     { id: 'dashboard', name: 'Pulpit', icon: '📊' },
     { id: 'financial', name: 'Analiza Finansowa', icon: '💰' },
@@ -92,13 +126,13 @@ const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Szybki podgląd KPI */}
+      {/* Szybki podgląd KPI - formatujemy tylko tutaj */}
       <div className="quick-overview">
         <div className="overview-grid">
           <div className="overview-item">
             <div className="overview-icon">💰</div>
             <div className="overview-content">
-              <div className="overview-value">{financialAnalytics.kpis.totalRevenue.toFixed(2)} zł</div>
+              <div className="overview-value">{formatCurrency(financialAnalytics.kpis.totalRevenue)}</div>
               <div className="overview-label">Przychód roczny</div>
             </div>
           </div>
@@ -106,7 +140,7 @@ const ReportsPage = () => {
           <div className="overview-item">
             <div className="overview-icon">📈</div>
             <div className="overview-content">
-              <div className="overview-value">{financialAnalytics.kpis.netProfit.toFixed(2)} zł</div>
+              <div className="overview-value">{formatCurrency(financialAnalytics.kpis.netProfit)}</div>
               <div className="overview-label">Zysk netto</div>
             </div>
           </div>
@@ -114,7 +148,7 @@ const ReportsPage = () => {
           <div className="overview-item">
             <div className="overview-icon">🌾</div>
             <div className="overview-content">
-              <div className="overview-value">{fieldAnalytics.totalFields}</div>
+              <div className="overview-value">{formatNumber(fieldAnalytics.totalFields)}</div>
               <div className="overview-label">Aktywne pola</div>
             </div>
           </div>
@@ -122,7 +156,7 @@ const ReportsPage = () => {
           <div className="overview-item">
             <div className="overview-icon">🐄</div>
             <div className="overview-content">
-              <div className="overview-value">{animalAnalytics.totalAnimals}</div>
+              <div className="overview-value">{formatNumber(animalAnalytics.totalAnimals)}</div>
               <div className="overview-label">Zwierzęta</div>
             </div>
           </div>
@@ -145,12 +179,15 @@ const ReportsPage = () => {
       <div className="reports-content">
         {activeTab === 'dashboard' && (
           <AnalyticsDashboard 
-            financialAnalytics={financialAnalytics}
+            financialAnalytics={financialAnalytics} // ← Przekazujemy ORYGINALNE dane
             fieldAnalytics={fieldAnalytics}
             animalAnalytics={animalAnalytics}
             warehouseAnalytics={warehouseAnalytics}
             equipmentAnalytics={equipmentAnalytics}
             alerts={alerts}
+            formatCurrency={formatCurrency} // ← Przekazujemy funkcje formatujące
+            formatNumber={formatNumber}
+            formatPercentage={formatPercentage}
           />
         )}
         
@@ -158,6 +195,9 @@ const ReportsPage = () => {
           <FinancialReports 
             data={financialAnalytics}
             fieldAnalytics={fieldAnalytics}
+            formatCurrency={formatCurrency}
+            formatNumber={formatNumber}
+            formatPercentage={formatPercentage}
           />
         )}
         
@@ -166,6 +206,9 @@ const ReportsPage = () => {
             fieldAnalytics={fieldAnalytics}
             animalAnalytics={animalAnalytics}
             equipmentAnalytics={equipmentAnalytics}
+            formatCurrency={formatCurrency}
+            formatNumber={formatNumber}
+            formatPercentage={formatPercentage}
           />
         )}
         
@@ -175,6 +218,9 @@ const ReportsPage = () => {
             fieldAnalytics={fieldAnalytics}
             animalAnalytics={animalAnalytics}
             equipmentAnalytics={equipmentAnalytics}
+            formatCurrency={formatCurrency}
+            formatNumber={formatNumber}
+            formatPercentage={formatPercentage}
           />
         )}
         
@@ -186,6 +232,9 @@ const ReportsPage = () => {
             warehouseAnalytics={warehouseAnalytics}
             equipmentAnalytics={equipmentAnalytics}
             alerts={alerts}
+            formatCurrency={formatCurrency}
+            formatNumber={formatNumber}
+            formatPercentage={formatPercentage}
           />
         )}
       </div>

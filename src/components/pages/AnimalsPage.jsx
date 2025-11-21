@@ -248,12 +248,7 @@ const filteredAndSortedAnimals = animals
       <div className="animals-header">
         <h2>Zarządzanie zwierzętami</h2>
         <div className="header-actions">
-          <button 
-            className="btn btn-primary"
-            onClick={() => openAnimalModal()}
-          >
-            <i className="fas fa-plus"></i> Dodaj zwierzę
-          </button>
+          
         </div>
       </div>
 
@@ -302,6 +297,12 @@ const filteredAndSortedAnimals = animals
     <option value="date-asc">Najstarsze</option>
   </select>
 </div>
+<button 
+            className="btn btn-primary"
+            onClick={() => openAnimalModal()}
+          >
+            <i className="fas fa-plus"></i> Dodaj zwierzę
+          </button>
         </div>
 
         <div className="animals-stats">
