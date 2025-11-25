@@ -602,11 +602,11 @@ const renderSortArrow = (key) => {
   
   return (
       <div className="fields-page">
-        <div className="header">
+      <div className="fields-content">
+        <div className="fields-header">
           <h2>Zarządzanie polami</h2>
         </div>
         
-        <div className="content">
           <div className="actions-bar">
             <div className="action-buttons">
               <button className="btn btn-primary" onClick={() => openFieldModal()}>

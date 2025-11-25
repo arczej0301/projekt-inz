@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  getAnimals, 
-  addAnimal, 
-  updateAnimal, 
+import {
+  getAnimals,
+  addAnimal,
+  updateAnimal,
   deleteAnimal,
-  subscribeToAnimals 
-} from '../../services/animalsService'; 
+  subscribeToAnimals
+} from '../../services/animalsService';
 import './AnimalsPage.css';
 
 function AnimalsPage() {
@@ -138,7 +138,7 @@ function AnimalsPage() {
 
     try {
       setSaveLoading(true);
-      
+
       // Przygotuj dane do zapisania
       const animalData = {
         name: currentAnimal.name,
@@ -159,7 +159,7 @@ function AnimalsPage() {
         // Dodanie nowego zwierzęcia
         await addAnimal(animalData);
       }
-      
+
       closeAnimalModal();
     } catch (error) {
       console.error('Error saving animal:', error);
@@ -182,31 +182,31 @@ function AnimalsPage() {
   };
 
   // Filtrowanie i sortowanie zwierząt
-const filteredAndSortedAnimals = animals
-  .filter(animal => {
-    const matchesSearch = animal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         animal.earTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (animal.breed && animal.breed.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesType = filterType === 'wszystkie' || animal.type === filterType;
-    return matchesSearch && matchesType;
-  })
-  .sort((a, b) => {
-    switch(sortOrder) {
-      case 'name-asc':
-        return a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' });
-      case 'name-desc':
-        return b.name.localeCompare(a.name, 'pl', { sensitivity: 'base' });
-      case 'date-desc':
-        return b.id.localeCompare(a.id);
-      case 'date-asc':
-        return a.id.localeCompare(b.id);
-      default:
-        return 0;
-    }
-  });
+  const filteredAndSortedAnimals = animals
+    .filter(animal => {
+      const matchesSearch = animal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        animal.earTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (animal.breed && animal.breed.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesType = filterType === 'wszystkie' || animal.type === filterType;
+      return matchesSearch && matchesType;
+    })
+    .sort((a, b) => {
+      switch (sortOrder) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' });
+        case 'name-desc':
+          return b.name.localeCompare(a.name, 'pl', { sensitivity: 'base' });
+        case 'date-desc':
+          return b.id.localeCompare(a.id);
+        case 'date-asc':
+          return a.id.localeCompare(b.id);
+        default:
+          return 0;
+      }
+    });
 
   const getHealthColor = (health) => {
-    switch(health) {
+    switch (health) {
       case 'zdrowy': return '#27ae60';
       case 'chory': return '#f39c12';
       case 'w leczeniu': return '#3498db';
@@ -234,25 +234,24 @@ const filteredAndSortedAnimals = animals
 
   if (loading) {
     return (
-      
-        <div className="loading">
-          <div className="loading-spinner"></div>
-          <p>Ładowanie zwierząt...</p>
-        </div>
-      
+
+      <div className="loading">
+        <div className="loading-spinner"></div>
+        <p>Ładowanie zwierząt...</p>
+      </div>
+
     );
   }
 
   return (
     <div className="animals-page">
-      <div className="animals-header">
-        <h2>Zarządzanie zwierzętami</h2>
-        <div className="header-actions">
-          
+      <div className="animals-content-inner">
+        <div className="animals-header">
+          <h2>Zarządzanie zwierzętami</h2>
+          <div className="header-actions">
+          </div>
         </div>
-      </div>
 
-      <div className="animals-content">
         <div className="filters-bar">
           {/* NOWE: Label dla wyszukiwarki */}
           <div className="search-group">
@@ -267,7 +266,7 @@ const filteredAndSortedAnimals = animals
               />
             </div>
           </div>
-          
+
           {/* Filtrowanie według typu */}
           <div className="filter-group">
             <label>Filtruj według typu:</label>
@@ -283,21 +282,21 @@ const filteredAndSortedAnimals = animals
               ))}
             </select>
           </div>
-          
+
           {/* NOWE: Sortowanie po nazwie i dacie */}
-<div className="filter-group">
-  <label>Sortuj:</label>
-  <select
-    value={sortOrder}
-    onChange={(e) => setSortOrder(e.target.value)}
-  >
-    <option value="name-asc">Nazwa A-Z</option>
-    <option value="name-desc">Nazwa Z-A</option>
-    <option value="date-desc">Ostatnio dodane (najnowsze)</option>
-    <option value="date-asc">Najstarsze</option>
-  </select>
-</div>
-<button 
+          <div className="filter-group">
+            <label>Sortuj:</label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+            >
+              <option value="name-asc">Nazwa A-Z</option>
+              <option value="name-desc">Nazwa Z-A</option>
+              <option value="date-desc">Ostatnio dodane (najnowsze)</option>
+              <option value="date-asc">Najstarsze</option>
+            </select>
+          </div>
+          <button
             className="btn btn-primary"
             onClick={() => openAnimalModal()}
           >
@@ -337,7 +336,7 @@ const filteredAndSortedAnimals = animals
                   <div className="animal-list-info">
                     <div className="animal-list-main">
                       <h4 className="animal-list-name">{animal.name}</h4>
-                      <span 
+                      <span
                         className="health-badge"
                         style={{ backgroundColor: getHealthColor(animal.health) }}
                       >
@@ -345,17 +344,17 @@ const filteredAndSortedAnimals = animals
                       </span>
                     </div>
                     <div className="animal-list-details">
-  <div className="detail-row">
-    <span className="animal-list-detail"><strong>Typ:</strong> {animal.type}</span>
-    <span className="animal-list-detail"><strong>Rasa:</strong> {animal.breed || 'Brak'}</span>
-    <span className="animal-list-detail"><strong>Kolczyk:</strong> {animal.earTag}</span>
-  </div>
-  <div className="detail-row">
-    <span className="animal-list-detail"><strong>Waga:</strong> {animal.weight ? `${animal.weight} kg` : 'Brak'}</span>
-    <span className="animal-list-detail"><strong>Status:</strong> {animal.status}</span>
-    <span className="animal-list-detail"><strong>Data urodzenia:</strong> {animal.birthDate ? new Date(animal.birthDate).toLocaleDateString('pl-PL') : 'Nieznana'}</span>
-  </div>
-</div>
+                      <div className="detail-row">
+                        <span className="animal-list-detail"><strong>Typ:</strong> {animal.type}</span>
+                        <span className="animal-list-detail"><strong>Rasa:</strong> {animal.breed || 'Brak'}</span>
+                        <span className="animal-list-detail"><strong>Kolczyk:</strong> {animal.earTag}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="animal-list-detail"><strong>Waga:</strong> {animal.weight ? `${animal.weight} kg` : 'Brak'}</span>
+                        <span className="animal-list-detail"><strong>Status:</strong> {animal.status}</span>
+                        <span className="animal-list-detail"><strong>Data urodzenia:</strong> {animal.birthDate ? new Date(animal.birthDate).toLocaleDateString('pl-PL') : 'Nieznana'}</span>
+                      </div>
+                    </div>
                     {animal.notes && (
                       <div className="animal-list-notes">
                         <strong>Notatki:</strong> {animal.notes}
@@ -363,13 +362,13 @@ const filteredAndSortedAnimals = animals
                     )}
                   </div>
                   <div className="animal-list-actions">
-                    <button 
-                      className="btn btn-primary btn-sm " 
+                    <button
+                      className="btn btn-primary btn-sm "
                       onClick={() => openAnimalModal(animal)}
                     >
                       <i className="fas fa-edit"></i> Edytuj
                     </button>
-                    <button 
+                    <button
                       className="btn btn-danger btn-sm"
                       onClick={() => handleDeleteAnimal(animal.id)}
                     >
@@ -403,12 +402,12 @@ const filteredAndSortedAnimals = animals
                     required
                   />
                 </div>
-                
+
                 {/* CUSTOM SELECT dla typu zwierzęcia */}
                 <div className="form-group">
                   <label>Typ zwierzęcia *</label>
                   <div className="custom-select">
-                    <div 
+                    <div
                       className={`select-header ${isTypeOpen ? 'open' : ''}`}
                       onClick={() => setIsTypeOpen(!isTypeOpen)}
                     >
@@ -470,12 +469,12 @@ const filteredAndSortedAnimals = animals
                     step="0.1"
                   />
                 </div>
-                
+
                 {/* CUSTOM SELECT dla statusu */}
                 <div className="form-group">
                   <label>Status</label>
                   <div className="custom-select">
-                    <div 
+                    <div
                       className={`select-header ${isStatusOpen ? 'open' : ''}`}
                       onClick={() => setIsStatusOpen(!isStatusOpen)}
                     >
@@ -502,7 +501,7 @@ const filteredAndSortedAnimals = animals
                 <div className="form-group">
                   <label>Stan zdrowia</label>
                   <div className="custom-select">
-                    <div 
+                    <div
                       className={`select-header ${isHealthOpen ? 'open' : ''}`}
                       onClick={() => setIsHealthOpen(!isHealthOpen)}
                     >
@@ -541,8 +540,8 @@ const filteredAndSortedAnimals = animals
               <button className="btn btn-secondary" onClick={closeAnimalModal}>
                 Anuluj
               </button>
-              <button 
-                className="btn btn-primary" 
+              <button
+                className="btn btn-primary"
                 onClick={saveAnimal}
                 disabled={saveLoading}
               >

@@ -1,4 +1,4 @@
-// components/InactivityWarning.jsx
+import './InactivityWarning.css';
 import { useAuth } from '../hooks/useAuth'
 
 const InactivityWarning = () => {

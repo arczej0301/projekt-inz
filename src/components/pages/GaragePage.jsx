@@ -326,12 +326,12 @@ const GaragePage = () => {
   };
 
   return (
-    <div className="garage-page">
-      <div className="header">
-        <h2>Zarządzanie garażem</h2>
+     <div className="garage-page">
+      <div className="garage-content">
+        <div className="garage-header">
+          <h2>Garaż maszyn</h2>
       </div>
 
-      <div className="content">
         <div className="actions-bar">
           <div className="action-buttons">
             <button className="btn btn-primary" onClick={() => setShowForm(true)}>

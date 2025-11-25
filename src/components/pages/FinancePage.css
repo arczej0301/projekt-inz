@@ -1,12 +1,21 @@
-/* FinancePage.css */
 .finance-page {
-  padding: 20px;
+  padding: 0; /* USUŃ PADDING */
   width: 100%;
-  margin: 0; 
+  margin: 0;
   box-sizing: border-box;
 }
 
+/* DODAJ NOWĄ KLASĘ DLA WEWNĘTRZNYCH ODSTĘPÓW */
+.finance-content-inner {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .finance-header {
+  padding: 20px 30px; /* SPÓJNE PADDING */
   background: white;
   padding: 20px;
   border-radius: 10px;
@@ -17,6 +26,9 @@
 .finance-header h2 {
   margin: 0 0 15px 0;
   color: #2c3e50;
+  font-size: 1.8rem; /* SPÓJNA WIELKOŚĆ CZCIONKI */
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .financial-overview {
