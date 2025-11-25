@@ -1324,3 +1324,73 @@
 .neutral {
   color: #7f8c8d;
 }
+
+.financial-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  height: auto;
+  min-height: auto;
+  width: 100%;
+}
+
+.financial-analysis .tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 8px;
+}
+
+.financial-analysis .report-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.financial-analysis .control-select {
+  padding: 8px 12px;
+  border: 1px solid #bdc3c7;
+  border-radius: 5px;
+  background: white;
+}
+
+.financial-analysis .report-summary {
+  margin-bottom: 30px;
+}
+
+.financial-analysis .report-summary .summary-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30px;
+  border-radius: 15px;
+  text-align: center;
+  display: block;
+}
+
+.financial-analysis .report-summary .summary-title {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.financial-analysis .report-summary .summary-amount {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: white;
+}
+
+.financial-analysis .report-summary .summary-amount.positive {
+  color: #a3e4a3;
+}
+
+.financial-analysis .report-summary .summary-amount.negative {
+  color: #f5b7b1;
+}
+
+.financial-analysis .report-summary .summary-period {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  color: white;
+}

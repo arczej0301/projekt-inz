@@ -6,6 +6,7 @@ import FinancialReports from '../../components/Analytics/FinancialReports'
 import ProductionReports from '../../components/Analytics/ProductionReports'
 import CostAnalysis from '../../components/Analytics/CostAnalysis'
 import ExportPanel from '../../components/Analytics/ExportPanel'
+import FinancialAnalysis from '../../components/Analytics/FinancialAnalysis'
 import './ReportsPage.css'
 
 const ReportsPage = () => {
@@ -17,7 +18,8 @@ const ReportsPage = () => {
     animalAnalytics, 
     warehouseAnalytics,
     equipmentAnalytics,
-    alerts 
+    alerts,
+    data 
   } = useAnalytics()
   
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -54,10 +56,9 @@ const ReportsPage = () => {
     return num.toFixed(1).replace('.', ',') + '%'
   }
 
-  // Przygotuj dane - NIE formatuj pól które są używane w obliczeniach
-  // Zamiast tego przekaż oryginalne dane + funkcje formatujące
   const tabs = [
     { id: 'dashboard', name: 'Pulpit', icon: '📊' },
+    { id: 'financial-analysis', name: 'Analiza Finansowa', icon: '📈' },
     { id: 'financial', name: 'Analiza Finansowa', icon: '💰' },
     { id: 'production', name: 'Wydajność', icon: '🌾' },
     { id: 'costs', name: 'Optymalizacja Kosztów', icon: '📉' },
@@ -163,7 +164,7 @@ const ReportsPage = () => {
         </div>
       </div>
 
-      <div className="reports-tabs">
+       <div className="reports-tabs">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -179,15 +180,23 @@ const ReportsPage = () => {
       <div className="reports-content">
         {activeTab === 'dashboard' && (
           <AnalyticsDashboard 
-            financialAnalytics={financialAnalytics} // ← Przekazujemy ORYGINALNE dane
+            financialAnalytics={financialAnalytics}
             fieldAnalytics={fieldAnalytics}
             animalAnalytics={animalAnalytics}
             warehouseAnalytics={warehouseAnalytics}
             equipmentAnalytics={equipmentAnalytics}
             alerts={alerts}
-            formatCurrency={formatCurrency} // ← Przekazujemy funkcje formatujące
+            formatCurrency={formatCurrency}
             formatNumber={formatNumber}
             formatPercentage={formatPercentage}
+          />
+        )}
+        
+        {/* DODAJ NOWĄ ZAKŁADKĘ */}
+        {activeTab === 'financial-analysis' && (
+          <FinancialAnalysis 
+            transactions={data?.transactions || []}
+            summary={financialAnalytics}
           />
         )}
         

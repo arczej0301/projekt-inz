@@ -5,7 +5,6 @@ import FinanceDashboard from '../../components/Finance/FinanceDashboard'
 import IncomeTab from '../../components/Finance/IncomeTab'
 import ExpensesTab from '../../components/Finance/ExpensesTab'
 import BudgetTab from '../../components/Finance/BudgetTab'
-import ReportsTab from '../../components/Finance/ReportsTab'
 import './FinancePage.css'
 
 function FinancePage() {
@@ -24,8 +23,7 @@ function FinancePage() {
     { id: 'dashboard', name: 'Pulpit', icon: '📊' },
     { id: 'income', name: 'Przychody', icon: '💰' },
     { id: 'expenses', name: 'Koszty', icon: '📉' },
-    { id: 'budget', name: 'Budżet', icon: '🎯' },
-    { id: 'reports', name: 'Raporty', icon: '📈' }
+    { id: 'budget', name: 'Budżet', icon: '🎯' }
   ]
 
   if (loading) {
@@ -85,12 +83,6 @@ function FinancePage() {
           <BudgetTab 
             budgets={budgets}
             transactions={transactions}
-          />
-        )}
-        {activeTab === 'reports' && (
-          <ReportsTab 
-            transactions={transactions}
-            summary={financialSummary}
           />
         )}
       </div>
