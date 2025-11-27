@@ -16,29 +16,19 @@
   gap: 20px;
 }
 
-/* SPÓJNY NAGŁÓWEK DLA GARAGE PAGE */
-.garage-header {
+/* Nagłówek */
+.header {
   background-color: white;
-  padding: 20px 30px;
+  padding: 15px 30px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
   border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0;
 }
 
-.garage-header h2 {
+.header h2 {
   color: #2c3e50;
   margin: 0;
   font-size: 1.8rem;
-  font-weight: 600;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* USUŃ STARE STYLE HEADERA */
-.header {
-  display: none;      
 }
 
 /* Zawartość - USUŃ PADDING */

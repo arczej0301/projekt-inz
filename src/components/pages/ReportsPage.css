@@ -1,20 +1,12 @@
+/* pages/ReportsPage.css */
 .reports-page {
-  padding: 0;
+  padding: 20px;
   width: 100%;
-  margin: 0;
+  margin: 0; 
   box-sizing: border-box;
 }
 
-.reports-content-inner {
-  padding: 20px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 .reports-header {
-  padding: 20px 30px; 
   background: white;
   padding: 20px;
   border-radius: 10px;
@@ -28,9 +20,6 @@
 .reports-header h2 {
   margin: 0;
   color: #2c3e50;
-  font-size: 1.8rem;
-  font-weight: 600;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .alerts-preview {
@@ -135,86 +124,5 @@
   
   .tab-button {
     flex: none;
-  }
-}
-
-/* Szybki podgląd KPI */
-.quick-overview {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-}
-
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.overview-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #3498db;
-  transition: all 0.3s ease;
-}
-
-.overview-item:hover {
-  background: #e8f4fc;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.overview-icon {
-  font-size: 24px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.overview-content {
-  flex: 1;
-}
-
-.overview-value {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 4px;
-}
-
-.overview-label {
-  font-size: 0.85rem;
-  color: #7f8c8d;
-  font-weight: 500;
-}
-
-/* Responsywność dla quick-overview */
-@media (max-width: 768px) {
-  .quick-overview {
-    padding: 15px;
-  }
-  
-  .overview-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  
-  .overview-item {
-    padding: 12px;
-  }
-  
-  .overview-value {
-    font-size: 1.1rem;
   }
 }

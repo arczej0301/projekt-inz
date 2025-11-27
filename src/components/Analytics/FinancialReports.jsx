@@ -3,45 +3,9 @@ import React, { useState } from 'react'
 import CustomSelect from '../CustomSelect'
 import './AnalyticsComponents.css'
 
-const FinancialReports = ({ data, formatCurrency, formatNumber, formatPercentage }) => {
+const FinancialReports = ({ data }) => {
   const [reportType, setReportType] = useState('profitability')
   const [timeRange, setTimeRange] = useState('year')
-
-  // Bezpieczne funkcje formatujące
-  const safeFormatCurrency = (amount) => {
-    if (formatCurrency) return formatCurrency(amount)
-    
-    if (amount === null || amount === undefined || isNaN(amount)) {
-      return '0,00 zł'
-    }
-    
-    const numAmount = parseFloat(amount)
-    const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-    return `${formatted} zł`
-  }
-
-  const safeFormatNumber = (number) => {
-    if (formatNumber) return formatNumber(number)
-    
-    if (number === null || number === undefined || isNaN(number)) return '0'
-    
-    const num = parseFloat(number)
-    
-    if (num % 1 !== 0) {
-      return num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-    }
-    
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-  }
-
-  const safeFormatPercentage = (number) => {
-    if (formatPercentage) return formatPercentage(number)
-    
-    if (number === null || number === undefined || isNaN(number)) return '0%'
-    
-    const num = parseFloat(number)
-    return num.toFixed(1).replace('.', ',') + '%'
-  }
 
   const reportTypeOptions = [
     { value: 'profitability', label: 'Rentowność', icon: '📈' },
@@ -80,22 +44,22 @@ const FinancialReports = ({ data, formatCurrency, formatNumber, formatPercentage
       <div className="financial-metrics">
         <div className="metrics-grid">
           <div className="metric-card">
-            <div className="metric-value">{safeFormatCurrency(data?.kpis?.totalRevenue || 0)}</div>
+            <div className="metric-value">{data.kpis.totalRevenue.toFixed(2)} zł</div>
             <div className="metric-label">Przychody całkowite</div>
             <div className="metric-trend positive">+8.3%</div>
           </div>
           <div className="metric-card">
-            <div className="metric-value">{safeFormatCurrency(data?.kpis?.totalExpenses || 0)}</div>
+            <div className="metric-value">{data.kpis.totalExpenses.toFixed(2)} zł</div>
             <div className="metric-label">Koszty całkowite</div>
             <div className="metric-trend negative">+5.2%</div>
           </div>
           <div className="metric-card">
-            <div className="metric-value">{safeFormatCurrency(data?.kpis?.netProfit || 0)}</div>
+            <div className="metric-value">{data.kpis.netProfit.toFixed(2)} zł</div>
             <div className="metric-label">Zysk netto</div>
             <div className="metric-trend positive">+12.1%</div>
           </div>
           <div className="metric-card">
-            <div className="metric-value">{safeFormatPercentage(data?.kpis?.profitMargin || 0)}</div>
+            <div className="metric-value">{data.kpis.profitMargin.toFixed(1)}%</div>
             <div className="metric-label">Marża zysku</div>
             <div className="metric-trend positive">+2.4%</div>
           </div>
@@ -107,16 +71,16 @@ const FinancialReports = ({ data, formatCurrency, formatNumber, formatPercentage
           <div className="chart-container">
             <h4>Struktura kosztów</h4>
             <div className="chart-placeholder">
-              {data?.costStructure?.map((item, index) => (
+              {data.costStructure.map((item, index) => (
                 <div key={index} className="cost-item">
                   <div className="cost-category">{item.category}</div>
                   <div className="cost-bar">
                     <div 
                       className="bar-fill"
-                      style={{ width: `${(item.amount / (data?.kpis?.totalExpenses || 1)) * 100}%` }}
+                      style={{ width: `${(item.amount / data.kpis.totalExpenses) * 100}%` }}
                     ></div>
                   </div>
-                  <div className="cost-amount">{safeFormatCurrency(item.amount || 0)}</div>
+                  <div className="cost-amount">{item.amount.toFixed(2)} zł</div>
                 </div>
               ))}
             </div>
@@ -126,21 +90,21 @@ const FinancialReports = ({ data, formatCurrency, formatNumber, formatPercentage
             <h4>Trend miesięczny</h4>
             <div className="chart-placeholder">
               <div className="trend-chart">
-                {data?.trends?.map((month, index) => (
+                {data.trends.map((month, index) => (
                   <div key={index} className="trend-item">
                     <div className="trend-bars">
                       <div 
                         className="bar revenue"
-                        style={{ height: `${((month.revenue || 0) / 10000) * 100}%` }}
-                        title={`Przychód: ${safeFormatCurrency(month.revenue || 0)}`}
+                        style={{ height: `${(month.revenue / 10000) * 100}%` }}
+                        title={`Przychód: ${month.revenue.toFixed(2)} zł`}
                       ></div>
                       <div 
                         className="bar expense"
-                        style={{ height: `${((month.expenses || 0) / 10000) * 100}%` }}
-                        title={`Koszty: ${safeFormatCurrency(month.expenses || 0)}`}
+                        style={{ height: `${(month.expenses / 10000) * 100}%` }}
+                        title={`Koszty: ${month.expenses.toFixed(2)} zł`}
                       ></div>
                     </div>
-                    <div className="trend-label">{month.month?.split('-')[1]}</div>
+                    <div className="trend-label">{month.month.split('-')[1]}</div>
                   </div>
                 ))}
               </div>
@@ -155,10 +119,10 @@ const FinancialReports = ({ data, formatCurrency, formatNumber, formatPercentage
           <div className="analysis-card">
             <h5>Najbardziej dochodowe kategorie</h5>
             <div className="analysis-list">
-              {data?.categoryPerformance?.income?.slice(0, 5).map((cat, index) => (
+              {data.categoryPerformance?.income?.slice(0, 5).map((cat, index) => (
                 <div key={index} className="analysis-item">
                   <span className="category-name">{cat.category}</span>
-                  <span className="category-amount positive">+{safeFormatCurrency(cat.amount || 0)}</span>
+                  <span className="category-amount positive">+{cat.amount.toFixed(2)} zł</span>
                 </div>
               ))}
             </div>
@@ -167,10 +131,10 @@ const FinancialReports = ({ data, formatCurrency, formatNumber, formatPercentage
           <div className="analysis-card">
             <h5>Największe koszty</h5>
             <div className="analysis-list">
-              {data?.costStructure?.slice(0, 5).map((cost, index) => (
+              {data.costStructure.slice(0, 5).map((cost, index) => (
                 <div key={index} className="analysis-item">
                   <span className="category-name">{cost.category}</span>
-                  <span className="category-amount negative">-{safeFormatCurrency(cost.amount || 0)}</span>
+                  <span className="category-amount negative">-{cost.amount.toFixed(2)} zł</span>
                 </div>
               ))}
             </div>

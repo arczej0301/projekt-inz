@@ -24,8 +24,11 @@ export const useWarehouse = () => {
   const categories = [
     { id: 'zboza', name: 'Zboża', icon: '🌾', color: '#4caf50' },
     { id: 'mleko', name: 'Produkty mleczne', icon: '🥛', color: '#2196f3' },
-    { id: 'nawozy', name: 'Nawozy', icon: '🧪', color: '#ff9800' },
+<<<<<<< HEAD
     { id: 'nawozy', name: 'Nasiona i Nawozy', icon: '🧪', color: '#ff9800' },
+=======
+    { id: 'nawozy', name: 'Nawozy', icon: '🧪', color: '#ff9800' },
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
     { id: 'paliwo', name: 'Paliwa i oleje', icon: '⛽', color: '#f44336' },
     { id: 'pasze', name: 'Pasze', icon: '🌿', color: '#8bc34a' },
     { id: 'warzywa', name: 'Warzywa', icon: '🥔', color: '#795548' },
