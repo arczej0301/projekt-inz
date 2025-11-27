@@ -70,8 +70,8 @@ const GaragePage = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'year' || name === 'serviceInterval' || name === 'purchasePrice' || name === 'currentValue' 
-        ? (value === '' ? '' : parseFloat(value)) 
+      [name]: name === 'year' || name === 'serviceInterval' || name === 'purchasePrice' || name === 'currentValue'
+        ? (value === '' ? '' : parseFloat(value))
         : value
     }));
   };
@@ -83,7 +83,7 @@ const GaragePage = () => {
       ...prev,
       [field]: value
     }));
-    
+
     // Zamknij odpowiedni select
     if (field === 'category') setIsCategoryOpen(false);
     if (field === 'status') setIsStatusOpen(false);
@@ -285,11 +285,11 @@ const GaragePage = () => {
 
   const filteredMachines = machines.filter(machine => {
     const matchesSearch = machine.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         machine.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         machine.model?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      machine.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      machine.model?.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = filterStatus === 'all' || machine.status === filterStatus;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -309,241 +309,241 @@ const GaragePage = () => {
   }
 
   const getCurrentFilterStatusLabel = () => {
-  const options = {
-    'all': 'Wszystkie statusy',
-    'active': 'Sprawne',
-    'maintenance': 'W serwisie', 
-    'broken': 'Awaria',
-    'sold': 'Sprzedane'
+    const options = {
+      'all': 'Wszystkie statusy',
+      'active': 'Sprawne',
+      'maintenance': 'W serwisie',
+      'broken': 'Awaria',
+      'sold': 'Sprzedane'
+    };
+    return options[filterStatus] || 'Wszystkie statusy';
   };
-  return options[filterStatus] || 'Wszystkie statusy';
-};
 
-// Dodaj tę funkcję do obsługi zmiany filtra
-const handleFilterStatusChange = (value) => {
-  console.log('Changing filter to:', value);
-  setFilterStatus(value);
-  setIsFilterStatusOpen(false);
-};
+  // Dodaj tę funkcję do obsługi zmiany filtra
+  const handleFilterStatusChange = (value) => {
+    console.log('Changing filter to:', value);
+    setFilterStatus(value);
+    setIsFilterStatusOpen(false);
+  };
 
   return (
-    <div className="garage-page">
-        <div className="header">
-          <h2>Zarządzanie garażem</h2>
+     <div className="garage-page">
+      <div className="garage-content">
+        <div className="garage-header">
+          <h2>Garaż maszyn</h2>
+      </div>
+
+        <div className="actions-bar">
+          <div className="action-buttons">
+            <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+              <i className="fas fa-plus"></i> Dodaj maszynę
+            </button>
+          </div>
+          <div className="search-box">
+            <i className="fas fa-search"></i>
+            <input
+              type="text"
+              placeholder="Szukaj maszyny..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
-        
-        <div className="content">
-          <div className="actions-bar">
-            <div className="action-buttons">
-              <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-                <i className="fas fa-plus"></i> Dodaj maszynę
-              </button>
+
+        {/* Statystyki */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-tractor"></i>
             </div>
-            <div className="search-box">
-              <i className="fas fa-search"></i>
-              <input 
-                type="text" 
-                placeholder="Szukaj maszyny..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="stat-content">
+              <h3>Wszystkie maszyny</h3>
+              <p className="stat-value">{machines.length}</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon warning">
+              <i className="fas fa-tools"></i>
+            </div>
+            <div className="stat-content">
+              <h3>Wymagają przeglądu</h3>
+              <p className="stat-value warning">{machinesNeedingService.length}</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon success">
+              <i className="fas fa-check-circle"></i>
+            </div>
+            <div className="stat-content">
+              <h3>Sprawne</h3>
+              <p className="stat-value success">
+                {machines.filter(m => m.status === 'active').length}
+              </p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon danger">
+              <i className="fas fa-exclamation-triangle"></i>
+            </div>
+            <div className="stat-content">
+              <h3>W serwisie</h3>
+              <p className="stat-value danger">
+                {machines.filter(m => m.status === 'maintenance').length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Lista maszyn */}
+        <div className="machines-list">
+          <div className="list-header">
+            <h3>Lista maszyn ({filteredMachines.length})</h3>
+            <div className="filter-controls">
+              <div className="custom-select">
+                <div
+                  className={`select-header ${isFilterStatusOpen ? 'open' : ''}`}
+                  onClick={() => setIsFilterStatusOpen(!isFilterStatusOpen)}
+                >
+                  {getCurrentFilterStatusLabel()}
+                  <span className="arrow">▼</span>
+                </div>
+                {isFilterStatusOpen && (
+                  <div className="select-options">
+                    <div
+                      className={`select-option ${filterStatus === 'all' ? 'selected' : ''}`}
+                      onClick={() => handleFilterStatusChange('all')}
+                    >
+                      Wszystkie statusy
+                    </div>
+                    <div
+                      className={`select-option ${filterStatus === 'active' ? 'selected' : ''}`}
+                      onClick={() => handleFilterStatusChange('active')}
+                    >
+                      Sprawne
+                    </div>
+                    <div
+                      className={`select-option ${filterStatus === 'maintenance' ? 'selected' : ''}`}
+                      onClick={() => handleFilterStatusChange('maintenance')}
+                    >
+                      W serwisie
+                    </div>
+                    <div
+                      className={`select-option ${filterStatus === 'broken' ? 'selected' : ''}`}
+                      onClick={() => handleFilterStatusChange('broken')}
+                    >
+                      Awaria
+                    </div>
+                    <div
+                      className={`select-option ${filterStatus === 'sold' ? 'selected' : ''}`}
+                      onClick={() => handleFilterStatusChange('sold')}
+                    >
+                      Sprzedane
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Statystyki */}
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-tractor"></i>
-              </div>
-              <div className="stat-content">
-                <h3>Wszystkie maszyny</h3>
-                <p className="stat-value">{machines.length}</p>
-              </div>
+          {filteredMachines.length === 0 ? (
+            <div className="no-machines">
+              <p>Brak maszyn do wyświetlenia</p>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon warning">
-                <i className="fas fa-tools"></i>
-              </div>
-              <div className="stat-content">
-                <h3>Wymagają przeglądu</h3>
-                <p className="stat-value warning">{machinesNeedingService.length}</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon success">
-                <i className="fas fa-check-circle"></i>
-              </div>
-              <div className="stat-content">
-                <h3>Sprawne</h3>
-                <p className="stat-value success">
-                  {machines.filter(m => m.status === 'active').length}
-                </p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon danger">
-                <i className="fas fa-exclamation-triangle"></i>
-              </div>
-              <div className="stat-content">
-                <h3>W serwisie</h3>
-                <p className="stat-value danger">
-                  {machines.filter(m => m.status === 'maintenance').length}
-                </p>
-              </div>
+          ) : (
+            <table className="machines-table">
+              <thead>
+                <tr>
+                  <th>Nazwa</th>
+                  <th>Kategoria</th>
+                  <th>Marka/Model</th>
+                  <th>Status</th>
+                  <th>Następny przegląd</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+  {filteredMachines.map((machine) => {
+    const needsService = machine.nextService && new Date(machine.nextService) <= new Date();
+    
+    return (
+      <tr 
+        key={machine.id}
+        className={`machine-row ${
+          selectedMachine?.id === machine.id ? 'selected' : ''
+        } ${
+          needsService && machine.status !== 'sold' ? 'needs-service' : ''
+        }`}
+        onClick={() => setSelectedMachine(machine)}
+      >
+        <td>
+          <div className="machine-name">
+            <strong>{machine.name}</strong>
+            <div className="machine-details">
+              Rok: {machine.year} {machine.power && `• ${machine.power} KM`}
             </div>
           </div>
-
-          {/* Lista maszyn */}
-          <div className="machines-list">
-            <div className="list-header">
-              <h3>Lista maszyn ({filteredMachines.length})</h3>
-              <div className="filter-controls">
-        <div className="custom-select">
-      <div 
-      className={`select-header ${isFilterStatusOpen ? 'open' : ''}`}
-      onClick={() => setIsFilterStatusOpen(!isFilterStatusOpen)}
-    >
-      {getCurrentFilterStatusLabel()}
-      <span className="arrow">▼</span>
-    </div>
-    {isFilterStatusOpen && (
-      <div className="select-options">
-        <div
-          className={`select-option ${filterStatus === 'all' ? 'selected' : ''}`}
-          onClick={() => handleFilterStatusChange('all')}
-        >
-          Wszystkie statusy
-        </div>
-        <div
-          className={`select-option ${filterStatus === 'active' ? 'selected' : ''}`}
-          onClick={() => handleFilterStatusChange('active')}
-        >
-          Sprawne
-        </div>
-        <div
-          className={`select-option ${filterStatus === 'maintenance' ? 'selected' : ''}`}
-          onClick={() => handleFilterStatusChange('maintenance')}
-        >
-          W serwisie
-        </div>
-        <div
-          className={`select-option ${filterStatus === 'broken' ? 'selected' : ''}`}
-          onClick={() => handleFilterStatusChange('broken')}
-        >
-          Awaria
-        </div>
-        <div
-          className={`select-option ${filterStatus === 'sold' ? 'selected' : ''}`}
-          onClick={() => handleFilterStatusChange('sold')}
-        >
-          Sprzedane
-        </div>
-      </div>
-    )}
-      </div>
-    </div>
-            </div>
-            
-            {filteredMachines.length === 0 ? (
-              <div className="no-machines">
-                <p>Brak maszyn do wyświetlenia</p>
+        </td>
+        <td>{categoryOptions.find(opt => opt.value === machine.category)?.label || machine.category}</td>
+        <td>
+          <div className="brand-model">
+            <div>{machine.brand}</div>
+            <div className="model">{machine.model}</div>
+          </div>
+        </td>
+        <td>
+          <span className={`status-badge ${getStatusColor(machine.status)}`}>
+            {getStatusText(machine.status)}
+          </span>
+        </td>
+        <td>
+          <div className="service-info">
+            {machine.nextService ? new Date(machine.nextService).toLocaleDateString('pl-PL') : 'Brak danych'}
+            {needsService && machine.status !== 'sold' && (
+              <div className="service-warning">
+                <i className="fas fa-exclamation-circle"></i> Wymaga przeglądu!
               </div>
-            ) : (
-              <table className="machines-table">
-                <thead>
-                  <tr>
-                    <th>Nazwa</th>
-                    <th>Kategoria</th>
-                    <th>Marka/Model</th>
-                    <th>Status</th>
-                    <th>Następny przegląd</th>
-                    <th>Akcje</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMachines.map((machine) => {
-                    const needsService = machine.nextService && new Date(machine.nextService) <= new Date();
-                    
-                    return (
-                      <tr 
-                        key={machine.id}
-                        className={`machine-row ${
-                          selectedMachine?.id === machine.id ? 'selected' : ''
-                        } ${
-                          needsService && machine.status !== 'sold' ? 'needs-service' : ''
-                        }`}
-                        onClick={() => setSelectedMachine(machine)}
-                      >
-                        <td>
-                          <div className="machine-name">
-                            <strong>{machine.name}</strong>
-                            <div className="machine-details">
-                              Rok: {machine.year} {machine.power && `• ${machine.power} KM`}
-                            </div>
-                          </div>
-                        </td>
-                        <td>{machine.category}</td>
-                        <td>
-                          <div className="brand-model">
-                            <div>{machine.brand}</div>
-                            <div className="model">{machine.model}</div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`status-badge ${getStatusColor(machine.status)}`}>
-                            {getStatusText(machine.status)}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="service-info">
-                            {machine.nextService ? new Date(machine.nextService).toLocaleDateString('pl-PL') : '-'}
-                            {needsService && machine.status !== 'sold' && (
-                              <div className="service-warning">
-                                <i className="fas fa-exclamation-circle"></i> Wymaga przeglądu!
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="action-buttons">
-                          <button 
-                            className="action-btn btn-primary" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(machine);
-                            }}
-                          >
-                            <i className="fas fa-edit"></i> Edytuj
-                          </button>
-                          <button 
-                            className="action-btn btn-warning" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openRepairHistory(machine);
-                            }}
-                          >
-                            <i className="fas fa-tools"></i> Naprawa
-                          </button>
-                          <button 
-                            className="action-btn btn-danger" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(machine.id);
-                            }}
-                          >
-                            <i className="fas fa-trash"></i> Usuń
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
             )}
           </div>
+        </td>
+        <td className="action-buttons">
+          <button 
+            className="action-btn btn-primary" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(machine);
+            }}
+          >
+            <i className="fas fa-edit"></i> Edytuj
+          </button>
+          <button 
+            className="action-btn btn-warning" 
+            onClick={(e) => {
+              e.stopPropagation();
+              openRepairHistory(machine);
+            }}
+          >
+            <i className="fas fa-tools"></i> Naprawa
+          </button>
+          <button 
+            className="action-btn btn-danger" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(machine.id);
+            }}
+          >
+            <i className="fas fa-trash"></i> Usuń
+          </button>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
+            </table>
+          )}
         </div>
-      
-      
+      </div>
+
+
       {/* Modal dodawania/edycji maszyny */}
       {showForm && (
         <MachineModal
@@ -607,8 +607,8 @@ const MachineModal = ({
     const { name, value } = e.target;
     onFormDataChange(prev => ({
       ...prev,
-      [name]: name === 'year' || name === 'serviceInterval' || name === 'purchasePrice' || name === 'currentValue' 
-        ? (value === '' ? '' : parseFloat(value)) 
+      [name]: name === 'year' || name === 'serviceInterval' || name === 'purchasePrice' || name === 'currentValue'
+        ? (value === '' ? '' : parseFloat(value))
         : value
     }));
   };
@@ -639,7 +639,7 @@ const MachineModal = ({
               <div className="form-group">
                 <label>Kategoria</label>
                 <div className="custom-select">
-                  <div 
+                  <div
                     className={`select-header ${isCategoryOpen ? 'open' : ''}`}
                     onClick={() => setIsCategoryOpen(!isCategoryOpen)}
                   >
@@ -666,7 +666,7 @@ const MachineModal = ({
               <div className="form-group">
                 <label>Status</label>
                 <div className="custom-select">
-                  <div 
+                  <div
                     className={`select-header ${isStatusOpen ? 'open' : ''}`}
                     onClick={() => setIsStatusOpen(!isStatusOpen)}
                   >
@@ -728,7 +728,7 @@ const MachineModal = ({
               <div className="form-group">
                 <label>Typ paliwa</label>
                 <div className="custom-select">
-                  <div 
+                  <div
                     className={`select-header ${isFuelTypeOpen ? 'open' : ''}`}
                     onClick={() => setIsFuelTypeOpen(!isFuelTypeOpen)}
                   >

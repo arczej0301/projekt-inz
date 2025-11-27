@@ -1,4 +1,4 @@
-// components/Header.jsx
+import './Header.css'
 import { useAuth } from '../hooks/useAuth'
 
 const Header = () => {

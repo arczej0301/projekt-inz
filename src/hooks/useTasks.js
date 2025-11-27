@@ -166,7 +166,7 @@ export const useTasks = () => {
         id: doc.id,
         ...doc.data()
       }));
-
+      
       if (filters.status && filters.status !== '') {
         tasksData = tasksData.filter(task => task.status === filters.status);
       }

@@ -1,5 +1,5 @@
 // src/pages/TasksPage.jsx
-import React, { useState, useEffect, useRef } from 'react'; 
+import React, { useState, useEffect, useRef } from 'react';
 import { useTasks } from '../../hooks/useTasks';
 import TaskList from '../../components/TaskList';
 import TaskModal from '../../components/TaskModal';
@@ -13,17 +13,17 @@ const TasksPage = () => {
   const [activeView, setActiveView] = useState('list');
   const [filters, setFilters] = useState({});
   const filterTimeoutRef = useRef(null);
-  
-  const { 
-    tasks, 
-    loading, 
-    error, 
+
+  const {
+    tasks,
+    loading,
+    error,
     fetchTasks,
     deleteTask,
     clearError,
     TASK_TYPES,
     TASK_STATUS,
-    PRIORITIES 
+    PRIORITIES
   } = useTasks();
 
   useEffect(() => {
@@ -31,7 +31,7 @@ const TasksPage = () => {
       const timer = setTimeout(() => {
         clearError();
       }, 5000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [error, clearError]);
@@ -40,11 +40,11 @@ const TasksPage = () => {
     const checkAndRemoveOldTasks = () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       tasks.forEach(task => {
         if (task.status === 'completed' && task.completedAt) {
           const completionDate = task.completedAt?.toDate ? task.completedAt.toDate() : new Date(task.completedAt);
-          
+
           if (completionDate < thirtyDaysAgo) {
             console.log(`Automatyczne usuwanie starego zadania: ${task.title}`);
             deleteTask(task.id);
@@ -55,7 +55,7 @@ const TasksPage = () => {
 
     const interval = setInterval(checkAndRemoveOldTasks, 60000);
     checkAndRemoveOldTasks();
-    
+
     return () => clearInterval(interval);
   }, [tasks, deleteTask]);
 
@@ -69,7 +69,7 @@ const TasksPage = () => {
       alert('Nie można edytować zadań zakończonych.');
       return;
     }
-    
+
     setEditingTask(task);
     setShowModal(true);
   };
@@ -82,11 +82,11 @@ const TasksPage = () => {
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
-    
+
     if (filterTimeoutRef.current) {
       clearTimeout(filterTimeoutRef.current);
     }
-    
+
     filterTimeoutRef.current = setTimeout(() => {
       fetchTasks(newFilters);
     }, 500);
@@ -105,99 +105,102 @@ const TasksPage = () => {
 
   return (
     <div className="tasks-page">
-      <div className="tasks-header">
-        <h1>Zadania</h1>
-        <div className="tasks-actions">
-          <div className="view-toggle">
-            <button 
-              className={activeView === 'list' ? 'active' : ''}
-              onClick={() => setActiveView('list')}
-            >
-              Lista
-            </button>
-            <button 
-              className={activeView === 'calendar' ? 'active' : ''}
-              onClick={() => setActiveView('calendar')}
-            >
-              Kalendarz
+      <div className="tasks-content-inner">
+        <div className="tasks-header">
+          <h1>Zadania</h1>
+          <div className="tasks-actions">
+            <div className="view-toggle">
+              <button
+                className={activeView === 'list' ? 'active' : ''}
+                onClick={() => setActiveView('list')}
+              >
+                Lista
+              </button>
+              <button
+                className={activeView === 'calendar' ? 'active' : ''}
+                onClick={() => setActiveView('calendar')}
+              >
+                Kalendarz
+              </button>
+            </div>
+            <button className="btn-primary" onClick={handleAddTask}>
+              + Nowe Zadanie
             </button>
           </div>
-          <button className="btn-primary" onClick={handleAddTask}>
-            + Nowe Zadanie
-          </button>
         </div>
-      </div>
 
-      {error && (
-        <div className="error-message">
-          <span>{error}</span>
-          <button onClick={handleClearError} className="error-close">×</button>
-        </div>
-      )}
-
-      <TaskFilters 
-        onFilterChange={handleFilterChange}
-        TASK_TYPES={TASK_TYPES}
-        TASK_STATUS={TASK_STATUS}
-        PRIORITIES={PRIORITIES}
-      />
-
-      <div className="tasks-content">
-        {activeView === 'list' ? (
-          <div className="tasks-list-view">
-            {activeTasks.length > 0 && (
-              <div className="tasks-section">
-                <div className="tasks-section-header">
-                  <h3>Aktywne zadania ({activeTasks.length})</h3>
-                </div>
-                <TaskList 
-                  tasks={activeTasks}
-                  onEditTask={handleEditTask}
-                  TASK_TYPES={TASK_TYPES}
-                />
-              </div>
-            )}
-
-            {completedTasks.length > 0 && (
-              <div className="tasks-section completed-section">
-                <div className="tasks-section-divider">
-                  <span className="divider-line"></span>
-                  <span className="divider-text">
-                    Zakończone ({completedTasks.length})
-                  </span>
-                  <span className="divider-line"></span>
-                </div>
-                
-                <div className="tasks-info-banner">
-        <div className="info-icon">ℹ️</div>
-        <div className="info-content">
-          <strong>Informacja:</strong> Zadania zakończone nie mogą być edytowane i są automatycznie usuwane po 30 dniach.
-        </div>
-      </div>
-                
-                <TaskList 
-                  tasks={completedTasks}
-                  onEditTask={handleEditTask}
-                  TASK_TYPES={TASK_TYPES}
-                />
-              </div>
-            )}
-
-            {tasks.length === 0 && !loading && (
-              <div className="no-tasks-message">
-                <p>📝 Brak zadań do wyświetlenia</p>
-                <button className="btn-primary" onClick={handleAddTask}>
-                  Utwórz pierwsze zadanie
-                </button>
-              </div>
-            )}
+        {error && (
+          <div className="error-message">
+            <span>{error}</span>
+            <button onClick={handleClearError} className="error-close">×</button>
           </div>
-        ) : (
-          <TaskCalendar 
-            tasks={tasks}
-            onEditTask={handleEditTask}
-          />
         )}
+
+        <TaskFilters
+          onFilterChange={handleFilterChange}
+          TASK_TYPES={TASK_TYPES}
+          TASK_STATUS={TASK_STATUS}
+          PRIORITIES={PRIORITIES}
+        />
+
+        <div className="tasks-content">
+          {activeView === 'list' ? (
+            <div className="tasks-list-view">
+              {activeTasks.length > 0 && (
+                <div className="tasks-section">
+                  <div className="tasks-section-header">
+                    <h3>Aktywne zadania ({activeTasks.length})</h3>
+                    <span className="section-subtitle">Możesz edytować te zadania</span>
+                  </div>
+                  <TaskList
+                    tasks={activeTasks}
+                    onEditTask={handleEditTask}
+                    TASK_TYPES={TASK_TYPES}
+                  />
+                </div>
+              )}
+
+              {completedTasks.length > 0 && (
+                <div className="tasks-section completed-section">
+                  <div className="tasks-section-divider">
+                    <span className="divider-line"></span>
+                    <span className="divider-text">
+                      Zakończone ({completedTasks.length})
+                    </span>
+                    <span className="divider-line"></span>
+                  </div>
+
+                  <div className="tasks-info-banner">
+                    <div className="info-icon">ℹ️</div>
+                    <div className="info-content">
+                      <strong>Informacja:</strong> Zadania zakończone nie mogą być edytowane i są automatycznie usuwane po 30 dniach.
+                    </div>
+                  </div>
+
+                  <TaskList
+                    tasks={completedTasks}
+                    onEditTask={handleEditTask}
+                    TASK_TYPES={TASK_TYPES}
+                  />
+                </div>
+              )}
+
+              {tasks.length === 0 && !loading && (
+                <div className="no-tasks-message">
+                  <p>📝 Brak zadań do wyświetlenia</p>
+                  <button className="btn-primary" onClick={handleAddTask}>
+                    Utwórz pierwsze zadanie
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <TaskCalendar
+              tasks={tasks}
+              onEditTask={handleEditTask}
+            />
+          )}
+        </div>
       </div>
 
       {showModal && (

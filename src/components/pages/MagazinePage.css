@@ -1,13 +1,20 @@
-/* components/pages/MagazinePage.css */
 .magazine-page {
-  padding: 20px;
-<<<<<<< HEAD
+  padding: 0;
   width: 100%;
-  margin: 0 ;
+  margin: 0;
   box-sizing: border-box;
 }
 
+.magazine-content-inner {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .magazine-header {
+  padding: 20px 30px; 
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -21,21 +28,9 @@
 .magazine-header h2 {
   color: #2c3e50;
   margin: 0;
-=======
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.magazine-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.magazine-header h2 {
-  color: var(--primary-dark);
-  margin-bottom: 10px;
-  font-size: 2rem;
->>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
+  font-size: 1.8rem;
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .magazine-header p {
@@ -353,7 +348,6 @@
   .product-actions {
     flex-direction: column;
   }
-<<<<<<< HEAD
 }
 
 /* Custom Select Styles */
@@ -506,26 +500,5 @@
   .filter-group select {
     width: 100%;
   }
-}
 
-.product-details .value {
-  font-weight: 600;
-  color: var(--dark);
-  text-align: right;
-  min-width: 120px; /* Zapewnia równą szerokość dla wartości */
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  padding: 5px 0;
-  min-height: 24px; /* Zapewnia stałą wysokość wiersza */
-}
-
-.detail-row:not(:last-child) {
-  border-bottom: 1px solid #f0f0f0;
-=======
->>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 }
