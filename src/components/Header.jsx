@@ -1,5 +1,6 @@
 // components/Header.jsx
 import { useAuth } from '../hooks/useAuth'
+import './Header.css'
 
 const Header = () => {
   const { user, logout } = useAuth()

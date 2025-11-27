@@ -1,3 +1,5 @@
+import './Sidebar.css'
+
 function Sidebar({ activeTab, setActiveTab }) {
     const menuItems = [
       { id: 'dashboard', label: 'Pulpit', icon: '📊' },

@@ -234,12 +234,12 @@ const filteredAndSortedAnimals = animals
 
   if (loading) {
     return (
-      
-        <div className="loading">
-          <div className="loading-spinner"></div>
+      <div className="animals-page">
+        <div className="animals-loading">
+          <div className="animals-loading-spinner"></div>
           <p>Ładowanie zwierząt...</p>
         </div>
-      
+      </div>
     );
   }
 
@@ -254,19 +254,18 @@ const filteredAndSortedAnimals = animals
 
       <div className="animals-content">
         <div className="filters-bar">
-          {/* NOWE: Label dla wyszukiwarki */}
-          <div className="search-group">
-            <label>Wyszukiwarka</label>
-            <div className="search-box">
-              <i className="fas fa-search"></i>
-              <input
-                type="text"
-                placeholder="Szukaj zwierząt..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+        <div className="search-group">
+          <label>Wyszukiwarka</label>
+          <div className="animals-search-box">
+            <i className="fas fa-search"></i>
+            <input
+              type="text"
+              placeholder="Szukaj zwierząt..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
+        </div>
           
           {/* Filtrowanie według typu */}
           <div className="filter-group">
@@ -297,13 +296,13 @@ const filteredAndSortedAnimals = animals
     <option value="date-asc">Najstarsze</option>
   </select>
 </div>
-<button 
-            className="btn btn-primary"
-            onClick={() => openAnimalModal()}
-          >
-            <i className="fas fa-plus"></i> Dodaj zwierzę
-          </button>
-        </div>
+  <button 
+          className="animals-btn animals-btn-primary"
+          onClick={() => openAnimalModal()}
+        >
+          <i className="fas fa-plus"></i> Dodaj zwierzę
+        </button>
+      </div>
 
         <div className="animals-stats">
           <div className="stat-card">
@@ -363,19 +362,19 @@ const filteredAndSortedAnimals = animals
                     )}
                   </div>
                   <div className="animal-list-actions">
-                    <button 
-                      className="btn btn-primary btn-sm " 
-                      onClick={() => openAnimalModal(animal)}
-                    >
-                      <i className="fas fa-edit"></i> Edytuj
-                    </button>
-                    <button 
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleDeleteAnimal(animal.id)}
-                    >
-                      <i className="fas fa-trash"></i> Usuń
-                    </button>
-                  </div>
+        <button 
+          className="animals-btn animals-btn-primary animals-btn-sm" 
+          onClick={() => openAnimalModal(animal)}
+        >
+          <i className="fas fa-edit"></i> Edytuj
+        </button>
+        <button 
+          className="animals-btn animals-btn-danger animals-btn-sm"
+          onClick={() => handleDeleteAnimal(animal.id)}
+        >
+          <i className="fas fa-trash"></i> Usuń
+        </button>
+      </div>
                 </div>
               ))}
             </div>
@@ -383,17 +382,17 @@ const filteredAndSortedAnimals = animals
         </div>
       </div>
 
-      {/* Modal dodawania/edycji zwierzęcia */}
+      {/* Modal - ZAKTUALIZOWANY Z NOWYMI KLASAMI */}
       {isModalOpen && currentAnimal && (
-        <div className="modal-overlay" onClick={closeAnimalModal}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="animals-modal-overlay" onClick={closeAnimalModal}>
+          <div className="animals-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="animals-modal-header">
               <h3>{currentAnimal.id ? 'Edytuj zwierzę' : 'Dodaj nowe zwierzę'}</h3>
-              <button className="close-btn" onClick={closeAnimalModal}>&times;</button>
+              <button className="animals-close-btn" onClick={closeAnimalModal}>&times;</button>
             </div>
-            <div className="modal-body">
-              <div className="form-grid">
-                <div className="form-group">
+            <div className="animals-modal-body">
+              <div className="animals-form-grid">
+                <div className="animals-form-group">
                   <label>Imię *</label>
                   <input
                     type="text"
@@ -404,23 +403,23 @@ const filteredAndSortedAnimals = animals
                   />
                 </div>
                 
-                {/* CUSTOM SELECT dla typu zwierzęcia */}
-                <div className="form-group">
+                {/* CUSTOM SELECT - ZAKTUALIZOWANY */}
+                <div className="animals-form-group">
                   <label>Typ zwierzęcia *</label>
-                  <div className="custom-select">
+                  <div className="animals-custom-select">
                     <div 
-                      className={`select-header ${isTypeOpen ? 'open' : ''}`}
+                      className={`animals-select-header ${isTypeOpen ? 'open' : ''}`}
                       onClick={() => setIsTypeOpen(!isTypeOpen)}
                     >
                       {getCurrentTypeLabel()}
                       <span className="arrow">▼</span>
                     </div>
                     {isTypeOpen && (
-                      <div className="select-options">
+                      <div className="animals-select-options">
                         {animalTypes.map(type => (
                           <div
                             key={type.value}
-                            className={`select-option ${currentAnimal?.type === type.value ? 'selected' : ''}`}
+                            className={`animals-select-option ${currentAnimal?.type === type.value ? 'selected' : ''}`}
                             onClick={() => handleCustomSelect('type', type.value)}
                           >
                             {type.label}
@@ -537,12 +536,12 @@ const filteredAndSortedAnimals = animals
                 </div>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={closeAnimalModal}>
+            <div className="animals-modal-footer">
+              <button className="animals-btn animals-btn-secondary" onClick={closeAnimalModal}>
                 Anuluj
               </button>
               <button 
-                className="btn btn-primary" 
+                className="animals-btn animals-btn-primary" 
                 onClick={saveAnimal}
                 disabled={saveLoading}
               >

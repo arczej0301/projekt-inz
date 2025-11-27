@@ -6,29 +6,28 @@ import {
   updateField, 
   deleteField,
   subscribeToFields,
-  // DODANE FUNKCJE DLA STATUSÓW
   getFieldStatus,
   updateFieldStatus,
   addFieldStatus
 } from '../../services/fieldsService';
-import './FieldsPage.css';
 
 const FieldsPage = () => { 
   const [fields, setFields] = useState([]);
-  const [fieldStatuses, setFieldStatuses] = useState({}); // { fieldId: statusData }
+  const [fieldStatuses, setFieldStatuses] = useState({});
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false); // NOWY MODAL
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [currentField, setCurrentField] = useState(null);
-  const [currentStatus, setCurrentStatus] = useState(null); // NOWY STAN
+  const [currentStatus, setCurrentStatus] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [tempPolygon, setTempPolygon] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [hoveredField, setHoveredField] = useState(null);
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false); // NOWY STAN DLA CTRL
 
-  // NOWE STANY DLA SORTOWANIA
+  // STANY DLA SORTOWANIA
   const [sortConfig, setSortConfig] = useState({
     key: 'name',
     direction: 'asc'
@@ -40,12 +39,14 @@ const FieldsPage = () => {
 
   const mapRef = useRef();
   const googleRef = useRef();
+  const contentRef = useRef(); // REF DLA CONTENT AREA
 
   const mapContainerStyle = {
     width: '100%',
     height: '900px'
   };
 
+  // ZAKTUALIZOWANE OPCJE MAPY
   const mapOptions = {
     mapTypeId: 'hybrid',
     streetViewControl: false,
@@ -54,8 +55,54 @@ const FieldsPage = () => {
     scaleControl: true,
     rotateControl: true,
     fullscreenControl: true,
-    draggableCursor: isDrawing ? 'crosshair' : 'default'
+    draggableCursor: isDrawing ? 'crosshair' : 'default',
+    scrollwheel: isCtrlPressed, // ZOOM TYLKO GDY CTRL WCISNIĘTY
+    gestureHandling: isCtrlPressed ? 'cooperative' : 'greedy' // ZACHOWANIE GESTÓW
   };
+
+  // NOWY useEffect DO OBSŁUGI KLAWISZA CTRL
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Control' || e.key === 'Ctrl') {
+        setIsCtrlPressed(true);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === 'Control' || e.key === 'Ctrl') {
+        setIsCtrlPressed(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // NOWA FUNKCJA DO OBSŁUGI SCROLLA NAD MAPĄ
+  const handleMapWheel = (e) => {
+    if (isCtrlPressed) {
+      // Pozwól Google Maps obsłużyć zoom - nie przewijaj strony
+      e.stopPropagation();
+      return;
+    }
+    // Bez Ctrl - pozwól na normalne przewijanie strony
+  };
+
+  // DODANY useEffect DO RESETOWANIA SCROLLA
+  useEffect(() => {
+    // Resetuj scroll do góry gdy komponent się montuje (przy zmianie karty)
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+    
+    // Dodatkowo resetuj scroll całej strony
+    window.scrollTo(0, 0);
+  }, []); // Pusta tablica zależności = uruchamia się tylko przy montowaniu
 
   const polygonOptions = {
     fillColor: '#27ae60',
@@ -104,7 +151,7 @@ const FieldsPage = () => {
     }
   };
 
-   // Funkcja do sortowania pól
+  // Funkcja do sortowania pól
   const sortFields = (fieldsToSort) => {
     if (!sortConfig.key) return fieldsToSort;
 
@@ -601,7 +648,7 @@ const renderSortArrow = (key) => {
 
   
   return (
-      <div className="fields-page">
+      <div className="fields-page" ref={contentRef}>
         <div className="header">
           <h2>Zarządzanie polami</h2>
         </div>
@@ -657,6 +704,7 @@ const renderSortArrow = (key) => {
                   mapRef.current = map;
                 }}
                 onClick={onMapClick}
+                onWheel={handleMapWheel} // NOWA OBSŁUGA SCROLLA
               >
                 {/* Tymczasowy polygon podczas rysowania */}
                 {isDrawing && tempPolygon.length > 0 && (
@@ -789,6 +837,22 @@ const renderSortArrow = (key) => {
                 </div>
               </div>
             )}
+
+            {/* NOWA: Instrukcja zoomu */}
+            <div className="zoom-instruction" style={{
+              position: 'absolute',
+              bottom: '10px',
+              right: '10px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+              zIndex: 1000
+            }}>
+              <i className="fas fa-info-circle" style={{ marginRight: '5px', color: '#3498db' }}></i>
+              <strong>Zoom:</strong> Przytrzymaj Ctrl + scroll
+            </div>
           </div>
           
            {/* Lista pól - ZAKTUALIZOWANA Z SORTOWANIEM */}
@@ -1049,12 +1113,12 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
                 required
               />
             </div>
-            
+
             {/* CUSTOM SELECT dla gleby */}
             <div className="form-group">
               <label htmlFor="fieldSoil">Typ gleby *</label>
               <div className="custom-select">
-                <div 
+                <div
                   className={`select-header ${isSoilOpen ? 'open' : ''}`}
                   onClick={() => setIsSoilOpen(!isSoilOpen)}
                 >
@@ -1081,7 +1145,7 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
             <div className="form-group">
               <label htmlFor="fieldCrop">Aktualna uprawa</label>
               <div className="custom-select">
-                <div 
+                <div
                   className={`select-header ${isCropOpen ? 'open' : ''}`}
                   onClick={() => setIsCropOpen(!isCropOpen)}
                 >
@@ -1130,8 +1194,8 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
           <button className="btn btn-secondary" onClick={onClose}>
             Anuluj
           </button>
-          <button 
-            className="btn btn-primary" 
+          <button
+            className="btn btn-primary"
             onClick={onSave}
             disabled={saveLoading}
           >
@@ -1221,12 +1285,12 @@ const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, save
                 />
               </div>
             )}
-            
+
             {/* SELECT dla stanu pola */}
             <div className="form-group">
               <label>Stan pola *</label>
               <div className="custom-select">
-                <div 
+                <div
                   className={`select-header ${isStatusOpen ? 'open' : ''}`}
                   onClick={() => setIsStatusOpen(!isStatusOpen)}
                 >
@@ -1253,7 +1317,7 @@ const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, save
             <div className="form-group">
               <label>Aktualna uprawa</label>
               <div className="custom-select">
-                <div 
+                <div
                   className={`select-header ${isCropOpen ? 'open' : ''}`}
                   onClick={() => setIsCropOpen(!isCropOpen)}
                 >
@@ -1293,8 +1357,8 @@ const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, save
           <button className="btn btn-secondary" onClick={onClose}>
             Anuluj
           </button>
-          <button 
-            className="btn btn-primary" 
+          <button
+            className="btn btn-primary"
             onClick={onSave}
             disabled={saveLoading}
           >

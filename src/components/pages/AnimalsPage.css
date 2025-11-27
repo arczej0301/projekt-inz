@@ -1,3 +1,23 @@
+/* AnimalsPage.css - TYLKO STYLE SPECYFICZNE DLA ZWIERZĄT */
+
+.animals-page {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.animals-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
 .animals-header {
   display: flex;
   justify-content: space-between;
@@ -39,7 +59,7 @@
   font-size: 14px;
 }
 
-.search-box {
+.animals-search-box {
   display: flex;
   align-items: center;
   background-color: white;
@@ -51,14 +71,14 @@
   margin-top: 20px;
 }
 
-.search-box input {
+.animals-search-box input {
   border: none;
   padding: 5px;
   width: 100%;
   outline: none;
 }
 
-.search-box i {
+.animals-search-box i {
   color: #7f8c8d;
   margin-right: 8px;
 }
@@ -227,13 +247,13 @@
   gap: 8px;
 }
 
-.btn-sm {
+.animals-btn-sm {
   padding: 8px 12px;
   font-size: 12px;
 }
 
-/* Modal styles */
-.modal-overlay {
+/* Modal styles SPECYFICZNE DLA ZWIERZĄT */
+.animals-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -247,7 +267,7 @@
   padding: 20px;
 }
 
-.modal-content {
+.animals-modal-content {
   background: white;
   border-radius: 8px;
   width: 100%;
@@ -257,7 +277,7 @@
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
-.modal-header {
+.animals-modal-header {
   padding: 20px;
   border-bottom: 1px solid #e9ecef;
   display: flex;
@@ -265,12 +285,12 @@
   align-items: center;
 }
 
-.modal-header h3 {
+.animals-modal-header h3 {
   margin: 0;
   color: #2c3e50;
 }
 
-.close-btn {
+.animals-close-btn {
   background: none;
   border: none;
   font-size: 24px;
@@ -278,46 +298,46 @@
   color: #7f8c8d;
 }
 
-.modal-body {
+.animals-modal-body {
   padding: 20px;
 }
 
-.form-grid {
+.animals-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
 }
 
-.form-group {
+.animals-form-group {
   display: flex;
   flex-direction: column;
 }
 
-.form-group.full-width {
+.animals-form-group.full-width {
   grid-column: 1 / -1;
 }
 
-.form-group label {
+.animals-form-group label {
   margin-bottom: 5px;
   font-weight: 600;
   color: #495057;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.animals-form-group input,
+.animals-form-group select,
+.animals-form-group textarea {
   padding: 10px;
   border: 1px solid #ced4da;
   border-radius: 4px;
   font-size: 14px;
 }
 
-.form-group textarea {
+.animals-form-group textarea {
   resize: vertical;
   min-height: 80px;
 }
 
-.modal-footer {
+.animals-modal-footer {
   padding: 20px;
   border-top: 1px solid #e9ecef;
   display: flex;
@@ -325,49 +345,117 @@
   gap: 10px;
 }
 
-/* Responsywność */
-@media (max-width: 768px) {
-  .animals-header {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-  }
-  
-  .filters-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .search-group,
-  .filter-group {
-    width: 100%;
-  }
-  
-  .search-box {
-    max-width: none;
-  }
-  
-  .animal-list-item {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  
-  .animal-list-actions {
-    justify-self: start;
-  }
-  
-  .detail-row {
-    flex-direction: column;
-    gap: 3px;
-  }
-  
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .animals-stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
+/* Custom Select Styles SPECYFICZNE DLA ZWIERZĄT */
+.animals-custom-select {
+  position: relative;
+  width: 100%;
+}
+
+.animals-select-header {
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 42px;
+  font-size: 14px;
+}
+
+.animals-select-header:hover {
+  border-color: #aaa;
+}
+
+.animals-select-header .arrow {
+  transition: transform 0.2s;
+  color: #666;
+}
+
+.animals-select-header.open .arrow {
+  transform: rotate(180deg);
+}
+
+.animals-select-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.animals-select-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.animals-select-option:hover {
+  background: #f5f5f5;
+}
+
+.animals-select-option.selected {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.animals-select-option:last-child {
+  border-bottom: none;
+}
+
+/* Button styles SPECYFICZNE DLA ZWIERZĄT */
+.animals-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.animals-btn-primary {
+  background-color: #27ae60;
+  color: white;
+}
+
+.animals-btn-primary:hover {
+  background-color: #219653;
+}
+
+.animals-btn-secondary {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.animals-btn-secondary:hover {
+  background-color: #7f8c8d;
+}
+
+.animals-btn-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.animals-btn-danger:hover {
+  background-color: #c0392b;
+}
+
+.animals-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Stylowanie scrollbara */
@@ -390,7 +478,7 @@
 }
 
 /* Loading styles */
-.loading {
+.animals-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -399,7 +487,7 @@
   gap: 15px;
 }
 
-.loading-spinner {
+.animals-loading-spinner {
   width: 40px;
   height: 40px;
   border: 4px solid #f3f3f3;
@@ -419,130 +507,52 @@
   color: #666;
 }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Custom Select Styles dla AnimalsPage */
-.custom-select {
-  position: relative;
-  width: 100%;
-}
-
-.select-header {
-  padding: 10px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 42px;
-  font-size: 14px;
-}
-
-.select-header:hover {
-  border-color: #aaa;
-}
-
-.select-header .arrow {
-  transition: transform 0.2s;
-  color: #666;
-}
-
-.select-header.open .arrow {
-  transform: rotate(180deg);
-}
-
-.select-options {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 10000;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.select-option {
-  padding: 10px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
-}
-
-.select-option:hover {
-  background: #f5f5f5;
-}
-
-.select-option.selected {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.select-option:last-child {
-  border-bottom: none;
-}
-
-/* Ensure modal is above everything */
-.modal-overlay {
-  z-index: 10000;
-}
-
-.modal-content {
-  z-index: 10001;
-}
-
-/* Button styles */
-.btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-}
-
-
-
-.btn-primary {
-  background-color: #27ae60;
-  color: white;
-}
-
-.products-controls .btn-primary {
-  margin-top: 15px;
-}
-
-.btn-primary:hover {
-  background-color: #219653;
-}
-
-.btn-secondary {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #7f8c8d;
-}
-
-.btn-danger {
-  background-color: #e74c3c;
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c0392b;
+/* Responsywność */
+@media (max-width: 768px) {
+  .animals-page {
+    padding: 15px;
+  }
+  
+  .animals-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+  }
+  
+  .search-group,
+  .filter-group {
+    width: 100%;
+  }
+  
+  .animals-search-box {
+    max-width: none;
+  }
+  
+  .animal-list-item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .animal-list-actions {
+    justify-self: start;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    gap: 3px;
+  }
+  
+  .animals-form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .animals-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

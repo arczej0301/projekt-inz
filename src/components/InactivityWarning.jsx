@@ -1,5 +1,6 @@
 // components/InactivityWarning.jsx
 import { useAuth } from '../hooks/useAuth'
+import './InactivityWarning.css'
 
 const InactivityWarning = () => {
   const { showWarning, countdown, updateUserActivity } = useAuth()

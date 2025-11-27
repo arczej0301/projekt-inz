@@ -16,6 +16,8 @@ import GaragePage from './components/pages/GaragePage'
 import SettingsPage from './components/Settings/SettingsPage'
 import TestPage from './components/pages/TestPage'
 import { LoadScript } from '@react-google-maps/api'
+import './App.css'
+import './components/MainContent.css'
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA";
 

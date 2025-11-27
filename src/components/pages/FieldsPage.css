@@ -1,157 +1,23 @@
-/* FieldsPage.css - ZAKTUALIZOWANA WERSJA */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+/* FieldsPage.css - TYLKO STYLE SPECYFICZNE DLA STRONY PÓL */
 
-body {
-  background-color: #f5f5f5;
-  color: #333;
-}
-
-.container {
-  display: flex;
-  min-height: 100vh;
-}
-
-/* Panel boczny */
-.sidebar {
-  width: 300px;
-  background-color: #2c3e50;
-  color: white;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  margin-bottom: 30px;
-}
-
-.logo i {
-  font-size: 24px;
-  margin-right: 10px;
-  color: #27ae60;
-}
-
-.logo h1 {
-  font-size: 20px;
-}
-
-.menu {
-  list-style: none;
-  margin-bottom: 30px;
-}
-
-.menu li {
-  padding: 12px 15px;
-  margin-bottom: 5px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.menu li:hover {
-  background-color: #34495e;
-}
-
-.menu li.active {
-  background-color: #27ae60;
-}
-
-.menu li i {
-  margin-right: 10px;
-  width: 20px;
-  text-align: center;
-}
-
-.section-title {
-  font-size: 16px;
-  margin: 20px 0 10px;
-  color: #bdc3c7;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.fields-sidebar {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.field-item {
-  padding: 10px;
-  border-bottom: 1px solid #34495e;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.field-item:hover {
-  background-color: #34495e;
-}
-
-.field-name {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.field-details {
-  font-size: 12px;
-  color: #bdc3c7;
-}
-
-/* Główna zawartość */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.header {
-  background-color: white;
-  padding: 15px 30px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.header h2 {
-  color: #2c3e50;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-}
-
-.user-info img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin-right: 10px;
-}
-
-/* Zawartość - FIELDS PAGE - USUWAMY PADDING */
+/* Zawartość - FIELDS PAGE */
 .fields-page {
-  padding: 0; /* USUŃ PADDING */
+  padding: 20px ; /* DODANY PADDING DLA ODSTĘPU OD SIDEBARU */
   flex: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: 100%;
+  overflow-y: auto;
 }
 
-/* DODAJEMY NOWĄ KLASĘ DLA WEWNĘTRZNYCH ODSTĘPÓW */
+/* Wewnętrzne odstępy */
 .fields-content {
-  padding: 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  height: 100%;
 }
 
 .actions-bar {
@@ -178,12 +44,12 @@ body {
 }
 
 .btn-primary {
-  background-color: #27ae60;
+  background-color: var(--primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #219653;
+  background-color: var(--primary-dark);
 }
 
 .btn-secondary {
@@ -205,7 +71,7 @@ body {
 }
 
 .btn-danger {
-  background-color: #e74c3c;
+  background-color: var(--danger);
   color: white;
 }
 
@@ -311,7 +177,7 @@ body {
 }
 
 .action-btn.btn-primary {
-  background-color: #27ae60;
+  background-color: var(--primary);
   color: white;
 }
 
@@ -321,7 +187,7 @@ body {
 }
 
 .action-btn.btn-danger {
-  background-color: #e74c3c;
+  background-color: var(--danger);
   color: white;
 }
 
@@ -505,7 +371,7 @@ body {
   box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
-/* NOWE STYLE DLA STATUSÓW */
+/* Style dla statusów */
 .status-badge {
   cursor: pointer;
   transition: all 0.3s ease;
@@ -566,52 +432,7 @@ body {
   margin-top: 2px;
 }
 
-/* Responsywność */
-@media (max-width: 992px) {
-  .container {
-    flex-direction: column;
-  }
-  
-  .sidebar {
-    width: 100%;
-    height: auto;
-  }
-  
-  .main-content {
-    width: 100%;
-  }
-  
-  .actions-bar {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .search-box {
-    width: 100%;
-  }
-  
-  .search-box input {
-    width: 100%;
-  }
-  
-  .fields-page {
-    padding: 0;
-  }
-  
-  .fields-content {
-    padding: 15px;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
-  
-  .action-btn {
-    margin-bottom: 5px;
-  }
-}
-
-/* Style dla sortowania - ZAKTUALIZOWANE WIĘKSZE STRZAŁKI */
+/* Style dla sortowania */
 .sortable {
   cursor: pointer;
   user-select: none;
@@ -631,17 +452,17 @@ body {
   justify-content: center;
   gap: 2px;
   color: #6c757d;
-  font-size: 16px; /* ZWIĘKSZONO ROZMIAR */
+  font-size: 16px;
   font-weight: bold;
   min-width: 20px;
   height: 24px;
   transition: all 0.3s ease;
 }
 
-/* Aktywne strzałki - WIĘKSZE I BARDZIEJ WIDOCZNE */
+/* Aktywne strzałki */
 .sort-arrows .active {
-  color: #e74c3c; /* CZERWONY KOLOR DLA AKTYWNYCH */
-  font-size: 18px; /* WIĘKSZE STRZAŁKI */
+  color: var(--danger);
+  font-size: 18px;
 }
 
 /* Hover efekt tylko dla strzałek */
@@ -660,8 +481,39 @@ body {
   transform: scale(1.2);
 }
 
-/* Responsywność dla sortowania */
+/* Responsywność dla strony pól */
+@media (max-width: 992px) {
+  .fields-page {
+    padding: 15px; /* MNIEJSZY PADDING NA TABLETACH */
+  }
+  
+  .actions-bar {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .search-box {
+    width: 100%;
+  }
+  
+  .search-box input {
+    width: 100%;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    margin-bottom: 5px;
+  }
+}
+
 @media (max-width: 768px) {
+  .fields-page {
+    padding: 10px; /* NAJMNIEJSZY PADDING NA TELEFONACH */
+  }
+  
   .th-content {
     flex-direction: row;
     gap: 6px;
@@ -676,4 +528,3 @@ body {
     font-size: 16px;
   }
 }
-
