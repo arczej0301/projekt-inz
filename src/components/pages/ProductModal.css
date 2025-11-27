@@ -106,6 +106,7 @@
   border-top: 1px solid var(--gray);
 }
 
+<<<<<<< HEAD
 /* Custom Select Styles */
 .custom-select {
   position: relative;
@@ -187,6 +188,8 @@
   color: white;
 }
 
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 /* Dodatkowe style dla MagazinePage.css */
 .sidebar-header {
   display: flex;
@@ -245,6 +248,7 @@
   .products-controls .btn-primary {
     width: 100%;
   }
+<<<<<<< HEAD
   
   .select-dropdown {
     position: fixed;
@@ -255,4 +259,6 @@
     max-width: 300px;
     max-height: 60vh;
   }
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 }

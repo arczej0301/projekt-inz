@@ -1,0 +1,347 @@
+/* components/pages/GarageModals.css */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content.large {
+  max-width: 800px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px;
+  border-bottom: 1px solid var(--gray);
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: 1.4rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.close-btn:hover {
+  background: #e0e0e0;
+  color: var(--danger);
+}
+
+.machine-form, .repair-form {
+  padding: 25px;
+}
+
+.form-section {
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--gray);
+}
+
+.form-section h4 {
+  margin: 0 0 15px 0;
+  color: var(--primary-dark);
+}
+
+.image-upload {
+  text-align: center;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 15px;
+}
+
+.image-preview img {
+  width: 200px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid var(--gray);
+}
+
+.remove-image {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-placeholder {
+  width: 200px;
+  height: 150px;
+  border: 2px dashed var(--gray);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 15px auto;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.image-placeholder:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.image-placeholder span {
+  font-size: 2.5rem;
+  margin-bottom: 5px;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-label {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.file-label:hover {
+  background: var(--primary-dark);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--gray);
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--gray);
+}
+
+/* Repair History Styles */
+.repair-history {
+  padding: 25px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.no-repairs {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.repairs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.repair-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  border-left: 4px solid var(--primary);
+}
+
+.repair-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.repair-date {
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
+.repair-status {
+  padding: 4px 12px;
+  border-radius: 15px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.delete-repair {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  width: 25px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.delete-repair:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.repair-description {
+  margin-bottom: 10px;
+  line-height: 1.5;
+  color: var(--dark);
+}
+
+.repair-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.repair-cost {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.repair-mechanic, .repair-parts {
+  color: #666;
+}
+
+.modal-actions {
+  padding: 20px 25px;
+  border-top: 1px solid var(--gray);
+  text-align: right;
+}
+
+/* Responsywność modalów */
+@media (max-width: 768px) {
+  .modal-content {
+    margin: 20px;
+    max-height: 95vh;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .repair-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-header {
+    padding: 20px;
+  }
+  
+  .machine-form, .repair-form {
+    padding: 20px;
+  }
+  
+  .repair-history {
+    padding: 20px;
+  }
+  
+  .repair-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

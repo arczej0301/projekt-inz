@@ -191,6 +191,138 @@ function MagazinePage() {
               {/* Użyj formatNumber dla liczby produktów */}
               <p>{formatNumber(Object.values(warehouseData).flat().length)}</p>
             </div>
+        <h2>Magazyn Gospodarstwa</h2>
+      </div>
+
+      
+<div className="magazine-stats">
+  <div className="stat-card">
+    <div className="stat-icon">💰</div>
+    <div className="stat-info">
+      <h3>Łączna wartość</h3>
+      {/* Użyj formatCurrency dla wartości całkowitej */}
+      <p>{formatCurrency(calculateTotalValue())}</p>
+    </div>
+  </div>
+  <div className="stat-card">
+    <div className="stat-icon">📦</div>
+    <div className="stat-info">
+      <h3>Łączna ilość produktów</h3>
+      {/* Użyj formatNumber dla liczby produktów */}
+      <p>{formatNumber(Object.values(warehouseData).flat().length)}</p>
+    </div>
+  </div>
+  <div className="stat-card">
+    <div className="stat-icon">⚠️</div>
+    <div className="stat-info">
+      <h3>Niskie stany</h3>
+      {/* Użyj formatNumber dla niskich stanów */}
+      <p>{formatNumber(countLowStockItems())}</p>
+    </div>
+  </div>
+</div>
+
+      <div className="magazine-content">
+        <div className="categories-sidebar">
+          <div className="sidebar-header">
+            <h3>Kategorie</h3>
+          </div>
+          {categories.map(category => (
+            <button
+              key={category.id}
+              className={`category-btn ${activeCategory === category.id ? 'active' : ''}`}
+              onClick={() => setActiveCategory(category.id)}
+              style={{ borderLeftColor: category.color }}
+            >
+              <span className="category-icon">{category.icon}</span>
+              <span className="category-name">{category.name}</span>
+              <span className="category-count">
+                ({warehouseData[category.id]?.length || 0})
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="products-section">
+          <div className="products-header">
+            <h3>
+              {categories.find(cat => cat.id === activeCategory)?.icon}
+              {categories.find(cat => cat.id === activeCategory)?.name}
+            </h3>
+            <div className="products-controls">
+              {/* Najpierw sortowanie */}
+              <div className="filter-group">
+                <label>Sortuj:</label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                >
+                  <option value="name-asc">Nazwa A-Z</option>
+                  <option value="name-desc">Nazwa Z-A</option>
+                  <option value="quantity-asc">Ilość (najniższe)</option>
+                  <option value="quantity-desc">Ilość (najwyższe)</option>
+                  <option value="date-desc">Ostatnio dodane (najnowsze)</option>
+                  <option value="date-asc">Najstarsze</option>
+                </select>
+              </div>
+              
+              {/* Potem wyszukiwanie */}
+              <div className="search-box">
+                <input
+                  type="text"
+                  placeholder="Szukaj produktu..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <span className="search-icon">🔍</span>
+              </div>
+              
+              {/* Na końcu przycisk dodaj produkt */}
+              <button 
+                className="btn-primary"
+                onClick={handleAddProduct}
+              >
+                + Dodaj produkt
+              </button>
+            </div>
+          </div>
+
+
+          
+<div className="products-grid">
+  {filteredItems.map(item => {
+    const stockStatus = getStockStatus(item.quantity, item.minStock)
+    return (
+      <div key={item.id} className="product-card">
+        <div className="product-header">
+          <h4>{item.name}</h4>
+          <div 
+            className="stock-status"
+            style={{ backgroundColor: getStatusColor(stockStatus) }}
+          >
+            {stockStatus}
+          </div>
+        </div>
+        
+        <div className="product-details">
+          <div className="detail-row">
+            <span className="label">Ilość:</span>
+            <span className="value">{formatNumber(item.quantity)} {item.unit}</span>
+          </div>
+          <div className="detail-row">
+            <span className="label">Minimalny stan:</span>
+            <span className="value">{formatNumber(item.minStock)} {item.unit}</span>
+          </div>
+          
+          {/* ZMIANA: Usuń warunek item.price i zawsze pokazuj cenę i wartość */}
+          <div className="detail-row">
+            <span className="label">Cena:</span>
+            <span className="value">{formatCurrency(item.price || 0)}/{item.unit}</span>
+          </div>
+          <div className="detail-row">
+            <span className="label">Wartość:</span>
+            <span className="value">{formatCurrency((item.quantity || 0) * (item.price || 0))}</span>
+
           </div>
           <div className="stat-card">
             <div className="stat-icon">⚠️</div>
@@ -213,6 +345,14 @@ function MagazinePage() {
                 className={`category-btn ${activeCategory === category.id ? 'active' : ''}`}
                 onClick={() => setActiveCategory(category.id)}
                 style={{ borderLeftColor: category.color }}
+
+          {filteredItems.length === 0 && (
+            <div className="no-products">
+              <p>📭 Brak produktów w tej kategorii</p>
+              <button 
+                className="btn-primary"
+                onClick={handleAddProduct}
+
               >
                 <span className="category-icon">{category.icon}</span>
                 <span className="category-name">{category.name}</span>
@@ -354,6 +494,18 @@ function MagazinePage() {
           category={activeCategory}
           categories={categories} // DODAJ TĘ LINIĘ
           onCategoryChange={handleCategoryChange} // DODAJ TĘ LINIĘ
+    <ProductModal
+      product={editingProduct}
+      category={activeCategory}
+      categories={categories} // DODAJ TĘ LINIĘ
+      onCategoryChange={handleCategoryChange} // DODAJ TĘ LINIĘ
+      onSave={handleSaveProduct}
+      onClose={() => {
+        setIsModalOpen(false)
+        setEditingProduct(null)
+      }}
+    />
+  )}
           onSave={handleSaveProduct}
           onClose={() => {
             setIsModalOpen(false)

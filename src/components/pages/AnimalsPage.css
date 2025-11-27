@@ -406,6 +406,7 @@
 
 .animals-list-view::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+<<<<<<< HEAD
 }
 
 /* Loading styles */
@@ -564,4 +565,6 @@
 
 .btn-danger:hover {
   background-color: #c0392b;
+=======
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 }

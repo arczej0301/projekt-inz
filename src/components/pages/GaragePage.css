@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* GaragePage.css - POPRAWIONA */
 .garage-page {
   padding: 0; /* USUŃ PADDING */
@@ -138,6 +139,32 @@
 
 /* Statystyki */
 .stats-grid {
+=======
+/* components/pages/GaragePage.css */
+.garage-page {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.garage-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.garage-header h2 {
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+  font-size: 2rem;
+}
+
+.garage-header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.garage-stats {
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
@@ -146,8 +173,13 @@
 
 .stat-card {
   background: white;
+<<<<<<< HEAD
   border-radius: 8px;
   padding: 20px;
+=======
+  padding: 20px;
+  border-radius: 10px;
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   display: flex;
   align-items: center;
@@ -160,6 +192,7 @@
 }
 
 .stat-icon {
+<<<<<<< HEAD
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -597,10 +630,268 @@
 
 .select-option:last-child {
   border-bottom: none;
+=======
+  font-size: 2rem;
+}
+
+.stat-info h3 {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.stat-info p {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary-dark);
+  margin: 0;
+}
+
+.garage-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  min-width: 300px;
+  flex: 1;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 45px 12px 15px;
+  border: 1px solid var(--gray);
+  border-radius: 25px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.machines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 25px;
+}
+
+.machine-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.machine-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.machine-image {
+  position: relative;
+  height: 200px;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.machine-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-image {
+  font-size: 4rem;
+  color: #ccc;
+}
+
+.status-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.machine-info {
+  padding: 20px;
+  flex: 1;
+}
+
+.machine-info h3 {
+  margin: 0 0 15px 0;
+  color: var(--primary-dark);
+  font-size: 1.3rem;
+}
+
+.machine-details {
+  margin-bottom: 15px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-item .label {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.detail-item .value {
+  font-weight: 500;
+  color: var(--dark);
+  text-align: right;
+}
+
+.repair-summary {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.repair-count, .repair-cost {
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.repair-cost {
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
+.machine-actions {
+  padding: 0 20px 20px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-primary, .btn-secondary, .btn-info, .btn-danger {
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+}
+
+.btn-secondary {
+  background-color: #f5f5f5;
+  color: var(--dark);
+  border: 1px solid var(--gray);
+}
+
+.btn-secondary:hover {
+  background-color: #e0e0e0;
+}
+
+.btn-info {
+  background-color: #2196f3;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #1976d2;
+}
+
+.btn-danger {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #d32f2f;
+}
+
+.no-machines {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+}
+
+.no-machines p {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.error-container {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 10px;
+  margin: 20px;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+}
+
+.error-container h2 {
+  color: var(--danger);
+  margin-bottom: 15px;
+}
+
+.error-container button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 15px;
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 }
 
 /* Responsywność */
 @media (max-width: 768px) {
+<<<<<<< HEAD
   .garage-page {
     padding: 0;
   }
@@ -610,11 +901,15 @@
   }
   
   .actions-bar {
+=======
+  .garage-controls {
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
     flex-direction: column;
     align-items: stretch;
   }
   
   .search-box {
+<<<<<<< HEAD
     width: 100%;
   }
   
@@ -653,10 +948,26 @@
   .modal-content {
     width: 95%;
     margin: 10px;
+=======
+    min-width: auto;
+  }
+  
+  .machines-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .machine-actions {
+    grid-template-columns: 1fr;
+  }
+  
+  .garage-stats {
+    grid-template-columns: 1fr;
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
   }
 }
 
 @media (max-width: 480px) {
+<<<<<<< HEAD
   .header {
     padding: 10px 15px;
   }
@@ -715,4 +1026,17 @@
   border-radius: 4px;
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+=======
+  .garage-page {
+    padding: 15px;
+  }
+  
+  .machine-info {
+    padding: 15px;
+  }
+  
+  .machine-actions {
+    padding: 0 15px 15px 15px;
+  }
+>>>>>>> 3495661e7661bd5f21447fce73bf84f457018fce
 }
