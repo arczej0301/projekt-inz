@@ -1,16 +1,14 @@
-/* AnimalsPage.css - TYLKO STYLE SPECYFICZNE DLA ZWIERZĄT */
 
 .animals-page {
-  padding: 20px;
+  padding: 0px;
   flex: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
-  overflow-y: auto;
+  height: auto;
 }
 
-.animals-content {
+.animals-page .animals-content {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -18,98 +16,101 @@
   height: 100%;
 }
 
-.animals-header {
+.animals-page .animals-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 10px;
   background: white;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.animals-header h2 {
+.animals-page .animals-header h2 {
   color: #2c3e50;
   margin: 0;
 }
 
-.filters-bar {
-  height: 130px;
+.animals-page .filters-bar {
+  height: 110px;
   display: flex;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 0px;
   align-items: end;
   background: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-/* Styl dla grupy wyszukiwarki */
-.search-group {
+.animals-page .search-group {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.search-group label {
+.animals-page .search-group label {
   font-weight: 600;
   color: #495057;
   font-size: 14px;
+  margin-bottom: 5px;
 }
 
-.animals-search-box {
+.animals-page .animals-search-box {
   display: flex;
   align-items: center;
   background-color: white;
   border: 1px solid #ddd;
   border-radius: 5px;
-  padding: 8px 15px;
+  padding: 5px 15px;
   flex: 1;
   max-width: 300px;
-  margin-top: 20px;
 }
 
-.animals-search-box input {
+/* DODANE: Przesunięcie przycisku do prawej */
+.animals-page .filters-bar .animals-btn-primary {
+  margin-left: auto;
+}animals-modal-content
+
+.animals-page .animals-search-box input {
   border: none;
   padding: 5px;
   width: 100%;
   outline: none;
 }
 
-.animals-search-box i {
+.animals-page .animals-search-box i {
   color: #7f8c8d;
   margin-right: 8px;
 }
 
-.filter-group {
+.animals-page .filter-group {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.filter-group label {
+.animals-page .filter-group label {
   font-weight: 600;
   color: #495057;
   font-size: 14px;
 }
 
-.filter-group select {
+.animals-page .filter-group select {
   padding: 8px 12px;
   border: 1px solid #ced4da;
   border-radius: 4px;
   font-size: 14px;
 }
 
-.animals-stats {
+.animals-page .animals-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
 }
 
-.stat-card {
+.animals-page .stat-card {
   background: white;
   padding: 20px;
   border-radius: 8px;
@@ -117,43 +118,48 @@
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.stat-card h3 {
+.animals-page .stat-card h3 {
   font-size: 2rem;
   color: #27ae60;
   margin: 0 0 10px 0;
 }
 
-.stat-card p {
+.animals-page .stat-card p {
   color: #666;
   margin: 0;
   font-weight: 600;
 }
 
-.animals-list {
+.animals-page .animals-list {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* WAŻNE */
 }
 
-.animals-list h3 {
+.animals-page .animals-list h3 {
   padding: 20px;
   margin: 0;
   background-color: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
 }
 
-/* Styl dla listy zwierząt */
-.animals-list-view {
+.animals-page .animals-list-view {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 20px;
-  max-height: 600px;
-  overflow-y: auto;
+  overflow-y: auto; /* PRZEWIJANIE LISTY */
+  flex: 1;
+  min-height: 0; /* WAŻNE */
 }
 
-.animal-list-item {
+.animals-page .animal-list-item {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 20px;
@@ -166,33 +172,33 @@
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.animal-list-item:hover {
+.animals-page .animal-list-item:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
-.animal-list-info {
+.animals-page .animal-list-info {
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: 95%;
 }
 
-.animal-list-main {
+.animals-page .animal-list-main {
   display: flex;
   align-items: center;
   gap: 15px;
   margin-bottom: 5px;
 }
 
-.animal-list-name {
+.animals-page .animal-list-name {
   font-size: 1.2rem;
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
 }
 
-.health-badge {
+.animals-page .health-badge {
   color: white;
   padding: 4px 12px;
   border-radius: 15px;
@@ -201,20 +207,19 @@
   text-transform: capitalize;
 }
 
-/* Style dla szczegółów zwierzęcia - kompaktowe */
-.animal-list-details {
+.animals-page .animal-list-details {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.detail-row {
+.animals-page .detail-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
 }
 
-.animal-list-detail {
+.animals-page .animal-list-detail {
   font-size: 13px;
   color: #666;
   display: flex;
@@ -222,12 +227,12 @@
   gap: 5px;
 }
 
-.animal-list-detail strong {
+.animals-page .animal-list-detail strong {
   color: #495057;
   font-weight: 600;
 }
 
-.animal-list-notes {
+.animals-page .animal-list-notes {
   font-size: 13px;
   color: #666;
   margin-top: 5px;
@@ -237,23 +242,22 @@
   border-left: 3px solid #3498db;
 }
 
-.animal-list-notes strong {
+.animals-page .animal-list-notes strong {
   color: #2c3e50;
   margin-right: 5px;
 }
 
-.animal-list-actions {
+.animals-page .animal-list-actions {
   display: flex;
   gap: 8px;
 }
 
-.animals-btn-sm {
+.animals-page .animals-btn-sm {
   padding: 8px 12px;
   font-size: 12px;
 }
 
-/* Modal styles SPECYFICZNE DLA ZWIERZĄT */
-.animals-modal-overlay {
+.animals-page .animals-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -267,7 +271,7 @@
   padding: 20px;
 }
 
-.animals-modal-content {
+.animals-page .animals-modal-content {
   background: white;
   border-radius: 8px;
   width: 100%;
@@ -277,7 +281,7 @@
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
-.animals-modal-header {
+.animals-page .animals-modal-header {
   padding: 20px;
   border-bottom: 1px solid #e9ecef;
   display: flex;
@@ -285,12 +289,12 @@
   align-items: center;
 }
 
-.animals-modal-header h3 {
+.animals-page .animals-modal-header h3 {
   margin: 0;
   color: #2c3e50;
 }
 
-.animals-close-btn {
+.animals-page .animals-close-btn {
   background: none;
   border: none;
   font-size: 24px;
@@ -298,46 +302,46 @@
   color: #7f8c8d;
 }
 
-.animals-modal-body {
+.animals-page .animals-modal-body {
   padding: 20px;
 }
 
-.animals-form-grid {
+.animals-page .animals-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
 }
 
-.animals-form-group {
+.animals-page .animals-form-group {
   display: flex;
   flex-direction: column;
 }
 
-.animals-form-group.full-width {
+.animals-page .animals-form-group.full-width {
   grid-column: 1 / -1;
 }
 
-.animals-form-group label {
+.animals-page .animals-form-group label {
   margin-bottom: 5px;
   font-weight: 600;
   color: #495057;
 }
 
-.animals-form-group input,
-.animals-form-group select,
-.animals-form-group textarea {
+.animals-page .animals-form-group input,
+.animals-page .animals-form-group select,
+.animals-page .animals-form-group textarea {
   padding: 10px;
   border: 1px solid #ced4da;
   border-radius: 4px;
   font-size: 14px;
 }
 
-.animals-form-group textarea {
+.animals-page .animals-form-group textarea {
   resize: vertical;
   min-height: 80px;
 }
 
-.animals-modal-footer {
+.animals-page .animals-modal-footer {
   padding: 20px;
   border-top: 1px solid #e9ecef;
   display: flex;
@@ -345,13 +349,12 @@
   gap: 10px;
 }
 
-/* Custom Select Styles SPECYFICZNE DLA ZWIERZĄT */
-.animals-custom-select {
+.animals-page .animals-custom-select {
   position: relative;
   width: 100%;
 }
 
-.animals-select-header {
+.animals-page .animals-select-header {
   padding: 10px 12px;
   border: 1px solid #ced4da;
   border-radius: 4px;
@@ -364,20 +367,20 @@
   font-size: 14px;
 }
 
-.animals-select-header:hover {
+.animals-page .animals-select-header:hover {
   border-color: #aaa;
 }
 
-.animals-select-header .arrow {
+.animals-page .animals-select-header .arrow {
   transition: transform 0.2s;
   color: #666;
 }
 
-.animals-select-header.open .arrow {
+.animals-page .animals-select-header.open .arrow {
   transform: rotate(180deg);
 }
 
-.animals-select-options {
+.animals-page .animals-select-options {
   position: absolute;
   top: 100%;
   left: 0;
@@ -391,28 +394,27 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.animals-select-option {
+.animals-page .animals-select-option {
   padding: 10px 12px;
   cursor: pointer;
   border-bottom: 1px solid #f0f0f0;
   font-size: 14px;
 }
 
-.animals-select-option:hover {
+.animals-page .animals-select-option:hover {
   background: #f5f5f5;
 }
 
-.animals-select-option.selected {
+.animals-page .animals-select-option.selected {
   background: #e3f2fd;
   color: #1976d2;
 }
 
-.animals-select-option:last-child {
+.animals-page .animals-select-option:last-child {
   border-bottom: none;
 }
 
-/* Button styles SPECYFICZNE DLA ZWIERZĄT */
-.animals-btn {
+.animals-page .animals-btn {
   padding: 10px 16px;
   border: none;
   border-radius: 4px;
@@ -426,59 +428,57 @@
   transition: all 0.2s;
 }
 
-.animals-btn-primary {
+.animals-page .animals-btn-primary {
   background-color: #27ae60;
   color: white;
 }
 
-.animals-btn-primary:hover {
+.animals-page .animals-btn-primary:hover {
   background-color: #219653;
 }
 
-.animals-btn-secondary {
+.animals-page .animals-btn-secondary {
   background-color: #95a5a6;
   color: white;
 }
 
-.animals-btn-secondary:hover {
+.animals-page .animals-btn-secondary:hover {
   background-color: #7f8c8d;
 }
 
-.animals-btn-danger {
+.animals-page .animals-btn-danger {
   background-color: #e74c3c;
   color: white;
 }
 
-.animals-btn-danger:hover {
+.animals-page .animals-btn-danger:hover {
   background-color: #c0392b;
 }
 
-.animals-btn:disabled {
+.animals-page .animals-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* Stylowanie scrollbara */
-.animals-list-view::-webkit-scrollbar {
+.animals-page .animals-list-view::-webkit-scrollbar {
   width: 6px;
 }
 
-.animals-list-view::-webkit-scrollbar-track {
+.animals-page .animals-list-view::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
 
-.animals-list-view::-webkit-scrollbar-thumb {
+.animals-page .animals-list-view::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 3px;
 }
 
-.animals-list-view::-webkit-scrollbar-thumb:hover {
+.animals-page .animals-list-view::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
 
-/* Loading styles */
-.animals-loading {
+.animals-page .animals-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -487,7 +487,7 @@
   gap: 15px;
 }
 
-.animals-loading-spinner {
+.animals-page .animals-loading-spinner {
   width: 40px;
   height: 40px;
   border: 4px solid #f3f3f3;
@@ -501,7 +501,7 @@
   100% { transform: rotate(360deg); }
 }
 
-.no-animals {
+.animals-page .no-animals {
   text-align: center;
   padding: 40px;
   color: #666;
@@ -513,46 +513,59 @@
     padding: 15px;
   }
   
-  .animals-header {
+  .animals-page .animals-header {
     flex-direction: column;
     gap: 15px;
     align-items: flex-start;
   }
   
-  .filters-bar {
+  .animals-page .filters-bar {
     flex-direction: column;
     align-items: stretch;
     height: auto;
   }
   
-  .search-group,
-  .filter-group {
+  .animals-page .search-group,
+  .animals-page .filter-group {
     width: 100%;
   }
   
-  .animals-search-box {
+  .animals-page .animals-search-box {
     max-width: none;
   }
   
-  .animal-list-item {
+  .animals-page .animal-list-item {
     grid-template-columns: 1fr;
     gap: 10px;
   }
   
-  .animal-list-actions {
+  .animals-page .animal-list-actions {
     justify-self: start;
   }
   
-  .detail-row {
+  .animals-page .detail-row {
     flex-direction: column;
     gap: 3px;
   }
   
-  .animals-form-grid {
+  .animals-page .animals-form-grid {
     grid-template-columns: 1fr;
   }
   
-  .animals-stats {
+  .animals-page .animals-stats {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.animals-page .delete-confirm-modal {
+  max-width: 500px;
+}
+
+.animals-page .delete-confirm-warning {
+  color: #e74c3c;
+  font-size: 14px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

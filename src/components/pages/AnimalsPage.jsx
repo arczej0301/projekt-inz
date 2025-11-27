@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  getAnimals, 
-  addAnimal, 
-  updateAnimal, 
+import {
+  getAnimals,
+  addAnimal,
+  updateAnimal,
   deleteAnimal,
-  subscribeToAnimals 
-} from '../../services/animalsService'; 
+  subscribeToAnimals
+} from '../../services/animalsService';
 import './AnimalsPage.css';
 
 function AnimalsPage() {
@@ -15,11 +15,13 @@ function AnimalsPage() {
   const [currentAnimal, setCurrentAnimal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('wszystkie');
-  const [sortOrder, setSortOrder] = useState('name-asc'); // name-asc lub name-desc
+  const [sortOrder, setSortOrder] = useState('name-asc');
   const [saveLoading, setSaveLoading] = useState(false);
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isHealthOpen, setIsHealthOpen] = useState(false);
+  const [healthFilter, setHealthFilter] = useState('wszystkie');
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const animalTypes = [
     { value: 'krowa', label: 'Krowy' },
@@ -138,7 +140,7 @@ function AnimalsPage() {
 
     try {
       setSaveLoading(true);
-      
+
       // Przygotuj dane do zapisania
       const animalData = {
         name: currentAnimal.name,
@@ -159,7 +161,7 @@ function AnimalsPage() {
         // Dodanie nowego zwierzęcia
         await addAnimal(animalData);
       }
-      
+
       closeAnimalModal();
     } catch (error) {
       console.error('Error saving animal:', error);
@@ -168,45 +170,45 @@ function AnimalsPage() {
     }
   };
 
-  const handleDeleteAnimal = async (animalId) => {
-    if (!window.confirm('Czy na pewno chcesz usunąć to zwierzę?')) {
-      return;
-    }
-
+  // Zmodyfikuj funkcję handleDeleteAnimal
+  const handleDeleteAnimal = async (animalId, animalName) => {
     try {
       await deleteAnimal(animalId);
+      setDeleteConfirm(null); // Zamknij okno potwierdzenia po udanym usunięciu
     } catch (error) {
       console.error('Error deleting animal:', error);
       alert('Błąd podczas usuwania zwierzęcia: ' + error.message);
+      setDeleteConfirm(null); // Zamknij okno potwierdzenia w przypadku błędu
     }
   };
 
   // Filtrowanie i sortowanie zwierząt
-const filteredAndSortedAnimals = animals
-  .filter(animal => {
-    const matchesSearch = animal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         animal.earTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (animal.breed && animal.breed.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesType = filterType === 'wszystkie' || animal.type === filterType;
-    return matchesSearch && matchesType;
-  })
-  .sort((a, b) => {
-    switch(sortOrder) {
-      case 'name-asc':
-        return a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' });
-      case 'name-desc':
-        return b.name.localeCompare(a.name, 'pl', { sensitivity: 'base' });
-      case 'date-desc':
-        return b.id.localeCompare(a.id);
-      case 'date-asc':
-        return a.id.localeCompare(b.id);
-      default:
-        return 0;
-    }
-  });
+  const filteredAndSortedAnimals = animals
+    .filter(animal => {
+      const matchesSearch = animal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        animal.earTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (animal.breed && animal.breed.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesType = filterType === 'wszystkie' || animal.type === filterType;
+      const matchesHealth = healthFilter === 'wszystkie' || animal.health === healthFilter;
+      return matchesSearch && matchesType && matchesHealth;
+    })
+    .sort((a, b) => {
+      switch (sortOrder) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' });
+        case 'name-desc':
+          return b.name.localeCompare(a.name, 'pl', { sensitivity: 'base' });
+        case 'date-desc':
+          return b.id.localeCompare(a.id);
+        case 'date-asc':
+          return a.id.localeCompare(b.id);
+        default:
+          return 0;
+      }
+    });
 
   const getHealthColor = (health) => {
-    switch(health) {
+    switch (health) {
       case 'zdrowy': return '#27ae60';
       case 'chory': return '#f39c12';
       case 'w leczeniu': return '#3498db';
@@ -248,26 +250,25 @@ const filteredAndSortedAnimals = animals
       <div className="animals-header">
         <h2>Zarządzanie zwierzętami</h2>
         <div className="header-actions">
-          
+
         </div>
       </div>
 
       <div className="animals-content">
         <div className="filters-bar">
-        <div className="search-group">
-          <label>Wyszukiwarka</label>
-          <div className="animals-search-box">
-            <i className="fas fa-search"></i>
-            <input
-              type="text"
-              placeholder="Szukaj zwierząt..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="search-group">
+            <label>Wyszukiwarka</label>
+            <div className="animals-search-box">
+              <i className="fas fa-search"></i>
+              <input
+                type="text"
+                placeholder="Szukaj zwierząt..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
-          
-          {/* Filtrowanie według typu */}
+
           <div className="filter-group">
             <label>Filtruj według typu:</label>
             <select
@@ -282,45 +283,42 @@ const filteredAndSortedAnimals = animals
               ))}
             </select>
           </div>
-          
-          {/* NOWE: Sortowanie po nazwie i dacie */}
-<div className="filter-group">
-  <label>Sortuj:</label>
-  <select
-    value={sortOrder}
-    onChange={(e) => setSortOrder(e.target.value)}
-  >
-    <option value="name-asc">Nazwa A-Z</option>
-    <option value="name-desc">Nazwa Z-A</option>
-    <option value="date-desc">Ostatnio dodane (najnowsze)</option>
-    <option value="date-asc">Najstarsze</option>
-  </select>
-</div>
-  <button 
-          className="animals-btn animals-btn-primary"
-          onClick={() => openAnimalModal()}
-        >
-          <i className="fas fa-plus"></i> Dodaj zwierzę
-        </button>
-      </div>
 
-        <div className="animals-stats">
-          <div className="stat-card">
-            <h3>{animals.length}</h3>
-            <p>Wszystkich zwierząt</p>
+          {/* DODANE: Filtrowanie według stanu zdrowia */}
+          <div className="filter-group">
+            <label>Filtruj według stanu zdrowia:</label>
+            <select
+              value={healthFilter}
+              onChange={(e) => setHealthFilter(e.target.value)}
+            >
+              <option value="wszystkie">Wszystkie</option>
+              {healthStatuses.map(health => (
+                <option key={health.value} value={health.value}>
+                  {health.label}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="stat-card">
-            <h3>{animals.filter(a => a.health === 'zdrowy').length}</h3>
-            <p>Zdrowych</p>
+
+          <div className="filter-group">
+            <label>Sortuj:</label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+            >
+              <option value="name-asc">Nazwa A-Z</option>
+              <option value="name-desc">Nazwa Z-A</option>
+              <option value="date-desc">Ostatnio dodane (najnowsze)</option>
+              <option value="date-asc">Najstarsze</option>
+            </select>
           </div>
-          <div className="stat-card">
-            <h3>{animals.filter(a => a.type === 'krowa').length}</h3>
-            <p>Krów</p>
-          </div>
-          <div className="stat-card">
-            <h3>{animals.filter(a => a.type === 'świnia').length}</h3>
-            <p>Świń</p>
-          </div>
+
+          <button
+            className="animals-btn animals-btn-primary"
+            onClick={() => openAnimalModal()}
+          >
+            <i className="fas fa-plus"></i> Dodaj zwierzę
+          </button>
         </div>
 
         <div className="animals-list">
@@ -336,7 +334,7 @@ const filteredAndSortedAnimals = animals
                   <div className="animal-list-info">
                     <div className="animal-list-main">
                       <h4 className="animal-list-name">{animal.name}</h4>
-                      <span 
+                      <span
                         className="health-badge"
                         style={{ backgroundColor: getHealthColor(animal.health) }}
                       >
@@ -344,17 +342,17 @@ const filteredAndSortedAnimals = animals
                       </span>
                     </div>
                     <div className="animal-list-details">
-  <div className="detail-row">
-    <span className="animal-list-detail"><strong>Typ:</strong> {animal.type}</span>
-    <span className="animal-list-detail"><strong>Rasa:</strong> {animal.breed || 'Brak'}</span>
-    <span className="animal-list-detail"><strong>Kolczyk:</strong> {animal.earTag}</span>
-  </div>
-  <div className="detail-row">
-    <span className="animal-list-detail"><strong>Waga:</strong> {animal.weight ? `${animal.weight} kg` : 'Brak'}</span>
-    <span className="animal-list-detail"><strong>Status:</strong> {animal.status}</span>
-    <span className="animal-list-detail"><strong>Data urodzenia:</strong> {animal.birthDate ? new Date(animal.birthDate).toLocaleDateString('pl-PL') : 'Nieznana'}</span>
-  </div>
-</div>
+                      <div className="detail-row">
+                        <span className="animal-list-detail"><strong>Typ:</strong> {animal.type}</span>
+                        <span className="animal-list-detail"><strong>Rasa:</strong> {animal.breed || 'Brak'}</span>
+                        <span className="animal-list-detail"><strong>Kolczyk:</strong> {animal.earTag}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="animal-list-detail"><strong>Waga:</strong> {animal.weight ? `${animal.weight} kg` : 'Brak'}</span>
+                        <span className="animal-list-detail"><strong>Status:</strong> {animal.status}</span>
+                        <span className="animal-list-detail"><strong>Data urodzenia:</strong> {animal.birthDate ? new Date(animal.birthDate).toLocaleDateString('pl-PL') : 'Nieznana'}</span>
+                      </div>
+                    </div>
                     {animal.notes && (
                       <div className="animal-list-notes">
                         <strong>Notatki:</strong> {animal.notes}
@@ -362,19 +360,19 @@ const filteredAndSortedAnimals = animals
                     )}
                   </div>
                   <div className="animal-list-actions">
-        <button 
-          className="animals-btn animals-btn-primary animals-btn-sm" 
-          onClick={() => openAnimalModal(animal)}
-        >
-          <i className="fas fa-edit"></i> Edytuj
-        </button>
-        <button 
-          className="animals-btn animals-btn-danger animals-btn-sm"
-          onClick={() => handleDeleteAnimal(animal.id)}
-        >
-          <i className="fas fa-trash"></i> Usuń
-        </button>
-      </div>
+                    <button
+                      className="animals-btn animals-btn-primary animals-btn-sm"
+                      onClick={() => openAnimalModal(animal)}
+                    >
+                      <i className="fas fa-edit"></i> Edytuj
+                    </button>
+                    <button
+                      className="animals-btn animals-btn-danger animals-btn-sm"
+                      onClick={() => setDeleteConfirm(animal)}
+                    >
+                      <i className="fas fa-trash"></i> Usuń
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -382,6 +380,38 @@ const filteredAndSortedAnimals = animals
         </div>
       </div>
 
+      {deleteConfirm && (
+        <div className="animals-modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="animals-modal-content delete-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="animals-modal-header">
+              <h3>Potwierdzenie usunięcia</h3>
+              <button className="animals-close-btn" onClick={() => setDeleteConfirm(null)}>&times;</button>
+            </div>
+            <div className="animals-modal-body">
+              <p>Czy na pewno chcesz usunąć zwierzę <strong>"{deleteConfirm.name}"</strong>?</p>
+              <div className="delete-confirm-warning">
+                <i className="fas fa-exclamation-triangle"></i>
+                <span>Tej operacji nie można cofnąć.</span>
+              </div>
+            </div>
+            <div className="animals-modal-footer">
+              <button
+                className="animals-btn animals-btn-secondary"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Anuluj
+              </button>
+              <button
+                className="animals-btn animals-btn-danger"
+                onClick={() => handleDeleteAnimal(deleteConfirm.id, deleteConfirm.name)}
+              >
+                <i className="fas fa-trash"></i> Tak, usuń
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Modal - ZAKTUALIZOWANY Z NOWYMI KLASAMI */}
       {isModalOpen && currentAnimal && (
         <div className="animals-modal-overlay" onClick={closeAnimalModal}>
@@ -402,12 +432,12 @@ const filteredAndSortedAnimals = animals
                     required
                   />
                 </div>
-                
+
                 {/* CUSTOM SELECT - ZAKTUALIZOWANY */}
                 <div className="animals-form-group">
                   <label>Typ zwierzęcia *</label>
                   <div className="animals-custom-select">
-                    <div 
+                    <div
                       className={`animals-select-header ${isTypeOpen ? 'open' : ''}`}
                       onClick={() => setIsTypeOpen(!isTypeOpen)}
                     >
@@ -469,12 +499,12 @@ const filteredAndSortedAnimals = animals
                     step="0.1"
                   />
                 </div>
-                
+
                 {/* CUSTOM SELECT dla statusu */}
                 <div className="form-group">
                   <label>Status</label>
                   <div className="custom-select">
-                    <div 
+                    <div
                       className={`select-header ${isStatusOpen ? 'open' : ''}`}
                       onClick={() => setIsStatusOpen(!isStatusOpen)}
                     >
@@ -501,7 +531,7 @@ const filteredAndSortedAnimals = animals
                 <div className="form-group">
                   <label>Stan zdrowia</label>
                   <div className="custom-select">
-                    <div 
+                    <div
                       className={`select-header ${isHealthOpen ? 'open' : ''}`}
                       onClick={() => setIsHealthOpen(!isHealthOpen)}
                     >
@@ -540,8 +570,8 @@ const filteredAndSortedAnimals = animals
               <button className="animals-btn animals-btn-secondary" onClick={closeAnimalModal}>
                 Anuluj
               </button>
-              <button 
-                className="animals-btn animals-btn-primary" 
+              <button
+                className="animals-btn animals-btn-primary"
                 onClick={saveAnimal}
                 disabled={saveLoading}
               >

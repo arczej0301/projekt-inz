@@ -10,6 +10,7 @@ import {
   updateFieldStatus,
   addFieldStatus
 } from '../../services/fieldsService';
+import './FieldsPage.css';
 
 const FieldsPage = () => { 
   const [fields, setFields] = useState([]);
@@ -25,7 +26,8 @@ const FieldsPage = () => {
   const [selectedField, setSelectedField] = useState(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [hoveredField, setHoveredField] = useState(null);
-  const [isCtrlPressed, setIsCtrlPressed] = useState(false); // NOWY STAN DLA CTRL
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // NOWY STAN DLA POTWIERDZENIA USUNIĘCIA
 
   // STANY DLA SORTOWANIA
   const [sortConfig, setSortConfig] = useState({
@@ -39,7 +41,7 @@ const FieldsPage = () => {
 
   const mapRef = useRef();
   const googleRef = useRef();
-  const contentRef = useRef(); // REF DLA CONTENT AREA
+  const contentRef = useRef();
 
   const mapContainerStyle = {
     width: '100%',
@@ -56,8 +58,8 @@ const FieldsPage = () => {
     rotateControl: true,
     fullscreenControl: true,
     draggableCursor: isDrawing ? 'crosshair' : 'default',
-    scrollwheel: isCtrlPressed, // ZOOM TYLKO GDY CTRL WCISNIĘTY
-    gestureHandling: isCtrlPressed ? 'cooperative' : 'greedy' // ZACHOWANIE GESTÓW
+    scrollwheel: isCtrlPressed,
+    gestureHandling: isCtrlPressed ? 'cooperative' : 'greedy'
   };
 
   // NOWY useEffect DO OBSŁUGI KLAWISZA CTRL
@@ -86,23 +88,19 @@ const FieldsPage = () => {
   // NOWA FUNKCJA DO OBSŁUGI SCROLLA NAD MAPĄ
   const handleMapWheel = (e) => {
     if (isCtrlPressed) {
-      // Pozwól Google Maps obsłużyć zoom - nie przewijaj strony
       e.stopPropagation();
       return;
     }
-    // Bez Ctrl - pozwól na normalne przewijanie strony
   };
 
   // DODANY useEffect DO RESETOWANIA SCROLLA
   useEffect(() => {
-    // Resetuj scroll do góry gdy komponent się montuje (przy zmianie karty)
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
     
-    // Dodatkowo resetuj scroll całej strony
     window.scrollTo(0, 0);
-  }, []); // Pusta tablica zależności = uruchamia się tylko przy montowaniu
+  }, []);
 
   const polygonOptions = {
     fillColor: '#27ae60',
@@ -159,19 +157,16 @@ const FieldsPage = () => {
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
 
-      // Specjalna obsługa dla statusu (pobieramy z fieldStatuses)
       if (sortConfig.key === 'status') {
         aValue = getStatusDisplay(a.id);
         bValue = getStatusDisplay(b.id);
       }
 
-      // Dla wartości tekstowych
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
 
-      // Dla wartości liczbowych
       if (sortConfig.key === 'area') {
         aValue = parseFloat(aValue);
         bValue = parseFloat(bValue);
@@ -191,7 +186,6 @@ const FieldsPage = () => {
   const handleSort = (key) => {
     let direction = 'asc';
     
-    // Jeśli klikamy ten sam klucz, zmieniamy kierunek
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
@@ -200,18 +194,18 @@ const FieldsPage = () => {
   };
 
   // POPRAWIONA FUNKCJA: Renderowanie strzałek sortowania
-const renderSortArrow = (key) => {
-  if (sortConfig.key !== key) {
-    return <span style={{ marginLeft: '8px', color: '#95a5a6', fontSize: '12px' }}>▲▼</span>;
-  }
-  return (
-    <span style={{ marginLeft: '8px', color: '#e74c3c', fontWeight: 'bold' }}>
-      {sortConfig.direction === 'asc' ? '▲' : '▼'}
-    </span>
-  );
-};
+  const renderSortArrow = (key) => {
+    if (sortConfig.key !== key) {
+      return <span style={{ marginLeft: '8px', color: '#95a5a6', fontSize: '12px' }}>▲▼</span>;
+    }
+    return (
+      <span style={{ marginLeft: '8px', color: '#e74c3c', fontWeight: 'bold' }}>
+        {sortConfig.direction === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
 
-  // Pobierz pola i ich statusy z Firebase - POPRAWIONA WERSJA
+  // Pobierz pola i ich statuses z Firebase
   useEffect(() => {
     const loadFieldsAndStatuses = async () => {
       try {
@@ -219,7 +213,6 @@ const renderSortArrow = (key) => {
         const fieldsData = await getFields();
         setFields(fieldsData);
 
-        // Pobierz statusy dla każdego pola osobno
         const statuses = {};
         for (const field of fieldsData) {
           try {
@@ -229,7 +222,6 @@ const renderSortArrow = (key) => {
             }
           } catch (statusError) {
             console.error(`Error loading status for field ${field.id}:`, statusError);
-            // Kontynuuj ładowanie innych pól nawet jeśli jeden status się nie udał
           }
         }
         setFieldStatuses(statuses);
@@ -246,7 +238,6 @@ const renderSortArrow = (key) => {
     const unsubscribe = subscribeToFields(async (fieldsData) => {
       setFields(fieldsData);
       
-      // Aktualizuj statusy dla załadowanych pól
       const statuses = {};
       for (const field of fieldsData) {
         try {
@@ -279,7 +270,6 @@ const renderSortArrow = (key) => {
   const calculateCentroid = (coordinates) => {
     if (!coordinates || coordinates.length === 0) return null;
     
-    // Usuń ostatni punkt jeśli jest duplikatem pierwszego (zamknięty polygon)
     const points = coordinates[0].lat === coordinates[coordinates.length - 1].lat && 
                    coordinates[0].lng === coordinates[coordinates.length - 1].lng 
                    ? coordinates.slice(0, -1) 
@@ -340,10 +330,10 @@ const renderSortArrow = (key) => {
     }
     
     total = Math.abs(total);
-    const earthRadius = 6371000; // promień Ziemi w metrach
+    const earthRadius = 6371000;
     const areaM2 = total * earthRadius * earthRadius / 2;
     
-    return (areaM2 / 10000).toFixed(2); // hektary
+    return (areaM2 / 10000).toFixed(2);
   };
 
   // Kliknięcie na mapę podczas rysowania
@@ -355,12 +345,10 @@ const renderSortArrow = (key) => {
       lng: event.latLng.lng()
     };
 
-    // Sprawdź czy kliknięto w pobliżu pierwszego punktu (zamykanie polygonu)
     if (tempPolygon.length >= 3) {
       const firstPoint = tempPolygon[0];
       const distance = calculateDistance(firstPoint, newPoint);
       
-      // Jeśli kliknięto w pobliżu pierwszego punktu (w promieniu 20m) - zakończ rysowanie
       if (distance < 20) {
         finishDrawing();
         return;
@@ -377,10 +365,8 @@ const renderSortArrow = (key) => {
       return;
     }
 
-    // Zamknij polygon (dodaj pierwszy punkt na koniec)
     const closedPolygon = [...tempPolygon, tempPolygon[0]];
     
-    // Oblicz powierzchnię
     let areaHa = 0;
     if (googleRef.current && googleRef.current.maps) {
       try {
@@ -452,7 +438,6 @@ const renderSortArrow = (key) => {
   const openStatusModal = (field = null) => {
     if (field) {
       setCurrentField(field);
-      // Załaduj istniejący status lub utwórz nowy
       const existingStatus = fieldStatuses[field.id];
       setCurrentStatus(existingStatus || {
         field_id: field.id,
@@ -531,7 +516,6 @@ const renderSortArrow = (key) => {
         await addFieldStatus(currentStatus);
       }
       
-      // Aktualizuj lokalny stan
       setFieldStatuses(prev => ({
         ...prev,
         [currentStatus.field_id]: currentStatus
@@ -553,20 +537,18 @@ const renderSortArrow = (key) => {
     }
   };
 
-  // Usuwanie pola
+  // USUNIĘCIE POPRZEDNIEJ FUNKCJI I ZASTĄPIENIE NOWĄ
   const handleDeleteField = async (id) => {
-    if (!window.confirm('Czy na pewno chcesz usunąć to pole?')) {
-      return;
-    }
-
     try {
       await deleteField(id);
+      setDeleteConfirm(null);
       if (selectedField?.id === id) {
         setSelectedField(null);
       }
     } catch (error) {
       console.error('Error deleting field:', error);
       alert('Błąd podczas usuwania pola: ' + error.message);
+      setDeleteConfirm(null);
     }
   };
 
@@ -581,7 +563,6 @@ const renderSortArrow = (key) => {
   const selectFieldFromList = (field) => {
     setSelectedField(field);
     
-    // Przesuń mapę do wybranego pola
     if (field.coordinates && field.coordinates.length > 0) {
       const bounds = new window.google.maps.LatLngBounds();
       field.coordinates.forEach(coord => {
@@ -649,13 +630,20 @@ const renderSortArrow = (key) => {
   
   return (
       <div className="fields-page" ref={contentRef}>
-        <div className="header">
+        <div className="fields-header">
           <h2>Zarządzanie polami</h2>
-        </div>
-        
-        <div className="content">
+          
           <div className="actions-bar">
             <div className="action-buttons">
+            <div className="search-box">
+              <i className="fas fa-search"></i>
+              <input 
+                type="text" 
+                placeholder="Szukaj pola..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
               <button className="btn btn-primary" onClick={() => openFieldModal()}>
                 <i className="fas fa-plus"></i> Dodaj pole
               </button>
@@ -681,17 +669,11 @@ const renderSortArrow = (key) => {
                 </button>
               )}
             </div>
-            <div className="search-box">
-              <i className="fas fa-search"></i>
-              <input 
-                type="text" 
-                placeholder="Szukaj pola..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+            
           </div>
-          
+        </div>
+        
+        <div className="fields-content">
           {/* Mapa */}
           <div className={`map-container ${isDrawing ? 'drawing-active' : ''}`}>
             
@@ -704,7 +686,7 @@ const renderSortArrow = (key) => {
                   mapRef.current = map;
                 }}
                 onClick={onMapClick}
-                onWheel={handleMapWheel} // NOWA OBSŁUGA SCROLLA
+                onWheel={handleMapWheel}
               >
                 {/* Tymczasowy polygon podczas rysowania */}
                 {isDrawing && tempPolygon.length > 0 && (
@@ -809,7 +791,7 @@ const renderSortArrow = (key) => {
                         </button>
                         <button 
                           className="action-btn btn-danger"
-                          onClick={() => handleDeleteField(selectedField.id)}
+                          onClick={() => setDeleteConfirm(selectedField)}
                         >
                           <i className="fas fa-trash"></i> Usuń
                         </button>
@@ -838,7 +820,7 @@ const renderSortArrow = (key) => {
               </div>
             )}
 
-            {/* NOWA: Instrukcja zoomu */}
+            {/* Instrukcja zoomu */}
             <div className="zoom-instruction" style={{
               position: 'absolute',
               bottom: '10px',
@@ -855,7 +837,7 @@ const renderSortArrow = (key) => {
             </div>
           </div>
           
-           {/* Lista pól - ZAKTUALIZOWANA Z SORTOWANIEM */}
+           {/* Lista pól */}
           <div className="fields-list">
             <h3>Lista pól ({sortedAndFilteredFields.length})</h3>
             {sortedAndFilteredFields.length === 0 ? (
@@ -981,7 +963,7 @@ const renderSortArrow = (key) => {
                           className="action-btn btn-danger" 
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteField(field.id);
+                            setDeleteConfirm(field);
                           }}
                         >
                           <i className="fas fa-trash"></i> Usuń
@@ -1017,17 +999,48 @@ const renderSortArrow = (key) => {
           saveLoading={saveLoading}
         />
       )}
+
+      {/* NOWY: Modal potwierdzenia usunięcia pola */}
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal-content delete-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Potwierdzenie usunięcia</h3>
+              <button className="close-btn" onClick={() => setDeleteConfirm(null)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p>Czy na pewno chcesz usunąć pole <strong>"{deleteConfirm.name}"</strong>?</p>
+              <div className="delete-confirm-warning">
+                <i className="fas fa-exclamation-triangle"></i>
+                <span>Tej operacji nie można cofnąć.</span>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Anuluj
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => handleDeleteField(deleteConfirm.id)}
+              >
+                <i className="fas fa-trash"></i> Tak, usuń
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-
-// Komponent modala (POPRAWIONA WERSJA)
+// Komponent modala
 const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
   const [isCropOpen, setIsCropOpen] = useState(false);
   const [isSoilOpen, setIsSoilOpen] = useState(false);
 
-  // POPRAWIONE: Funkcja do obsługi zmian w formularzu
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (typeof onFieldChange === 'function') {
@@ -1038,7 +1051,6 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
     }
   };
 
-  // POPRAWIONE: Funkcja do custom select
   const handleCustomSelect = (name, value) => {
     if (typeof onFieldChange === 'function') {
       onFieldChange(prev => ({
@@ -1207,7 +1219,7 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
   );
 };
 
-// NOWY KOMPONENT: Modal statusu pola
+// Komponent: Modal statusu pola
 const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, saveLoading }) => {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isCropOpen, setIsCropOpen] = useState(false);

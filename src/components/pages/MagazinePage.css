@@ -1,12 +1,12 @@
-/* components/pages/MagazinePage.css */
+/* MagazinePage.css - TYLKO STYLE SPECYFICZNE DLA MAGAZYNU */
 .magazine-page {
-  padding: 20px;
+  padding: 0px;
   width: 100%;
-  margin: 0 ;
+  margin: 0;
   box-sizing: border-box;
 }
 
-.magazine-header {
+.magazine-page .magazine-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -17,24 +17,24 @@
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.magazine-header h2 {
+.magazine-page .magazine-header h2 {
   color: #2c3e50;
   margin: 0;
 }
 
-.magazine-header p {
+.magazine-page .magazine-header p {
   color: #666;
   font-size: 1.1rem;
 }
 
-.magazine-stats {
+.magazine-page .magazine-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
 }
 
-.stat-card {
+.magazine-page .stat-card {
   background: white;
   padding: 20px;
   border-radius: 10px;
@@ -45,35 +45,35 @@
   transition: transform 0.2s;
 }
 
-.stat-card:hover {
+.magazine-page .stat-card:hover {
   transform: translateY(-2px);
 }
 
-.stat-icon {
+.magazine-page .stat-icon {
   font-size: 2rem;
 }
 
-.stat-info h3 {
+.magazine-page .stat-info h3 {
   font-size: 0.9rem;
   color: #666;
   margin-bottom: 5px;
   text-transform: uppercase;
 }
 
-.stat-info p {
+.magazine-page .stat-info p {
   font-size: 1.5rem;
   font-weight: bold;
   color: var(--primary-dark);
   margin: 0;
 }
 
-.magazine-content {
+.magazine-page .magazine-content {
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 30px;
 }
 
-.categories-sidebar {
+.magazine-page .categories-sidebar {
   background: white;
   border-radius: 10px;
   padding: 20px;
@@ -81,14 +81,14 @@
   height: fit-content;
 }
 
-.categories-sidebar h3 {
+.magazine-page .categories-sidebar h3 {
   margin-bottom: 15px;
   color: var(--primary-dark);
   border-bottom: 2px solid var(--primary);
   padding-bottom: 10px;
 }
 
-.category-btn {
+.magazine-page .category-btn {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -104,45 +104,45 @@
   border-radius: 0 8px 8px 0;
 }
 
-.category-btn:hover {
+.magazine-page .category-btn:hover {
   background-color: #f5f5f5;
   transform: translateX(5px);
 }
 
-.category-btn.active {
+.magazine-page .category-btn.active {
   background-color: var(--primary-light);
   color: white;
   transform: translateX(5px);
 }
 
-.category-icon {
+.magazine-page .category-icon {
   font-size: 1.2rem;
 }
 
-.category-name {
+.magazine-page .category-name {
   flex: 1;
   font-weight: 500;
 }
 
-.category-count {
+.magazine-page .category-count {
   background: rgba(0,0,0,0.1);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.8rem;
 }
 
-.category-btn.active .category-count {
+.magazine-page .category-btn.active .category-count {
   background: rgba(255,255,255,0.3);
 }
 
-.products-section {
+.magazine-page .products-section {
   background: white;
   border-radius: 10px;
   padding: 25px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.products-header {
+.magazine-page .products-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -151,18 +151,51 @@
   gap: 15px;
 }
 
-.products-header h3 {
+.magazine-page .products-header h3 {
   color: var(--primary-dark);
   font-size: 1.5rem;
   margin: 0;
 }
 
-.search-box {
+.magazine-page .products-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.magazine-page .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.magazine-page .filter-group label {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.magazine-page .filter-group select {
+  padding: 8px 12px;
+  border: 1px solid var(--gray);
+  border-radius: 5px;
+  font-size: 0.9rem;
+  background: white;
+  cursor: pointer;
+}
+
+.magazine-page .filter-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.magazine-page .search-box {
   position: relative;
   min-width: 250px;
 }
 
-.search-box input {
+.magazine-page .search-box input {
   width: 100%;
   padding: 10px 40px 10px 15px;
   border: 1px solid var(--gray);
@@ -171,13 +204,13 @@
   transition: border-color 0.3s;
 }
 
-.search-box input:focus {
+.magazine-page .search-box input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.1);
 }
 
-.search-icon {
+.magazine-page .search-icon {
   position: absolute;
   right: 15px;
   top: 50%;
@@ -185,13 +218,13 @@
   color: #666;
 }
 
-.products-grid {
+.magazine-page .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
 }
 
-.product-card {
+.magazine-page .product-card {
   border: 1px solid var(--gray);
   border-radius: 10px;
   padding: 20px;
@@ -199,25 +232,25 @@
   background: white;
 }
 
-.product-card:hover {
+.magazine-page .product-card:hover {
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
   transform: translateY(-2px);
 }
 
-.product-header {
+.magazine-page .product-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 15px;
 }
 
-.product-header h4 {
+.magazine-page .product-header h4 {
   margin: 0;
   color: var(--dark);
   font-size: 1.2rem;
 }
 
-.stock-status {
+.magazine-page .stock-status {
   padding: 4px 12px;
   border-radius: 15px;
   color: white;
@@ -226,11 +259,11 @@
   text-transform: uppercase;
 }
 
-.product-details {
+.magazine-page .product-details {
   margin-bottom: 20px;
 }
 
-.detail-row {
+.magazine-page .detail-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -238,26 +271,26 @@
   padding: 5px 0;
 }
 
-.detail-row:not(:last-child) {
+.magazine-page .detail-row:not(:last-child) {
   border-bottom: 1px solid #f0f0f0;
 }
 
-.label {
+.magazine-page .label {
   color: #666;
   font-size: 0.9rem;
 }
 
-.value {
+.magazine-page .value {
   font-weight: 500;
   color: var(--dark);
 }
 
-.product-actions {
+.magazine-page .product-actions {
   display: flex;
   gap: 10px;
 }
 
-.btn-primary, .btn-secondary {
+.magazine-page .btn-primary, .magazine-page .btn-secondary {
   padding: 8px 16px;
   border: none;
   border-radius: 5px;
@@ -267,47 +300,47 @@
   flex: 1;
 }
 
-.btn-primary {
+.magazine-page .btn-primary {
   background-color: var(--primary);
   color: white;
 }
 
-.btn-primary:hover {
+.magazine-page .btn-primary:hover {
   background-color: var(--primary-dark);
 }
 
-.btn-secondary {
+.magazine-page .btn-secondary {
   background-color: #f5f5f5;
   color: var(--dark);
   border: 1px solid var(--gray);
 }
 
-.btn-secondary:hover {
+.magazine-page .btn-secondary:hover {
   background-color: #e0e0e0;
 }
 
-.no-products {
+.magazine-page .no-products {
   text-align: center;
   padding: 40px;
   color: #666;
 }
 
-.no-products p {
+.magazine-page .no-products p {
   font-size: 1.1rem;
   margin: 0;
 }
 
 /* Responsywność */
 @media (max-width: 1024px) {
-  .magazine-content {
+  .magazine-page .magazine-content {
     grid-template-columns: 1fr;
   }
   
-  .categories-sidebar {
+  .magazine-page .categories-sidebar {
     order: 2;
   }
   
-  .products-section {
+  .magazine-page .products-section {
     order: 1;
   }
 }
@@ -317,176 +350,37 @@
     padding: 15px;
   }
   
-  .products-header {
+  .magazine-page .products-header {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .search-box {
+  .magazine-page .search-box {
     min-width: auto;
   }
   
-  .products-grid {
+  .magazine-page .products-grid {
     grid-template-columns: 1fr;
   }
   
-  .magazine-stats {
+  .magazine-page .magazine-stats {
     grid-template-columns: 1fr;
   }
   
-  .product-actions {
+  .magazine-page .product-actions {
     flex-direction: column;
   }
-}
-
-/* Custom Select Styles */
-.custom-select {
-  position: relative;
-  width: 100%;
-}
-
-.select-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  cursor: pointer;
-  transition: border-color 0.3s ease;
-}
-
-.select-header:hover {
-  border-color: #007bff;
-}
-
-.select-header.has-value {
-  border-color: #007bff;
-}
-
-.select-header.disabled {
-  background-color: #f8f9fa;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.select-value {
-  color: #333;
-}
-
-.select-header.disabled .select-value {
-  color: #6c757d;
-}
-
-.select-arrow {
-  font-size: 12px;
-  color: #666;
-  transition: transform 0.3s ease;
-}
-
-.select-header:not(.disabled):hover .select-arrow {
-  color: #007bff;
-}
-
-.select-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  z-index: 1000;
-  max-height: 200px;
-  overflow-y: auto;
-  margin-top: 2px;
-}
-
-.select-option {
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.select-option:hover {
-  background-color: #f8f9fa;
-}
-
-.select-option.selected {
-  background-color: #007bff;
-  color: white;
-}
-
-/* Modal overlay for dropdown */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.products-controls {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.filter-group label {
-  font-size: 0.8rem;
-  color: #666;
-  font-weight: 500;
-}
-
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid var(--gray);
-  border-radius: 5px;
-  font-size: 0.9rem;
-  background: white;
-  cursor: pointer;
-}
-
-.filter-group select:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-/* Responsywność dla nowych elementów */
-@media (max-width: 768px) {
-  .products-controls {
+  
+  .magazine-page .products-controls {
     flex-direction: column;
     width: 100%;
   }
   
-  .filter-group {
+  .magazine-page .filter-group {
     width: 100%;
   }
   
-  .filter-group select {
+  .magazine-page .filter-group select {
     width: 100%;
   }
 }

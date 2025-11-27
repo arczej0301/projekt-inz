@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import CustomSelect from './CustomSelect';
 import './TaskModal.css';
 
+
 const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
   const { addTask, updateTask, fields, tractors, machines, warehouseItems } = useTasks();
   const { user } = useAuth();

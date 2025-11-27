@@ -1,18 +1,43 @@
 /* FieldsPage.css - TYLKO STYLE SPECYFICZNE DLA STRONY PÓL */
-
-/* Zawartość - FIELDS PAGE */
 .fields-page {
-  padding: 20px ; /* DODANY PADDING DLA ODSTĘPU OD SIDEBARU */
+  padding: 0px;
   flex: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
-  overflow-y: auto;
+  height: auto;
 }
 
-/* Wewnętrzne odstępy */
-.fields-content {
+.fields-page .fields-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.fields-page .delete-confirm-modal {
+  max-width: 500px;
+}
+
+.fields-page .delete-confirm-warning {
+  color: #e74c3c;
+  font-size: 14px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fields-page .fields-header h2 {
+  color: #2c3e50;
+  margin: 0;
+}
+
+.fields-page .fields-content {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -20,75 +45,12 @@
   height: 100%;
 }
 
-.actions-bar {
+.fields-page .actions-bar {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 20px;
-  width: 100%;
 }
 
-.btn {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  transition: background-color 0.3s;
-  margin-right: 10px;
-}
-
-.btn i {
-  margin-right: 8px;
-}
-
-.btn-primary {
-  background-color: var(--primary);
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-}
-
-.btn-secondary {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #2980b9;
-}
-
-.btn-info {
-  background-color: #17a2b8;
-  color: white;
-}
-
-.btn-info:hover {
-  background-color: #138496;
-}
-
-.btn-danger {
-  background-color: var(--danger);
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c0392b;
-}
-
-.btn-success {
-  background-color: #28a745;
-  color: white;
-}
-
-.btn-success:hover {
-  background-color: #218838;
-}
-
-.search-box {
+.fields-page .search-box {
   display: flex;
   align-items: center;
   background-color: white;
@@ -97,72 +59,50 @@
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.search-box input {
+.fields-page .search-box input {
   border: none;
   padding: 8px;
   width: 200px;
   outline: none;
 }
 
-.search-box i {
+.fields-page .search-box i {
   color: #7f8c8d;
 }
 
-/* Mapa */
-.map-container {
+.fields-page .map-container {
   flex: 1;
   background-color: white;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  min-height: 400px;
+  min-height: 300px;
   width: 100%;
   position: relative;
 }
 
-/* Lista pól */
-.fields-list {
+.fields-page .fields-list {
   margin-top: 20px;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   overflow: hidden;
   width: 100%;
+  height: auto;
 }
 
-.fields-list h3 {
+.fields-page .fields-list h3 {
   padding: 15px 20px;
   background-color: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
 }
 
-.fields-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.fields-table th, .fields-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.fields-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #495057;
-}
-
-.fields-table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.action-buttons {
+.fields-page .action-buttons {
   display: flex;
   gap: 5px;
 }
 
-.action-btn {
+.fields-page .action-btn {
   padding: 5px 10px;
   border: none;
   border-radius: 3px;
@@ -172,113 +112,16 @@
   align-items: center;
 }
 
-.action-btn i {
+.fields-page .action-btn i {
   margin-right: 4px;
 }
 
-.action-btn.btn-primary {
-  background-color: var(--primary);
-  color: white;
-}
-
-.action-btn.btn-info {
-  background-color: #17a2b8;
-  color: white;
-}
-
-.action-btn.btn-danger {
-  background-color: var(--danger);
-  color: white;
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.5);
-  z-index: 1000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-content {
-  background-color: white;
-  border-radius: 8px;
-  width: 500px;
-  max-width: 90%;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #e9ecef;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #2c3e50;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #7f8c8d;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 600;
-  color: #495057;
-}
-
-.form-group input, .form-group select, .form-group textarea {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.modal-footer {
-  padding: 15px 20px;
-  border-top: 1px solid #e9ecef;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* Custom Select Styles */
-.custom-select {
+.fields-page .custom-select {
   position: relative;
   width: 100%;
 }
 
-.select-header {
+.fields-page .select-header {
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -290,19 +133,19 @@
   min-height: 42px;
 }
 
-.select-header:hover {
+.fields-page .select-header:hover {
   border-color: #aaa;
 }
 
-.select-header .arrow {
+.fields-page .select-header .arrow {
   transition: transform 0.2s;
 }
 
-.select-header.open .arrow {
+.fields-page .select-header.open .arrow {
   transform: rotate(180deg);
 }
 
-.select-options {
+.fields-page .select-options {
   position: absolute;
   top: 100%;
   left: 0;
@@ -316,99 +159,60 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.select-option {
+.fields-page .select-option {
   padding: 10px 12px;
   cursor: pointer;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.select-option:hover {
+.fields-page .select-option:hover {
   background: #f5f5f5;
 }
 
-.select-option.selected {
+.fields-page .select-option.selected {
   background: #e3f2fd;
   color: #1976d2;
 }
 
-.select-option:last-child {
+.fields-page .select-option:last-child {
   border-bottom: none;
 }
 
-/* Ensure modal is above everything */
-.modal-overlay {
-  z-index: 10000;
-}
-
-.modal-content {
-  z-index: 10001;
-}
-
-/* Form styles */
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
-}
-
-/* Style dla statusów */
-.status-badge {
+.fields-page .status-badge {
   cursor: pointer;
   transition: all 0.3s ease;
   display: inline-block;
 }
 
-.status-badge:hover {
+.fields-page .status-badge:hover {
   opacity: 0.8;
   transform: scale(1.05);
 }
 
-/* InfoWindow styles */
-.field-info-window {
+.fields-page .field-info-window {
   min-width: 250px;
 }
 
-.field-info-details p {
+.fields-page .field-info-details p {
   margin: 8px 0;
   display: flex;
   align-items: center;
 }
 
-.field-info-details i {
+.fields-page .field-info-details i {
   margin-right: 8px;
   width: 16px;
   text-align: center;
 }
 
-.field-info-actions {
+.fields-page .field-info-actions {
   display: flex;
   gap: 5px;
   margin-top: 10px;
   flex-wrap: wrap;
 }
 
-/* Drawing instruction */
-.drawing-instruction {
+.fields-page .drawing-instruction {
   position: absolute;
   top: 10px;
   left: 10px;
@@ -420,32 +224,31 @@
   max-width: 300px;
 }
 
-.instruction-content {
+.fields-page .instruction-content {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 
-.instruction-content i {
+.fields-page .instruction-content i {
   color: #3498db;
   font-size: 18px;
   margin-top: 2px;
 }
 
-/* Style dla sortowania */
-.sortable {
+.fields-page .sortable {
   cursor: pointer;
   user-select: none;
 }
 
-.th-content {
+.fields-page .th-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.sort-arrows {
+.fields-page .sort-arrows {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -459,72 +262,69 @@
   transition: all 0.3s ease;
 }
 
-/* Aktywne strzałki */
-.sort-arrows .active {
+.fields-page .sort-arrows .active {
   color: var(--danger);
   font-size: 18px;
 }
 
-/* Hover efekt tylko dla strzałek */
-.th-content:hover .sort-arrows {
+.fields-page .th-content:hover .sort-arrows {
   color: #495057;
   transform: scale(1.1);
 }
 
-/* Style dla Unicode strzałek */
-.sort-arrows span {
+.fields-page .sort-arrows span {
   display: inline-block;
   transition: transform 0.2s ease;
 }
 
-.th-content:hover .sort-arrows span {
+.fields-page .th-content:hover .sort-arrows span {
   transform: scale(1.2);
 }
 
 /* Responsywność dla strony pól */
 @media (max-width: 992px) {
   .fields-page {
-    padding: 15px; /* MNIEJSZY PADDING NA TABLETACH */
+    padding: 15px;
   }
   
-  .actions-bar {
+  .fields-page .actions-bar {
     flex-direction: column;
     gap: 10px;
   }
   
-  .search-box {
+  .fields-page .search-box {
     width: 100%;
   }
   
-  .search-box input {
+  .fields-page .search-box input {
     width: 100%;
   }
   
-  .action-buttons {
+  .fields-page .action-buttons {
     flex-direction: column;
   }
   
-  .action-btn {
+  .fields-page .action-btn {
     margin-bottom: 5px;
   }
 }
 
 @media (max-width: 768px) {
   .fields-page {
-    padding: 10px; /* NAJMNIEJSZY PADDING NA TELEFONACH */
+    padding: 10px;
   }
   
-  .th-content {
+  .fields-page .th-content {
     flex-direction: row;
     gap: 6px;
   }
   
-  .sort-arrows {
+  .fields-page .sort-arrows {
     font-size: 14px;
     min-width: 18px;
   }
   
-  .sort-arrows .active {
+  .fields-page .sort-arrows .active {
     font-size: 16px;
   }
 }

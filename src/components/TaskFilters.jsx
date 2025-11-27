@@ -1,9 +1,8 @@
-// src/components/TaskFilters.jsx
-import React, { useState } from 'react';
-import CustomSelect from './CustomSelect';
+// src/components/TaskFilters.jsx - CAŁKOWICIE POPRAWIONA WERSJA
+import React, { useState, useEffect } from 'react';
 import './TaskFilters.css';
 
-const TaskFilters = ({ onFilterChange, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
+const TaskFilters = ({ onFilterChange, currentFilters, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
   const [filters, setFilters] = useState({
     status: '',
     type: '',
@@ -11,6 +10,13 @@ const TaskFilters = ({ onFilterChange, TASK_TYPES, TASK_STATUS, PRIORITIES }) =>
     assignedTo: '',
     dateRange: ''
   });
+
+  // Synchronizuj z props od rodzica
+  useEffect(() => {
+    if (currentFilters) {
+      setFilters(currentFilters);
+    }
+  }, [currentFilters]);
 
   const DATE_RANGE_OPTIONS = [
     { value: '', label: 'Wszystkie daty' },
@@ -44,7 +50,53 @@ const TaskFilters = ({ onFilterChange, TASK_TYPES, TASK_STATUS, PRIORITIES }) =>
     onFilterChange(emptyFilters);
   };
 
+  const removeFilter = (filterName) => {
+    console.log('Removing filter:', filterName);
+    console.log('Current filters before:', filters);
+    
+    const newFilters = {
+      ...filters,
+      [filterName]: ''
+    };
+    
+    console.log('New filters after:', newFilters);
+    
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
+
   const hasActiveFilters = Object.values(filters).some(value => value !== '');
+
+  const getFilterLabel = (filterName, value) => {
+    switch (filterName) {
+      case 'status':
+        return TASK_STATUS.find(s => s.value === value)?.label;
+      case 'type':
+        return TASK_TYPES.find(t => t.value === value)?.label;
+      case 'priority':
+        return PRIORITIES.find(p => p.value === value)?.label;
+      case 'dateRange':
+        return DATE_RANGE_OPTIONS.find(d => d.value === value)?.label;
+      case 'assignedTo':
+        return value;
+      default:
+        return value;
+    }
+  };
+
+  const getFilterDisplayName = (filterName) => {
+    switch (filterName) {
+      case 'status': return 'Status';
+      case 'type': return 'Typ';
+      case 'priority': return 'Priorytet';
+      case 'assignedTo': return 'Wykonawca';
+      case 'dateRange': return 'Data';
+      default: return filterName;
+    }
+  };
+
+  // Debug - pokaż aktualne filtry
+  console.log('Current filters in component:', filters);
 
   return (
     <div className="task-filters">
@@ -52,7 +104,7 @@ const TaskFilters = ({ onFilterChange, TASK_TYPES, TASK_STATUS, PRIORITIES }) =>
         <h3>Filtry</h3>
         {hasActiveFilters && (
           <button onClick={clearFilters} className="clear-filters-btn">
-            Wyczyść filtry
+            Wyczyść wszystkie filtry
           </button>
         )}
       </div>
@@ -60,36 +112,54 @@ const TaskFilters = ({ onFilterChange, TASK_TYPES, TASK_STATUS, PRIORITIES }) =>
       <div className="filters-grid">
         <div className="filter-group">
           <label>Status</label>
-          <CustomSelect
-            value={filters.status}
-            onChange={(value) => handleFilterChange('status', value)}
-            options={[{ value: '', label: 'Wszystkie statusy' }, ...TASK_STATUS]}
-          />
+          <select
+            value={filters.status || ''}
+            onChange={(e) => handleFilterChange('status', e.target.value)}
+          >
+            <option value="">Wszystkie statusy</option>
+            {TASK_STATUS.map(status => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="filter-group">
           <label>Typ zadania</label>
-          <CustomSelect
-            value={filters.type}
-            onChange={(value) => handleFilterChange('type', value)}
-            options={[{ value: '', label: 'Wszystkie typy' }, ...TASK_TYPES]}
-          />
+          <select
+            value={filters.type || ''}
+            onChange={(e) => handleFilterChange('type', e.target.value)}
+          >
+            <option value="">Wszystkie typy</option>
+            {TASK_TYPES.map(type => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="filter-group">
           <label>Priorytet</label>
-          <CustomSelect
-            value={filters.priority}
-            onChange={(value) => handleFilterChange('priority', value)}
-            options={[{ value: '', label: 'Wszystkie priorytety' }, ...PRIORITIES]}
-          />
+          <select
+            value={filters.priority || ''}
+            onChange={(e) => handleFilterChange('priority', e.target.value)}
+          >
+            <option value="">Wszystkie priorytety</option>
+            {PRIORITIES.map(priority => (
+              <option key={priority.value} value={priority.value}>
+                {priority.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="filter-group">
           <label>Wykonawca</label>
           <input
             type="text"
-            value={filters.assignedTo}
+            value={filters.assignedTo || ''}
             onChange={(e) => handleFilterChange('assignedTo', e.target.value)}
             placeholder="Filtruj po wykonawcy..."
           />
@@ -97,42 +167,35 @@ const TaskFilters = ({ onFilterChange, TASK_TYPES, TASK_STATUS, PRIORITIES }) =>
 
         <div className="filter-group">
           <label>Zakres dat</label>
-          <CustomSelect
-            value={filters.dateRange}
-            onChange={(value) => handleFilterChange('dateRange', value)}
-            options={DATE_RANGE_OPTIONS}
-          />
+          <select
+            value={filters.dateRange || ''}
+            onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+          >
+            {DATE_RANGE_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       {hasActiveFilters && (
         <div className="active-filters">
           <span>Aktywne filtry:</span>
-          {filters.status && (
-            <span className="active-filter-tag">
-              Status: {TASK_STATUS.find(s => s.value === filters.status)?.label}
-            </span>
-          )}
-          {filters.type && (
-            <span className="active-filter-tag">
-              Typ: {TASK_TYPES.find(t => t.value === filters.type)?.label}
-            </span>
-          )}
-          {filters.priority && (
-            <span className="active-filter-tag">
-              Priorytet: {PRIORITIES.find(p => p.value === filters.priority)?.label}
-            </span>
-          )}
-          {filters.assignedTo && (
-            <span className="active-filter-tag">
-              Wykonawca: {filters.assignedTo}
-            </span>
-          )}
-          {filters.dateRange && (
-            <span className="active-filter-tag">
-              Data: {DATE_RANGE_OPTIONS.find(d => d.value === filters.dateRange)?.label}
-            </span>
-          )}
+          {Object.entries(filters)
+            .filter(([key, value]) => value && value !== '')
+            .map(([key, value]) => (
+              <span 
+                key={key} 
+                className="active-filter-tag"
+                onClick={() => removeFilter(key)}
+                title={`Kliknij aby usunąć filtr: ${getFilterDisplayName(key)}`}
+              >
+                {getFilterDisplayName(key)}: {getFilterLabel(key, value)}
+                <span className="remove-filter-x"> ×</span>
+              </span>
+            ))}
         </div>
       )}
     </div>

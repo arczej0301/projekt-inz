@@ -12,6 +12,7 @@ const GaragePage = () => {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [showRepairHistory, setShowRepairHistory] = useState(false);
   const [currentRepairMachine, setCurrentRepairMachine] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // Stany dla custom selectów
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -129,18 +130,17 @@ const GaragePage = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Czy na pewno chcesz usunąć tę maszynę?')) {
-      try {
-        await garageService.deleteMachine(id);
-        loadMachines();
-        if (selectedMachine?.id === id) {
-          setSelectedMachine(null);
-        }
-      } catch (error) {
-        console.error('Błąd usuwania:', error);
-        alert('Błąd podczas usuwania maszyny');
+  const handleDeleteMachine = async (machineId) => {
+    try {
+      await deleteMachine(machineId);
+      setDeleteConfirm(null);
+      if (selectedMachine?.id === machineId) {
+        setSelectedMachine(null);
       }
+    } catch (error) {
+      console.error('Error deleting machine:', error);
+      alert('Błąd podczas usuwania maszyny: ' + error.message);
+      setDeleteConfirm(null);
     }
   };
 
@@ -327,17 +327,10 @@ const GaragePage = () => {
 
   return (
     <div className="garage-page">
-      <div className="header">
+      <div className="garage-header">
         <h2>Zarządzanie garażem</h2>
-      </div>
-
-      <div className="content">
         <div className="actions-bar">
-          <div className="action-buttons">
-            <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-              <i className="fas fa-plus"></i> Dodaj maszynę
-            </button>
-          </div>
+
           <div className="search-box">
             <i className="fas fa-search"></i>
             <input
@@ -347,8 +340,15 @@ const GaragePage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <div className="action-buttons">
+            <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+              <i className="fas fa-plus"></i> Dodaj maszynę
+            </button>
+          </div>
         </div>
+      </div>
 
+      <div className="garage-content">
         {/* Statystyki */}
         <div className="stats-grid">
           <div className="stat-card">
@@ -461,88 +461,117 @@ const GaragePage = () => {
                 </tr>
               </thead>
               <tbody>
-  {filteredMachines.map((machine) => {
-    const needsService = machine.nextService && new Date(machine.nextService) <= new Date();
-    
-    return (
-      <tr 
-        key={machine.id}
-        className={`machine-row ${
-          selectedMachine?.id === machine.id ? 'selected' : ''
-        } ${
-          needsService && machine.status !== 'sold' ? 'needs-service' : ''
-        }`}
-        onClick={() => setSelectedMachine(machine)}
-      >
-        <td>
-          <div className="machine-name">
-            <strong>{machine.name}</strong>
-            <div className="machine-details">
-              Rok: {machine.year} {machine.power && `• ${machine.power} KM`}
-            </div>
-          </div>
-        </td>
-        <td>{categoryOptions.find(opt => opt.value === machine.category)?.label || machine.category}</td>
-        <td>
-          <div className="brand-model">
-            <div>{machine.brand}</div>
-            <div className="model">{machine.model}</div>
-          </div>
-        </td>
-        <td>
-          <span className={`status-badge ${getStatusColor(machine.status)}`}>
-            {getStatusText(machine.status)}
-          </span>
-        </td>
-        <td>
-          <div className="service-info">
-            {machine.nextService ? new Date(machine.nextService).toLocaleDateString('pl-PL') : 'Brak danych'}
-            {needsService && machine.status !== 'sold' && (
-              <div className="service-warning">
-                <i className="fas fa-exclamation-circle"></i> Wymaga przeglądu!
-              </div>
-            )}
-          </div>
-        </td>
-        <td className="action-buttons">
-          <button 
-            className="action-btn btn-primary" 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(machine);
-            }}
-          >
-            <i className="fas fa-edit"></i> Edytuj
-          </button>
-          <button 
-            className="action-btn btn-warning" 
-            onClick={(e) => {
-              e.stopPropagation();
-              openRepairHistory(machine);
-            }}
-          >
-            <i className="fas fa-tools"></i> Naprawa
-          </button>
-          <button 
-            className="action-btn btn-danger" 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(machine.id);
-            }}
-          >
-            <i className="fas fa-trash"></i> Usuń
-          </button>
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
+                {filteredMachines.map((machine) => {
+                  const needsService = machine.nextService && new Date(machine.nextService) <= new Date();
+
+                  return (
+                    <tr
+                      key={machine.id}
+                      className={`machine-row ${selectedMachine?.id === machine.id ? 'selected' : ''
+                        } ${needsService && machine.status !== 'sold' ? 'needs-service' : ''
+                        }`}
+                      onClick={() => setSelectedMachine(machine)}
+                    >
+                      <td>
+                        <div className="machine-name">
+                          <strong>{machine.name}</strong>
+                          <div className="machine-details">
+                            Rok: {machine.year} {machine.power && `• ${machine.power} KM`}
+                          </div>
+                        </div>
+                      </td>
+                      <td>{categoryOptions.find(opt => opt.value === machine.category)?.label || machine.category}</td>
+                      <td>
+                        <div className="brand-model">
+                          <div>{machine.brand}</div>
+                          <div className="model">{machine.model}</div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${getStatusColor(machine.status)}`}>
+                          {getStatusText(machine.status)}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="service-info">
+                          {machine.nextService ? new Date(machine.nextService).toLocaleDateString('pl-PL') : 'Brak danych'}
+                          {needsService && machine.status !== 'sold' && (
+                            <div className="service-warning">
+                              <i className="fas fa-exclamation-circle"></i> Wymaga przeglądu!
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="action-buttons">
+                        <button
+                          className="action-btn btn-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditMachine(machine.id);
+                          }}
+                        >
+                          <i className="fas fa-edit"></i> Edytuj
+                        </button>
+                        <button
+                          className="action-btn btn-info"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleServiceRecord(machine.id);
+                          }}
+                        >
+                          <i className="fas fa-tools"></i> Serwis
+                        </button>
+                        <button
+                          className="action-btn btn-danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirm(machine);
+                          }}
+                        >
+                          <i className="fas fa-trash"></i> Usuń
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           )}
         </div>
       </div>
 
-
+      {/* Modal potwierdzenia usunięcia maszyny */}
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal-content delete-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Potwierdzenie usunięcia</h3>
+              <button className="close-btn" onClick={() => setDeleteConfirm(null)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p>Czy na pewno chcesz usunąć maszynę <strong>"{deleteConfirm.name}"</strong>?</p>
+              <div className="delete-confirm-warning">
+                <i className="fas fa-exclamation-triangle"></i>
+                <span>Tej operacji nie można cofnąć.</span>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Anuluj
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => handleDeleteMachine(deleteConfirm.id)}
+              >
+                <i className="fas fa-trash"></i> Tak, usuń
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modal dodawania/edycji maszyny */}
       {showForm && (
         <MachineModal
@@ -914,6 +943,7 @@ const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, o
           </button>
         </div>
       </div>
+
     </div>
   );
 };

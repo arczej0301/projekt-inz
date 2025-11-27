@@ -102,7 +102,6 @@ const ReportsPage = () => {
       <div className="reports-header">
         <div className="header-main">
           <h2>Raporty i Analizy</h2>
-          <p className="header-subtitle">Kompleksowy przegląd efektywności Twojego gospodarstwa</p>
         </div>
         
         <div className="alerts-preview">
@@ -127,7 +126,7 @@ const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Szybki podgląd KPI - formatujemy tylko tutaj */}
+      {/* Szybki podgląd KPI */}
       <div className="quick-overview">
         <div className="overview-grid">
           <div className="overview-item">
@@ -164,7 +163,7 @@ const ReportsPage = () => {
         </div>
       </div>
 
-       <div className="reports-tabs">
+      <div className="reports-tabs">
         {tabs.map(tab => (
           <button
             key={tab.id}

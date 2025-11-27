@@ -10,41 +10,42 @@ function MagazinePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [sortOrder, setSortOrder] = useState('name-asc')
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // Poprawiona funkcja do formatowania waluty
-const formatCurrency = (amount) => {
-  if (amount === null || amount === undefined || isNaN(amount)) {
-    return '0,00 zł'
-  }
-  
-  const numAmount = parseFloat(amount)
-  const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-  return `${formatted} zł`
-}
+  const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return '0,00 zł'
+    }
 
-// Poprawiona funkcja do formatowania liczb
-const formatNumber = (number) => {
-  if (number === null || number === undefined || isNaN(number)) return '0'
-  
-  const num = parseFloat(number)
-  
-  // Dla liczb zmiennoprzecinkowych - formatuj z 2 miejscami po przecinku
-  if (num % 1 !== 0) {
-    return num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    const numAmount = parseFloat(amount)
+    const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    return `${formatted} zł`
   }
-  
-  // Dla liczb całkowitych
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-}
+
+  // Poprawiona funkcja do formatowania liczb
+  const formatNumber = (number) => {
+    if (number === null || number === undefined || isNaN(number)) return '0'
+
+    const num = parseFloat(number)
+
+    // Dla liczb zmiennoprzecinkowych - formatuj z 2 miejscami po przecinku
+    if (num % 1 !== 0) {
+      return num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    }
+
+    // Dla liczb całkowitych
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  }
 
   const handleCategoryChange = (newCategory) => {
     setActiveCategory(newCategory)
   }
 
-  const { 
-    warehouseData, 
-    categories, 
-    loading, 
+  const {
+    warehouseData,
+    categories,
+    loading,
     error,
     addProduct,
     updateProduct,
@@ -141,13 +142,18 @@ const formatNumber = (number) => {
   }
 
   const handleDeleteProduct = async (productId) => {
-    if (window.confirm('Czy na pewno chcesz usunąć ten produkt?')) {
-      const result = await deleteProduct(productId)
+    try {
+      const result = await deleteProduct(productId);
+      setDeleteConfirm(null);
       if (!result.success) {
-        alert(`Błąd: ${result.error}`)
+        alert(`Błąd: ${result.error}`);
       }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Błąd podczas usuwania produktu: ' + error.message);
+      setDeleteConfirm(null);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -174,33 +180,33 @@ const formatNumber = (number) => {
         <h2>Magazyn Gospodarstwa</h2>
       </div>
 
-      
-<div className="magazine-stats">
-  <div className="stat-card">
-    <div className="stat-icon">💰</div>
-    <div className="stat-info">
-      <h3>Łączna wartość</h3>
-      {/* Użyj formatCurrency dla wartości całkowitej */}
-      <p>{formatCurrency(calculateTotalValue())}</p>
-    </div>
-  </div>
-  <div className="stat-card">
-    <div className="stat-icon">📦</div>
-    <div className="stat-info">
-      <h3>Łączna ilość produktów</h3>
-      {/* Użyj formatNumber dla liczby produktów */}
-      <p>{formatNumber(Object.values(warehouseData).flat().length)}</p>
-    </div>
-  </div>
-  <div className="stat-card">
-    <div className="stat-icon">⚠️</div>
-    <div className="stat-info">
-      <h3>Niskie stany</h3>
-      {/* Użyj formatNumber dla niskich stanów */}
-      <p>{formatNumber(countLowStockItems())}</p>
-    </div>
-  </div>
-</div>
+
+      <div className="magazine-stats">
+        <div className="stat-card">
+          <div className="stat-icon">💰</div>
+          <div className="stat-info">
+            <h3>Łączna wartość</h3>
+            {/* Użyj formatCurrency dla wartości całkowitej */}
+            <p>{formatCurrency(calculateTotalValue())}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">📦</div>
+          <div className="stat-info">
+            <h3>Łączna ilość produktów</h3>
+            {/* Użyj formatNumber dla liczby produktów */}
+            <p>{formatNumber(Object.values(warehouseData).flat().length)}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">⚠️</div>
+          <div className="stat-info">
+            <h3>Niskie stany</h3>
+            {/* Użyj formatNumber dla niskich stanów */}
+            <p>{formatNumber(countLowStockItems())}</p>
+          </div>
+        </div>
+      </div>
 
       <div className="magazine-content">
         <div className="categories-sidebar">
@@ -245,7 +251,7 @@ const formatNumber = (number) => {
                   <option value="date-asc">Najstarsze</option>
                 </select>
               </div>
-              
+
               {/* Potem wyszukiwanie */}
               <div className="search-box">
                 <input
@@ -256,9 +262,9 @@ const formatNumber = (number) => {
                 />
                 <span className="search-icon">🔍</span>
               </div>
-              
+
               {/* Na końcu przycisk dodaj produkt */}
-              <button 
+              <button
                 className="btn-primary"
                 onClick={handleAddProduct}
               >
@@ -267,76 +273,76 @@ const formatNumber = (number) => {
             </div>
           </div>
 
-          
-<div className="products-grid">
-  {filteredItems.map(item => {
-    const stockStatus = getStockStatus(item.quantity, item.minStock)
-    return (
-      <div key={item.id} className="product-card">
-        <div className="product-header">
-          <h4>{item.name}</h4>
-          <div 
-            className="stock-status"
-            style={{ backgroundColor: getStatusColor(stockStatus) }}
-          >
-            {stockStatus}
-          </div>
-        </div>
-        
-        <div className="product-details">
-          <div className="detail-row">
-            <span className="label">Ilość:</span>
-            <span className="value">{formatNumber(item.quantity)} {item.unit}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Minimalny stan:</span>
-            <span className="value">{formatNumber(item.minStock)} {item.unit}</span>
-          </div>
-          
-          {/* ZMIANA: Usuń warunek item.price i zawsze pokazuj cenę i wartość */}
-          <div className="detail-row">
-            <span className="label">Cena:</span>
-            <span className="value">{formatCurrency(item.price || 0)}/{item.unit}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Wartość:</span>
-            <span className="value">{formatCurrency((item.quantity || 0) * (item.price || 0))}</span>
-          </div>
-          
-          <div className="detail-row">
-            <span className="label">Ostatnia aktualizacja:</span>
-            <span className="value">
-              {item.lastUpdate?.toDate ? 
-                item.lastUpdate.toDate().toLocaleDateString('pl-PL') : 
-                'Brak danych'
-              }
-            </span>
-          </div>
-        </div>
 
-        <div className="product-actions">
-          <button 
-            className="btn-primary"
-            onClick={() => handleEditProduct(item)}
-          >
-            Edytuj
-          </button>
-          <button 
-            className="btn-secondary"
-            onClick={() => handleDeleteProduct(item.id)}
-          >
-            Usuń
-          </button>
-        </div>
-      </div>
-    )
-  })}
-</div>
+          <div className="products-grid">
+            {filteredItems.map(item => {
+              const stockStatus = getStockStatus(item.quantity, item.minStock)
+              return (
+                <div key={item.id} className="product-card">
+                  <div className="product-header">
+                    <h4>{item.name}</h4>
+                    <div
+                      className="stock-status"
+                      style={{ backgroundColor: getStatusColor(stockStatus) }}
+                    >
+                      {stockStatus}
+                    </div>
+                  </div>
+
+                  <div className="product-details">
+                    <div className="detail-row">
+                      <span className="label">Ilość:</span>
+                      <span className="value">{formatNumber(item.quantity)} {item.unit}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Minimalny stan:</span>
+                      <span className="value">{formatNumber(item.minStock)} {item.unit}</span>
+                    </div>
+
+                    {/* ZMIANA: Usuń warunek item.price i zawsze pokazuj cenę i wartość */}
+                    <div className="detail-row">
+                      <span className="label">Cena:</span>
+                      <span className="value">{formatCurrency(item.price || 0)}/{item.unit}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Wartość:</span>
+                      <span className="value">{formatCurrency((item.quantity || 0) * (item.price || 0))}</span>
+                    </div>
+
+                    <div className="detail-row">
+                      <span className="label">Ostatnia aktualizacja:</span>
+                      <span className="value">
+                        {item.lastUpdate?.toDate ?
+                          item.lastUpdate.toDate().toLocaleDateString('pl-PL') :
+                          'Brak danych'
+                        }
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="product-actions">
+                    <button
+                      className="btn-primary"
+                      onClick={() => handleEditProduct(item)}
+                    >
+                      Edytuj
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setDeleteConfirm(item)}
+                    >
+                      Usuń
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
 
           {filteredItems.length === 0 && (
             <div className="no-products">
               <p>📭 Brak produktów w tej kategorii</p>
-              <button 
+              <button
                 className="btn-primary"
                 onClick={handleAddProduct}
               >
@@ -347,19 +353,53 @@ const formatNumber = (number) => {
         </div>
       </div>
 
+
+      {/* Modal potwierdzenia usunięcia produktu */}
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal-content delete-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Potwierdzenie usunięcia</h3>
+              <button className="close-btn" onClick={() => setDeleteConfirm(null)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p>Czy na pewno chcesz usunąć produkt <strong>"{deleteConfirm.name}"</strong>?</p>
+              <div className="delete-confirm-warning">
+                <i className="fas fa-exclamation-triangle"></i>
+                <span>Tej operacji nie można cofnąć.</span>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Anuluj
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => handleDeleteProduct(deleteConfirm.id)}
+              >
+                <i className="fas fa-trash"></i>Tak
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isModalOpen && (
-    <ProductModal
-      product={editingProduct}
-      category={activeCategory}
-      categories={categories} // DODAJ TĘ LINIĘ
-      onCategoryChange={handleCategoryChange} // DODAJ TĘ LINIĘ
-      onSave={handleSaveProduct}
-      onClose={() => {
-        setIsModalOpen(false)
-        setEditingProduct(null)
-      }}
-    />
-  )}
+        <ProductModal
+          product={editingProduct}
+          category={activeCategory}
+          categories={categories} // DODAJ TĘ LINIĘ
+          onCategoryChange={handleCategoryChange} // DODAJ TĘ LINIĘ
+          onSave={handleSaveProduct}
+          onClose={() => {
+            setIsModalOpen(false)
+            setEditingProduct(null)
+          }}
+        />
+      )}
     </div>
   )
 }

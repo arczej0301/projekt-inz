@@ -13,6 +13,7 @@ const TasksPage = () => {
   const [activeView, setActiveView] = useState('list');
   const [filters, setFilters] = useState({});
   const filterTimeoutRef = useRef(null);
+  const [filterLoading, setFilterLoading] = useState(false);
 
   const {
     tasks,
@@ -80,17 +81,18 @@ const TasksPage = () => {
     fetchTasks(filters);
   };
 
-  const handleFilterChange = (newFilters) => {
-    setFilters(newFilters);
-
-    if (filterTimeoutRef.current) {
-      clearTimeout(filterTimeoutRef.current);
-    }
-
-    filterTimeoutRef.current = setTimeout(() => {
-      fetchTasks(newFilters);
-    }, 500);
-  };
+  const handleFilterChange = async (newFilters) => {
+  setFilters(newFilters);
+  setFilterLoading(true);
+  
+  try {
+    await fetchTasks(newFilters);
+  } catch (error) {
+    console.error('Błąd podczas filtrowania:', error);
+  } finally {
+    setFilterLoading(false);
+  }
+};
 
   const handleClearError = () => {
     clearError();
@@ -123,7 +125,7 @@ const TasksPage = () => {
             </button>
           </div>
           <button className="btn-primary" onClick={handleAddTask}>
-            + Nowe Zadanie
+            Nowe Zadanie
           </button>
         </div>
       </div>
@@ -135,12 +137,20 @@ const TasksPage = () => {
         </div>
       )}
 
+      {filterLoading && (
+  <div className="loading-filter">
+    <div className="loading-spinner"></div>
+    <span>Filtrowanie zadań...</span>
+  </div>
+)}
+
       <TaskFilters
-        onFilterChange={handleFilterChange}
-        TASK_TYPES={TASK_TYPES}
-        TASK_STATUS={TASK_STATUS}
-        PRIORITIES={PRIORITIES}
-      />
+  onFilterChange={handleFilterChange}
+  currentFilters={filters}
+  TASK_TYPES={TASK_TYPES}
+  TASK_STATUS={TASK_STATUS}
+  PRIORITIES={PRIORITIES}
+/>
 
       <div className="tasks-content">
         {activeView === 'list' ? (
@@ -187,9 +197,6 @@ const TasksPage = () => {
             {tasks.length === 0 && !loading && (
               <div className="no-tasks-message">
                 <p>📝 Brak zadań do wyświetlenia</p>
-                <button className="btn-primary" onClick={handleAddTask}>
-                  Utwórz pierwsze zadanie
-                </button>
               </div>
             )}
           </div>
@@ -201,6 +208,12 @@ const TasksPage = () => {
         )}
       </div>
 
+      {filterLoading && (
+        <div className="loading-filter">
+          <div className="loading-spinner"></div>
+          <span>Filtrowanie zadań...</span>
+        </div>
+      )}
       {showModal && (
         <TaskModal
           task={editingTask}
