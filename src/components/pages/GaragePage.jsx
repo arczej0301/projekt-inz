@@ -325,6 +325,33 @@ const GaragePage = () => {
     setIsFilterStatusOpen(false);
   };
 
+  // DODAJ TE FUNKCJE do komponentu GaragePage (przed return)
+
+const handleEditMachine = (machineId) => {
+  const machine = machines.find(m => m.id === machineId);
+  if (machine) {
+    handleEdit(machine);
+  }
+};
+
+const handleServiceRecord = (machineId) => {
+  const machine = machines.find(m => m.id === machineId);
+  if (machine) {
+    openRepairHistory(machine);
+  }
+};
+
+const deleteMachine = async (machineId) => {
+  try {
+    await garageService.deleteMachine(machineId);
+    setMachines(prev => prev.filter(m => m.id !== machineId));
+    alert('Maszyna została usunięta pomyślnie');
+  } catch (error) {
+    console.error('Błąd usuwania maszyny:', error);
+    throw error;
+  }
+};
+
   return (
     <div className="garage-page">
       <div className="garage-header">
@@ -503,34 +530,34 @@ const GaragePage = () => {
                         </div>
                       </td>
                       <td className="action-buttons">
-                        <button
-                          className="action-btn btn-primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditMachine(machine.id);
-                          }}
-                        >
-                          <i className="fas fa-edit"></i> Edytuj
-                        </button>
-                        <button
-                          className="action-btn btn-info"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleServiceRecord(machine.id);
-                          }}
-                        >
-                          <i className="fas fa-tools"></i> Serwis
-                        </button>
-                        <button
-                          className="action-btn btn-danger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteConfirm(machine);
-                          }}
-                        >
-                          <i className="fas fa-trash"></i> Usuń
-                        </button>
-                      </td>
+  <button
+    className="action-btn btn-primary"
+    onClick={(e) => {
+      e.stopPropagation();
+      handleEdit(machine); // Używamy bezpośrednio handleEdit
+    }}
+  >
+    <i className="fas fa-edit"></i> Edytuj
+  </button>
+  <button
+    className="action-btn btn-info"
+    onClick={(e) => {
+      e.stopPropagation();
+      openRepairHistory(machine); // Używamy bezpośrednio openRepairHistory
+    }}
+  >
+    <i className="fas fa-tools"></i> Serwis
+  </button>
+  <button
+    className="action-btn btn-danger"
+    onClick={(e) => {
+      e.stopPropagation();
+      setDeleteConfirm(machine);
+    }}
+  >
+    <i className="fas fa-trash"></i> Usuń
+  </button>
+</td>
                     </tr>
                   );
                 })}

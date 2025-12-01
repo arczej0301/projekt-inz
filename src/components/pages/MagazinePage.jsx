@@ -268,7 +268,7 @@ function MagazinePage() {
                 className="btn-primary"
                 onClick={handleAddProduct}
               >
-                + Dodaj produkt
+                Dodaj produkt
               </button>
             </div>
           </div>

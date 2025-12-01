@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LoadScript, GoogleMap, Polygon, InfoWindow, Marker } from '@react-google-maps/api';
-import { 
-  getFields, 
-  addField, 
-  updateField, 
+import {
+  getFields,
+  addField,
+  updateField,
   deleteField,
   subscribeToFields,
   getFieldStatus,
@@ -12,7 +12,7 @@ import {
 } from '../../services/fieldsService';
 import './FieldsPage.css';
 
-const FieldsPage = () => { 
+const FieldsPage = () => {
   const [fields, setFields] = useState([]);
   const [fieldStatuses, setFieldStatuses] = useState({});
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,7 @@ const FieldsPage = () => {
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
-    
+
     window.scrollTo(0, 0);
   }, []);
 
@@ -185,11 +185,11 @@ const FieldsPage = () => {
   // Funkcja do zmiany sortowania
   const handleSort = (key) => {
     let direction = 'asc';
-    
+
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
-    
+
     setSortConfig({ key, direction });
   };
 
@@ -237,7 +237,7 @@ const FieldsPage = () => {
 
     const unsubscribe = subscribeToFields(async (fieldsData) => {
       setFields(fieldsData);
-      
+
       const statuses = {};
       for (const field of fieldsData) {
         try {
@@ -250,7 +250,7 @@ const FieldsPage = () => {
         }
       }
       setFieldStatuses(statuses);
-      
+
       setLoading(false);
     });
 
@@ -269,11 +269,11 @@ const FieldsPage = () => {
   // Funkcja do obliczania centroidu polygonu
   const calculateCentroid = (coordinates) => {
     if (!coordinates || coordinates.length === 0) return null;
-    
-    const points = coordinates[0].lat === coordinates[coordinates.length - 1].lat && 
-                   coordinates[0].lng === coordinates[coordinates.length - 1].lng 
-                   ? coordinates.slice(0, -1) 
-                   : coordinates;
+
+    const points = coordinates[0].lat === coordinates[coordinates.length - 1].lat &&
+      coordinates[0].lng === coordinates[coordinates.length - 1].lng
+      ? coordinates.slice(0, -1)
+      : coordinates;
 
     if (points.length === 0) return null;
 
@@ -284,7 +284,7 @@ const FieldsPage = () => {
     for (let i = 0; i < points.length; i++) {
       const current = points[i];
       const next = points[(i + 1) % points.length];
-      
+
       const area = (current.lat * next.lng) - (next.lat * current.lng);
       signedArea += area;
       centroidX += (current.lat + next.lat) * area;
@@ -301,11 +301,11 @@ const FieldsPage = () => {
   // Oblicz odległość między punktami w metrach
   const calculateDistance = (point1, point2) => {
     if (!googleRef.current || !googleRef.current.maps) return Infinity;
-    
+
     try {
       const latLng1 = new googleRef.current.maps.LatLng(point1.lat, point1.lng);
       const latLng2 = new googleRef.current.maps.LatLng(point2.lat, point2.lng);
-      
+
       return googleRef.current.maps.geometry.spherical.computeDistanceBetween(latLng1, latLng2);
     } catch (error) {
       console.error('Error calculating distance:', error);
@@ -316,23 +316,23 @@ const FieldsPage = () => {
   // Dokładna funkcja do obliczania powierzchni
   const calculateAreaAccurate = (coordinates) => {
     if (coordinates.length < 3) return 0;
-    
+
     let total = 0;
     const n = coordinates.length;
-    
+
     for (let i = 0; i < n - 1; i++) {
       const lat1 = coordinates[i].lat * Math.PI / 180;
       const lng1 = coordinates[i].lng * Math.PI / 180;
       const lat2 = coordinates[i + 1].lat * Math.PI / 180;
       const lng2 = coordinates[i + 1].lng * Math.PI / 180;
-      
+
       total += (lng2 - lng1) * (2 + Math.sin(lat1) + Math.sin(lat2));
     }
-    
+
     total = Math.abs(total);
     const earthRadius = 6371000;
     const areaM2 = total * earthRadius * earthRadius / 2;
-    
+
     return (areaM2 / 10000).toFixed(2);
   };
 
@@ -348,7 +348,7 @@ const FieldsPage = () => {
     if (tempPolygon.length >= 3) {
       const firstPoint = tempPolygon[0];
       const distance = calculateDistance(firstPoint, newPoint);
-      
+
       if (distance < 20) {
         finishDrawing();
         return;
@@ -366,7 +366,7 @@ const FieldsPage = () => {
     }
 
     const closedPolygon = [...tempPolygon, tempPolygon[0]];
-    
+
     let areaHa = 0;
     if (googleRef.current && googleRef.current.maps) {
       try {
@@ -476,7 +476,7 @@ const FieldsPage = () => {
 
     try {
       setSaveLoading(true);
-      
+
       const fieldData = {
         name: currentField.name.trim(),
         area: parseFloat(currentField.area),
@@ -491,7 +491,7 @@ const FieldsPage = () => {
       } else {
         await addField(fieldData);
       }
-      
+
       closeFieldModal();
     } catch (error) {
       console.error('Error saving field:', error);
@@ -509,18 +509,18 @@ const FieldsPage = () => {
 
     try {
       setSaveLoading(true);
-      
+
       if (currentStatus.id) {
         await updateFieldStatus(currentStatus.id, currentStatus);
       } else {
         await addFieldStatus(currentStatus);
       }
-      
+
       setFieldStatuses(prev => ({
         ...prev,
         [currentStatus.field_id]: currentStatus
       }));
-      
+
       closeStatusModal();
     } catch (error) {
       console.error('Error saving field status:', error);
@@ -562,13 +562,13 @@ const FieldsPage = () => {
   // Wybierz pole z listy
   const selectFieldFromList = (field) => {
     setSelectedField(field);
-    
+
     if (field.coordinates && field.coordinates.length > 0) {
       const bounds = new window.google.maps.LatLngBounds();
       field.coordinates.forEach(coord => {
         bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
       });
-      
+
       if (mapRef.current) {
         mapRef.current.fitBounds(bounds);
         mapRef.current.panToBounds(bounds, 50);
@@ -586,11 +586,11 @@ const FieldsPage = () => {
     setHoveredField(null);
   };
 
-   // Funkcja pomocnicza do wyświetlania statusu
+  // Funkcja pomocnicza do wyświetlania statusu
   const getStatusDisplay = (fieldId) => {
     const status = fieldStatuses[fieldId];
     if (!status || !status.status) return 'Brak danych';
-    
+
     const statusLabels = {
       'sown': 'Zasiane',
       'harvested': 'Zebrane',
@@ -598,7 +598,7 @@ const FieldsPage = () => {
       'fallow': 'Ugór',
       'pasture': 'Pastwisko/Łąka'
     };
-    
+
     return statusLabels[status.status] || status.status;
   };
 
@@ -606,7 +606,7 @@ const FieldsPage = () => {
   const getStatusColor = (fieldId) => {
     const status = fieldStatuses[fieldId];
     if (!status || !status.status) return '#95a5a6';
-    
+
     const statusColors = {
       'sown': '#27ae60',
       'harvested': '#e74c3c',
@@ -614,7 +614,7 @@ const FieldsPage = () => {
       'fallow': '#f39c12',
       'pasture': '#2ecc71'
     };
-    
+
     return statusColors[status.status] || '#95a5a6';
   };
 
@@ -627,356 +627,357 @@ const FieldsPage = () => {
 
   const sortedAndFilteredFields = sortFields(filteredFields);
 
-  
+
   return (
-      <div className="fields-page" ref={contentRef}>
-        <div className="fields-header">
-          <h2>Zarządzanie polami</h2>
-          
-          <div className="actions-bar">
-            <div className="action-buttons">
+    <div className="fields-page" ref={contentRef}>
+      <div className="fields-header">
+        <h2>Zarządzanie polami</h2>
+
+        <div className="actions-bar">
+          <div className="action-buttons">
+
+            <button className="btn btn-primary" onClick={() => openFieldModal()}>
+              <i className="fas fa-plus"></i> Dodaj pole
+            </button>
+            <button
+              className="btn btn-info"
+              onClick={() => openStatusModal()}
+            >
+              <i className="fas fa-seedling"></i> Zarządzaj stanem pól
+            </button>
+            <button
+              className={`btn ${isDrawing ? 'btn-danger' : 'btn-secondary'}`}
+              onClick={isDrawing ? cancelDrawing : startDrawing}
+            >
+              <i className="fas fa-draw-polygon"></i>
+              {isDrawing ? 'Anuluj rysowanie' : 'Narysuj pole'}
+            </button>
+            {isDrawing && tempPolygon.length >= 3 && (
+              <button
+                className="btn btn-success"
+                onClick={finishDrawing}
+              >
+                <i className="fas fa-check"></i> Zakończ rysowanie
+              </button>
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      <div className="fields-content">
+        {/* Mapa */}
+        <div className={`map-container ${isDrawing ? 'drawing-active' : ''}`}>
+
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={mapCenter}
+            zoom={mapZoom}
+            options={mapOptions}
+            onLoad={(map) => {
+              mapRef.current = map;
+            }}
+            onClick={onMapClick}
+            onWheel={handleMapWheel}
+          >
+            {/* Tymczasowy polygon podczas rysowania */}
+            {isDrawing && tempPolygon.length > 0 && (
+              <>
+                <Polygon
+                  paths={tempPolygon}
+                  options={tempPolygonOptions}
+                />
+                {/* Znaczniki punktów */}
+                {tempPolygon.map((point, index) => (
+                  <Marker
+                    key={index}
+                    position={point}
+                    label={{
+                      text: (index + 1).toString(),
+                      color: 'white',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}
+                    icon={{
+                      path: window.google?.maps.SymbolPath.CIRCLE,
+                      scale: 8,
+                      fillColor: index === 0 ? '#e74c3c' : '#3498db',
+                      fillOpacity: 1,
+                      strokeColor: '#ffffff',
+                      strokeWeight: 2,
+                    }}
+                  />
+                ))}
+              </>
+            )}
+
+            {/* Wyświetlanie istniejących pól */}
+            {fields.map(field => (
+              <Polygon
+                key={field.id}
+                paths={field.coordinates}
+                options={
+                  selectedField?.id === field.id
+                    ? selectedPolygonOptions
+                    : {
+                      ...polygonOptions,
+                      fillColor: hoveredField?.id === field.id ? '#f39c12' : '#27ae60'
+                    }
+                }
+                onClick={() => onFieldClick(field)}
+                onMouseOver={() => setHoveredField(field)}
+                onMouseOut={() => setHoveredField(null)}
+              />
+            ))}
+
+            {/* InfoWindow dla wybranego pola */}
+            {selectedField && (
+              <InfoWindow
+                position={calculateCentroid(selectedField.coordinates) ||
+                  (selectedField.coordinates && selectedField.coordinates[0]) ||
+                  mapCenter}
+                onCloseClick={() => setSelectedField(null)}
+                options={{
+                  pixelOffset: new window.google.maps.Size(0, -40),
+                  maxWidth: 300
+                }}
+              >
+                <div className="field-info-window">
+                  <h3>{selectedField.name}</h3>
+                  <div className="field-info-details">
+                    <p>
+                      <i className="fas fa-ruler-combined"></i>
+                      <strong>Powierzchnia:</strong> {selectedField.area} ha
+                    </p>
+                    <p>
+                      <i className="fas fa-mountain"></i>
+                      <strong>Gleba:</strong> {selectedField.soil}
+                    </p>
+                    <p>
+                      <i className="fas fa-seedling"></i>
+                      <strong>Uprawa: </strong> {selectedField.crop || 'Brak'}
+                    </p>
+                    <p>
+                      <i className="fas fa-chart-line"></i>
+                      <strong>Stan: </strong> {getStatusDisplay(selectedField.id)}
+                    </p>
+                    {selectedField.notes && (
+                      <p>
+                        <i className="fas fa-sticky-note"></i>
+                        <strong>Notatki: </strong> {selectedField.notes}
+                      </p>
+                    )}
+                  </div>
+                  <div className="field-info-actions">
+                    <button
+                      className="action-btn btn-primary"
+                      onClick={() => editField(selectedField.id)}
+                    >
+                      <i className="fas fa-edit"></i> Edytuj
+                    </button>
+                    <button
+                      className="action-btn btn-info"
+                      onClick={() => openStatusModal(selectedField)}
+                    >
+                      <i className="fas fa-seedling"></i> Stan
+                    </button>
+                    <button
+                      className="action-btn btn-danger"
+                      onClick={() => setDeleteConfirm(selectedField)}
+                    >
+                      <i className="fas fa-trash"></i> Usuń
+                    </button>
+                  </div>
+                </div>
+              </InfoWindow>
+            )}
+          </GoogleMap>
+
+          {/* Instrukcja rysowania */}
+          {isDrawing && (
+            <div className="drawing-instruction">
+              <div className="instruction-content">
+                <i className="fas fa-info-circle"></i>
+                <div>
+                  <div><strong>Instrukcja rysowania:</strong></div>
+                  <div>Kliknij na mapę, aby dodać punkty polygonu</div>
+                  <div>Minimalnie 3 punkty - aktualnie: {tempPolygon.length}</div>
+                  {tempPolygon.length >= 3 && (
+                    <div style={{ color: '#27ae60', fontWeight: 'bold' }}>
+                      Kliknij w pobliżu pierwszego punktu, aby zamknąć polygon
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Instrukcja zoomu */}
+          <div className="zoom-instruction" style={{
+            position: 'absolute',
+            bottom: '10px',
+            right: '10px',
+            background: 'rgba(255, 255, 255, 0.9)',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+            zIndex: 1000
+          }}>
+            <i className="fas fa-info-circle" style={{ marginRight: '5px', color: '#3498db' }}></i>
+            <strong>Zoom:</strong> Przytrzymaj Ctrl + scroll
+          </div>
+        </div>
+
+        {/* Lista pól */}
+        <div className="fields-list">
+          <div className="fields-list-header">
+            <h3>Lista pól ({sortedAndFilteredFields.length})</h3>
             <div className="search-box">
               <i className="fas fa-search"></i>
-              <input 
-                type="text" 
-                placeholder="Szukaj pola..." 
+              <input
+                type="text"
+                placeholder="Szukaj pola..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-              <button className="btn btn-primary" onClick={() => openFieldModal()}>
-                <i className="fas fa-plus"></i> Dodaj pole
-              </button>
-              <button 
-                className="btn btn-info"
-                onClick={() => openStatusModal()}
-              >
-                <i className="fas fa-seedling"></i> Zarządzaj stanem pól
-              </button>
-              <button 
-                className={`btn ${isDrawing ? 'btn-danger' : 'btn-secondary'}`}
-                onClick={isDrawing ? cancelDrawing : startDrawing}
-              >
-                <i className="fas fa-draw-polygon"></i> 
-                {isDrawing ? 'Anuluj rysowanie' : 'Narysuj pole'}
-              </button>
-              {isDrawing && tempPolygon.length >= 3 && (
-                <button 
-                  className="btn btn-success"
-                  onClick={finishDrawing}
-                >
-                  <i className="fas fa-check"></i> Zakończ rysowanie
-                </button>
-              )}
-            </div>
-            
           </div>
-        </div>
-        
-        <div className="fields-content">
-          {/* Mapa */}
-          <div className={`map-container ${isDrawing ? 'drawing-active' : ''}`}>
-            
-              <GoogleMap
-                mapContainerStyle={mapContainerStyle}
-                center={mapCenter}
-                zoom={mapZoom}
-                options={mapOptions}
-                onLoad={(map) => {
-                  mapRef.current = map;
-                }}
-                onClick={onMapClick}
-                onWheel={handleMapWheel}
-              >
-                {/* Tymczasowy polygon podczas rysowania */}
-                {isDrawing && tempPolygon.length > 0 && (
-                  <>
-                    <Polygon
-                      paths={tempPolygon}
-                      options={tempPolygonOptions}
-                    />
-                    {/* Znaczniki punktów */}
-                    {tempPolygon.map((point, index) => (
-                      <Marker
-                        key={index}
-                        position={point}
-                        label={{
-                          text: (index + 1).toString(),
-                          color: 'white',
-                          fontSize: '12px',
-                          fontWeight: 'bold'
-                        }}
-                        icon={{
-                          path: window.google?.maps.SymbolPath.CIRCLE,
-                          scale: 8,
-                          fillColor: index === 0 ? '#e74c3c' : '#3498db',
-                          fillOpacity: 1,
-                          strokeColor: '#ffffff',
-                          strokeWeight: 2,
-                        }}
-                      />
-                    ))}
-                  </>
-                )}
-                
-                {/* Wyświetlanie istniejących pól */}
-                {fields.map(field => (
-                  <Polygon
-                    key={field.id}
-                    paths={field.coordinates}
-                    options={
-                      selectedField?.id === field.id 
-                        ? selectedPolygonOptions 
-                        : {
-                            ...polygonOptions,
-                            fillColor: hoveredField?.id === field.id ? '#f39c12' : '#27ae60'
-                          }
-                    }
-                    onClick={() => onFieldClick(field)}
-                    onMouseOver={() => setHoveredField(field)}
-                    onMouseOut={() => setHoveredField(null)}
-                  />
-                ))}
-                
-                {/* InfoWindow dla wybranego pola */}
-                {selectedField && (
-                  <InfoWindow
-                    position={calculateCentroid(selectedField.coordinates) || 
-                             (selectedField.coordinates && selectedField.coordinates[0]) || 
-                             mapCenter}
-                    onCloseClick={() => setSelectedField(null)}
-                    options={{
-                      pixelOffset: new window.google.maps.Size(0, -40),
-                      maxWidth: 300
-                    }}
+          {sortedAndFilteredFields.length === 0 ? (
+            <div className="no-fields">
+              <p>Brak pól do wyświetlenia</p>
+            </div>
+          ) : (
+            <table className="fields-table">
+              <thead>
+                <tr>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('name')}
                   >
-                    <div className="field-info-window">
-                      <h3>{selectedField.name}</h3>
-                      <div className="field-info-details">
-                        <p>
-                          <i className="fas fa-ruler-combined"></i> 
-                          <strong>Powierzchnia:</strong> {selectedField.area} ha
-                        </p>
-                        <p>
-                          <i className="fas fa-mountain"></i> 
-                          <strong>Gleba:</strong> {selectedField.soil}
-                        </p>
-                        <p>
-                          <i className="fas fa-seedling"></i> 
-                          <strong>Uprawa:</strong> {selectedField.crop || 'Brak'}
-                        </p>
-                        <p>
-                          <i className="fas fa-chart-line"></i> 
-                          <strong>Stan:</strong> {getStatusDisplay(selectedField.id)}
-                        </p>
-                        {selectedField.notes && (
-                          <p>
-                            <i className="fas fa-sticky-note"></i> 
-                            <strong>Notatki:</strong> {selectedField.notes}
-                          </p>
-                        )}
-                      </div>
-                      <div className="field-info-actions">
-                        <button 
-                          className="action-btn btn-primary"
-                          onClick={() => editField(selectedField.id)}
-                        >
-                          <i className="fas fa-edit"></i> Edytuj
-                        </button>
-                        <button 
-                          className="action-btn btn-info"
-                          onClick={() => openStatusModal(selectedField)}
-                        >
-                          <i className="fas fa-seedling"></i> Stan
-                        </button>
-                        <button 
-                          className="action-btn btn-danger"
-                          onClick={() => setDeleteConfirm(selectedField)}
-                        >
-                          <i className="fas fa-trash"></i> Usuń
-                        </button>
-                      </div>
+                    <div className="th-content">
+                      Nazwa
+                      {renderSortArrow('name')}
                     </div>
-                  </InfoWindow>
-                )}
-              </GoogleMap>
-            
-            {/* Instrukcja rysowania */}
-            {isDrawing && (
-              <div className="drawing-instruction">
-                <div className="instruction-content">
-                  <i className="fas fa-info-circle"></i>
-                  <div>
-                    <div><strong>Instrukcja rysowania:</strong></div>
-                    <div>Kliknij na mapę, aby dodać punkty polygonu</div>
-                    <div>Minimalnie 3 punkty - aktualnie: {tempPolygon.length}</div>
-                    {tempPolygon.length >= 3 && (
-                      <div style={{ color: '#27ae60', fontWeight: 'bold' }}>
-                        Kliknij w pobliżu pierwszego punktu, aby zamknąć polygon
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Instrukcja zoomu */}
-            <div className="zoom-instruction" style={{
-              position: 'absolute',
-              bottom: '10px',
-              right: '10px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-              zIndex: 1000
-            }}>
-              <i className="fas fa-info-circle" style={{ marginRight: '5px', color: '#3498db' }}></i>
-              <strong>Zoom:</strong> Przytrzymaj Ctrl + scroll
-            </div>
-          </div>
-          
-           {/* Lista pól */}
-          <div className="fields-list">
-            <h3>Lista pól ({sortedAndFilteredFields.length})</h3>
-            {sortedAndFilteredFields.length === 0 ? (
-              <div className="no-fields">
-                <p>Brak pól do wyświetlenia</p>
-              </div>
-            ) : (
-              <table className="fields-table">
-                <thead>
-                  <tr>
-                    <th 
-                      className="sortable" 
-                      onClick={() => handleSort('name')}
-                    >
-                      <div className="th-content">
-                        Nazwa
-                        {renderSortArrow('name')}
-                      </div>
-                    </th>
-                    <th 
-                      className="sortable" 
-                      onClick={() => handleSort('area')}
-                    >
-                      <div className="th-content">
-                        Powierzchnia (ha)
-                        {renderSortArrow('area')}
-                      </div>
-                    </th>
-                    <th 
-                      className="sortable" 
-                      onClick={() => handleSort('soil')}
-                    >
-                      <div className="th-content">
-                        Typ gleby
-                        {renderSortArrow('soil')}
-                      </div>
-                    </th>
-                    <th 
-                      className="sortable" 
-                      onClick={() => handleSort('crop')}
-                    >
-                      <div className="th-content">
-                        Uprawa
-                        {renderSortArrow('crop')}
-                      </div>
-                    </th>
-                    <th 
-                      className="sortable" 
-                      onClick={() => handleSort('status')}
-                    >
-                      <div className="th-content">
-                        Stan
-                        {renderSortArrow('status')}
-                      </div>
-                    </th>
-                    <th>Akcje</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedAndFilteredFields.map(field => (
-                    <tr 
-                      key={field.id}
-                      className={`field-row ${
-                        selectedField?.id === field.id ? 'selected' : ''
-                      } ${
-                        hoveredField?.id === field.id ? 'hovered' : ''
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('area')}
+                  >
+                    <div className="th-content">
+                      Powierzchnia (ha)
+                      {renderSortArrow('area')}
+                    </div>
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('soil')}
+                  >
+                    <div className="th-content">
+                      Typ gleby
+                      {renderSortArrow('soil')}
+                    </div>
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('crop')}
+                  >
+                    <div className="th-content">
+                      Uprawa
+                      {renderSortArrow('crop')}
+                    </div>
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="th-content">
+                      Stan
+                      {renderSortArrow('status')}
+                    </div>
+                  </th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedAndFilteredFields.map(field => (
+                  <tr
+                    key={field.id}
+                    className={`field-row ${selectedField?.id === field.id ? 'selected' : ''
+                      } ${hoveredField?.id === field.id ? 'hovered' : ''
                       }`}
-                      onClick={() => selectFieldFromList(field)}
-                      onMouseEnter={() => hoverFieldFromList(field)}
-                      onMouseLeave={leaveFieldFromList}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td>
-                        <strong>{field.name}</strong>
-                        {selectedField?.id === field.id && (
-                          <span style={{ color: '#e74c3c', marginLeft: '8px' }}>
-                            <i className="fas fa-map-marker-alt"></i> Zaznaczone
-                          </span>
-                        )}
-                      </td>
-                      <td>{field.area}</td>
-                      <td>{field.soil}</td>
-                      <td>{field.crop || 'Brak'}</td>
-                      <td>
-                        <span 
-                          className="status-badge"
-                          style={{
-                            backgroundColor: getStatusColor(field.id),
-                            color: 'white',
-                            padding: '4px 8px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: '600'
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openStatusModal(field);
-                          }}
-                        >
-                          {getStatusDisplay(field.id)}
+                    onClick={() => selectFieldFromList(field)}
+                    onMouseEnter={() => hoverFieldFromList(field)}
+                    onMouseLeave={leaveFieldFromList}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td>
+                      <strong>{field.name}</strong>
+                      {selectedField?.id === field.id && (
+                        <span style={{ color: '#e74c3c', marginLeft: '8px' }}>
+                          <i className="fas fa-map-marker-alt"></i> Zaznaczone
                         </span>
-                      </td>
-                      <td className="action-buttons">
-                        <button 
-                          className="action-btn btn-primary" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            editField(field.id);
-                          }}
-                        >
-                          <i className="fas fa-edit"></i> Edytuj
-                        </button>
-                        <button 
-                          className="action-btn btn-info" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openStatusModal(field);
-                          }}
-                        >
-                          <i className="fas fa-seedling"></i> Stan
-                        </button>
-                        <button 
-                          className="action-btn btn-danger" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteConfirm(field);
-                          }}
-                        >
-                          <i className="fas fa-trash"></i> Usuń
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                      )}
+                    </td>
+                    <td>{field.area}</td>
+                    <td>{field.soil}</td>
+                    <td>{field.crop || 'Brak'}</td>
+                    <td>
+                      <span
+                        className="status-badge"
+                        style={{
+                          backgroundColor: getStatusColor(field.id),
+                          color: 'white',
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openStatusModal(field);
+                        }}
+                      >
+                        {getStatusDisplay(field.id)}
+                      </span>
+                    </td>
+                    <td className="action-buttons">
+                      <button
+                        className="action-btn btn-primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          editField(field.id);
+                        }}
+                      >
+                        <i className="fas fa-edit"></i> Edytuj
+                      </button>
+                      <button
+                        className="action-btn btn-info"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openStatusModal(field);
+                        }}
+                      >
+                        <i className="fas fa-seedling"></i> Stan
+                      </button>
+                      <button
+                        className="action-btn btn-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirm(field);
+                        }}
+                      >
+                        <i className="fas fa-trash"></i> Usuń
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      
+      </div>
+
       {/* Modal dodawania/edycji pola */}
       {isModalOpen && currentField && (
         <FieldModal
@@ -1016,8 +1017,8 @@ const FieldsPage = () => {
               </div>
             </div>
             <div className="modal-footer">
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 onClick={() => setDeleteConfirm(null)}
               >
                 Anuluj

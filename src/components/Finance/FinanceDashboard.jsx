@@ -139,20 +139,50 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
         </div>
 
         {/* Podsumowanie kategorii */}
-        <div className="category-summary">
-          <h3>Podsumowanie kategorii</h3>
-          <div className="categories-list">
-            {Object.entries(categorySummary).map(([category, data]) => (
-              <div key={category} className="category-item">
-                <div className="category-name">{category}</div>
-                <div className="category-amounts">
-                  <span className="income-amount">+{formatCurrency(data.income)}</span>
-                  <span className="expense-amount">-{formatCurrency(data.expenses)}</span>
-                </div>
+<div className="category-summary">
+  <h3>Podsumowanie kategorii</h3>
+  <div className="categories-list">
+    {Object.entries(categorySummary)
+      .filter(([category, data]) => data.income !== 0 || data.expenses !== 0) // Filtruj tylko kategorie z kwotami
+      .map(([category, data]) => {
+        // Wybierz odpowiednią kwotę do wyświetlenia
+        let displayAmount = 0
+        let amountType = ''
+        
+        if (data.income > 0 && data.expenses > 0) {
+          // Jeśli kategoria ma zarówno przychody jak i wydatki, pokaż obie kwoty osobno
+          return (
+            <div key={category} className="category-item">
+              <div className="category-name">{category}</div>
+              <div className="category-amounts">
+                <span className="income-amount">+{formatCurrency(data.income)}</span>
+                <span className="expense-amount">-{formatCurrency(data.expenses)}</span>
               </div>
-            ))}
+            </div>
+          )
+        } else if (data.income > 0) {
+          displayAmount = data.income
+          amountType = 'income'
+        } else if (data.expenses > 0) {
+          displayAmount = data.expenses
+          amountType = 'expense'
+        } else {
+          return null // Pomijaj kategorie z zerowymi kwotami
+        }
+
+        return (
+          <div key={category} className="category-item">
+            <div className="category-name">{category}</div>
+            <div className="category-amounts">
+              <span className={`${amountType}-amount ${amountType === 'income' ? 'positive' : 'negative'}`}>
+                {amountType === 'income' ? '+' : '-'}{formatCurrency(displayAmount)}
+              </span>
+            </div>
           </div>
-        </div>
+        )
+      })}
+  </div>
+</div>
       </div>
     </div>
   )

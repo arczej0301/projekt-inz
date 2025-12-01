@@ -1,47 +1,19 @@
-// components/Analytics/FinancialReports.jsx
 import React, { useState } from 'react'
 import CustomSelect from '../CustomSelect'
+import { useFormatters } from '../../hooks/useFormatters' // NOWY IMPORT
 import './AnalyticsComponents.css'
 
-const FinancialReports = ({ data, formatCurrency, formatNumber, formatPercentage }) => {
+const FinancialReports = ({ data }) => {
   const [reportType, setReportType] = useState('profitability')
   const [timeRange, setTimeRange] = useState('year')
+  
+  // UŻYCIE WSPÓLNYCH FORMATTERÓW
+  const { formatCurrency, formatNumber, formatPercentage } = useFormatters()
 
-  // Bezpieczne funkcje formatujące
-  const safeFormatCurrency = (amount) => {
-    if (formatCurrency) return formatCurrency(amount)
-    
-    if (amount === null || amount === undefined || isNaN(amount)) {
-      return '0,00 zł'
-    }
-    
-    const numAmount = parseFloat(amount)
-    const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-    return `${formatted} zł`
-  }
-
-  const safeFormatNumber = (number) => {
-    if (formatNumber) return formatNumber(number)
-    
-    if (number === null || number === undefined || isNaN(number)) return '0'
-    
-    const num = parseFloat(number)
-    
-    if (num % 1 !== 0) {
-      return num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-    }
-    
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-  }
-
-  const safeFormatPercentage = (number) => {
-    if (formatPercentage) return formatPercentage(number)
-    
-    if (number === null || number === undefined || isNaN(number)) return '0%'
-    
-    const num = parseFloat(number)
-    return num.toFixed(1).replace('.', ',') + '%'
-  }
+  // Reszta komponentu z użyciem bezpiecznych formatterów...
+  const safeFormatCurrency = (amount) => formatCurrency(amount)
+  const safeFormatNumber = (number) => formatNumber(number)
+  const safeFormatPercentage = (number) => formatPercentage(number)
 
   const reportTypeOptions = [
     { value: 'profitability', label: 'Rentowność', icon: '📈' },

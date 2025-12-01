@@ -79,13 +79,6 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
   ];
 
   useEffect(() => {
-    console.log('Fields loaded:', fields);
-    console.log('Ciągniki załadowane:', tractors);
-    console.log('Maszyny załadowane:', machines);
-    console.log('Nasiona i nawozy z magazynu:', warehouseItems);
-  }, [fields, tractors, machines, warehouseItems]);
-
-  useEffect(() => {
     if (task) {
       let dueDate = '';
       if (task.dueDate) {
@@ -188,6 +181,7 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     }
   };
 
+  
   return (
     <div className="modal-overlay">
       <div className="modal-content">

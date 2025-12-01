@@ -7,17 +7,190 @@
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
-  z-index: 100;
-  height: 80px; /* Ustalona wysokość header */
+  z-index: 1000;
+  height: 80px;
+  position: relative;
 }
 
-.search-bar input {
-  padding: 8px 12px;
-  border: 1px solid var(--gray);
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-right {
+  gap: 30px;
+}
+
+/* Stylizacja dzwoneczka powiadomień */
+.notifications-container {
+  position: relative;
+}
+
+.notifications-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
+.notifications-button:hover {
+  background-color: #f5f5f5;
+}
+
+.bell-icon {
+  font-size: 24px;
+  line-height: 1;
+  display: inline-block;
+}
+
+/* Badge pozostaje taki sam */
+.notification-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: #ff4757;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* Dropdown powiadomień */
+.notifications-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 350px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  margin-top: 10px;
+  z-index: 1001;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notifications-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notifications-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.clear-all-btn {
+  background: none;
+  border: none;
+  color: #ff4757;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 5px 10px;
   border-radius: 4px;
-  width: 250px;
+  transition: background-color 0.3s ease;
 }
 
+.clear-all-btn:hover {
+  background-color: #fff5f5;
+}
+
+.notifications-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 15px 20px;
+  border-bottom: 1px solid #f5f5f5;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  position: relative;
+}
+
+.notification-item:hover {
+  background-color: #f9f9f9;
+}
+
+.notification-item.unread {
+  background-color: #f0f7ff;
+}
+
+.notification-item.unread:hover {
+  background-color: #e6f0ff;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-title {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.notification-text {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+
+.notification-time {
+  color: #999;
+  font-size: 12px;
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #3498db;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.no-notifications {
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+}
+
+/* Stylizacja user-info (zachowanie poprzednich stylów z drobnymi poprawkami) */
 .user-info {
   display: flex;
   align-items: center;
@@ -75,27 +248,43 @@
 @media (max-width: 768px) {
   .header {
     padding: 12px 20px;
-    flex-wrap: wrap;
-    gap: 15px;
     height: auto;
     min-height: 80px;
   }
   
-  .search-bar input {
-    width: 100%;
+  .header-right {
+    gap: 15px;
+  }
+  
+  .notifications-dropdown {
+    width: 300px;
+    right: -50%;
+  }
+  
+  .user-info {
+    flex-wrap: wrap;
   }
 }
 
 @media (max-width: 480px) {
-  .user-info {
-    flex-wrap: wrap;
+  .header {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+  
+  .header-left, .header-right {
+    width: 100%;
     justify-content: center;
-    gap: 10px;
+  }
+  
+  .notifications-dropdown {
+    width: calc(100vw - 40px);
+    right: -80px;
   }
   
   .logout-button {
     margin-left: 0;
     width: 100%;
-    order: 3;
   }
 }

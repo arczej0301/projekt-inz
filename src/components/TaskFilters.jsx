@@ -51,15 +51,12 @@ const TaskFilters = ({ onFilterChange, currentFilters, TASK_TYPES, TASK_STATUS, 
   };
 
   const removeFilter = (filterName) => {
-    console.log('Removing filter:', filterName);
-    console.log('Current filters before:', filters);
     
     const newFilters = {
       ...filters,
       [filterName]: ''
     };
     
-    console.log('New filters after:', newFilters);
     
     setFilters(newFilters);
     onFilterChange(newFilters);
@@ -94,9 +91,6 @@ const TaskFilters = ({ onFilterChange, currentFilters, TASK_TYPES, TASK_STATUS, 
       default: return filterName;
     }
   };
-
-  // Debug - pokaż aktualne filtry
-  console.log('Current filters in component:', filters);
 
   return (
     <div className="task-filters">

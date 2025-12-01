@@ -1,5 +1,4 @@
-// components/Analytics/AnalyticsDashboard.jsx
-import React, { useState } from 'react'  // DODAJ useState
+import React, { useState } from 'react' // DODANY useState
 import CustomSelect from '../CustomSelect'
 import './AnalyticsComponents.css'
 
@@ -16,6 +15,19 @@ const AnalyticsDashboard = ({
   
   const [timeRange, setTimeRange] = useState('month')
   const [viewType, setViewType] = useState('overview')
+
+  // Bezpieczne funkcje formatujące
+  const safeFormatCurrency = (amount) => {
+    if (formatCurrency) return formatCurrency(amount)
+    
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return '0,00 zł'
+    }
+    
+    const numAmount = parseFloat(amount)
+    const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    return `${formatted} zł`
+  }
 
   const timeRangeOptions = [
     { value: 'week', label: 'Tydzień', icon: '📅' },

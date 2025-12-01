@@ -315,3 +315,33 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* TasksPage.css - DODAJ TE STYLE NA KOŃCU PLIKU */
+
+/* Stylizacja kontenera kalendarza w TasksPage */
+.tasks-page .task-calendar {
+  margin: 0 8px;
+}
+
+.tasks-page .tasks-content .task-calendar {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsywność kalendarza w kontekście TasksPage */
+@media (max-width: 768px) {
+  .tasks-page .task-calendar {
+    margin: 0 4px;
+  }
+  
+  .tasks-page .calendar-header {
+    padding: 12px 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tasks-page .task-calendar {
+    margin: 0 2px;
+  }
+}

@@ -155,109 +155,129 @@ const ExportPanel = ({ financialAnalytics, fieldAnalytics, animalAnalytics }) =>
   )
 }
 
-// Komponenty podglądu
-const FinancialPreview = ({ data }) => (
-  <div className="preview-table">
-    <table>
-      <thead>
-        <tr>
-          <th>Wskaźnik</th>
-          <th>Wartość</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Przychód całkowity</td>
-          <td>{data.kpis.totalRevenue.toFixed(2)} zł</td>
-        </tr>
-        <tr>
-          <td>Koszty całkowite</td>
-          <td>{data.kpis.totalExpenses.toFixed(2)} zł</td>
-        </tr>
-        <tr>
-          <td>Zysk netto</td>
-          <td>{data.kpis.netProfit.toFixed(2)} zł</td>
-        </tr>
-        <tr>
-          <td>Marża zysku</td>
-          <td>{data.kpis.profitMargin.toFixed(1)}%</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-)
-
-const ProductionPreview = ({ data }) => (
-  <div className="preview-table">
-    <table>
-      <thead>
-        <tr>
-          <th>Pole</th>
-          <th>Uprawa</th>
-          <th>Powierzchnia</th>
-          <th>Wydajność</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.productivity.slice(0, 5).map((field, index) => (
-          <tr key={index}>
-            <td>{field.name}</td>
-            <td>{field.crop}</td>
-            <td>{field.area} ha</td>
-            <td>{field.efficiency.toFixed(1)}%</td>
+// Komponenty podglądu - ZABEZPIECZONE
+const FinancialPreview = ({ data }) => {
+  if (!data || !data.kpis) return <div className="no-data">Brak danych finansowych</div>
+  
+  return (
+    <div className="preview-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Wskaźnik</th>
+            <th>Wartość</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-)
+        </thead>
+        <tbody>
+          <tr>
+            <td>Przychód całkowity</td>
+            <td>{data.kpis.totalRevenue?.toFixed(2) || '0.00'} zł</td>
+          </tr>
+          <tr>
+            <td>Koszty całkowite</td>
+            <td>{data.kpis.totalExpenses?.toFixed(2) || '0.00'} zł</td>
+          </tr>
+          <tr>
+            <td>Zysk netto</td>
+            <td>{data.kpis.netProfit?.toFixed(2) || '0.00'} zł</td>
+          </tr>
+          <tr>
+            <td>Marża zysku</td>
+            <td>{data.kpis.profitMargin?.toFixed(1) || '0.0'}%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
-const AnimalsPreview = ({ data }) => (
-  <div className="preview-table">
-    <table>
-      <thead>
-        <tr>
-          <th>Wskaźnik</th>
-          <th>Wartość</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Średnia wydajność mleka</td>
-          <td>{data.productivity?.milkYield?.dailyAverage || 0} l/dzień</td>
-        </tr>
-        <tr>
-          <td>Wskaźnik zdrowia</td>
-          <td>{data.health?.healthIndex || 0}%</td>
-        </tr>
-        <tr>
-          <td>Koszty paszy</td>
-          <td>{data.costs?.feedCosts?.toFixed(2) || 0} zł</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-)
+const ProductionPreview = ({ data }) => {
+  if (!data || !data.productivity) return <div className="no-data">Brak danych produkcyjnych</div>
+  
+  return (
+    <div className="preview-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Pole</th>
+            <th>Uprawa</th>
+            <th>Powierzchnia</th>
+            <th>Wydajność</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.productivity.slice(0, 5).map((field, index) => (
+            <tr key={index}>
+              <td>{field.name || 'Brak nazwy'}</td>
+              <td>{field.crop || 'Brak'}</td>
+              <td>{field.area || 0} ha</td>
+              <td>{field.efficiency?.toFixed(1) || 0}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
-const ComprehensivePreview = ({ financial, production, animals }) => (
-  <div className="preview-comprehensive">
-    <div className="preview-section">
-      <h5>Finanse</h5>
-      <div>Przychód: {financial.kpis.totalRevenue.toFixed(2)} zł</div>
-      <div>Zysk: {financial.kpis.netProfit.toFixed(2)} zł</div>
+const AnimalsPreview = ({ data }) => {
+  if (!data) return <div className="no-data">Brak danych zwierząt</div>
+  
+  return (
+    <div className="preview-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Wskaźnik</th>
+            <th>Wartość</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Średnia wydajność mleka</td>
+            <td>{data.productivity?.milkYield?.dailyAverage || 0} l/dzień</td>
+          </tr>
+          <tr>
+            <td>Wskaźnik zdrowia</td>
+            <td>{data.health?.healthIndex || 0}%</td>
+          </tr>
+          <tr>
+            <td>Koszty paszy</td>
+            <td>{data.costs?.feedCosts?.toFixed(2) || '0.00'} zł</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div className="preview-section">
-      <h5>Produkcja</h5>
-      <div>Liczba pól: {production.productivity.length}</div>
-      <div>Średnia wydajność: {calculateAverageEfficiency(production.productivity)}%</div>
+  )
+}
+
+const ComprehensivePreview = ({ financial, production, animals }) => {
+  const calculateAverageEfficiency = (fields) => {
+    if (!fields || !fields.length) return 0
+    const sum = fields.reduce((acc, field) => acc + (field.efficiency || 0), 0)
+    return (sum / fields.length).toFixed(1)
+  }
+
+  return (
+    <div className="preview-comprehensive">
+      <div className="preview-section">
+        <h5>Finanse</h5>
+        <div>Przychód: {financial?.kpis?.totalRevenue?.toFixed(2) || '0.00'} zł</div>
+        <div>Zysk: {financial?.kpis?.netProfit?.toFixed(2) || '0.00'} zł</div>
+      </div>
+      <div className="preview-section">
+        <h5>Produkcja</h5>
+        <div>Liczba pól: {production?.productivity?.length || 0}</div>
+        <div>Średnia wydajność: {calculateAverageEfficiency(production?.productivity)}%</div>
+      </div>
+      <div className="preview-section">
+        <h5>Zwierzeta</h5>
+        <div>Wskaźnik zdrowia: {animals?.health?.healthIndex || 0}%</div>
+        <div>Koszty: {animals?.costs?.totalCosts?.toFixed(2) || '0.00'} zł</div>
+      </div>
     </div>
-    <div className="preview-section">
-      <h5>Zwierzeta</h5>
-      <div>Wskaźnik zdrowia: {animals.health?.healthIndex || 0}%</div>
-      <div>Koszty: {animals.costs?.totalCosts?.toFixed(2) || 0} zł</div>
-    </div>
-  </div>
-)
+  )
+}
 
 const calculateAverageEfficiency = (fields) => {
   if (!fields.length) return 0

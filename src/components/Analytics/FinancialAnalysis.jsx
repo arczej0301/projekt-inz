@@ -4,11 +4,84 @@ import { useFinance } from '../../hooks/useFinance'
 import './AnalyticsComponents.css'
 
 const FinancialAnalysis = ({ transactions, summary }) => {
+  // 1. HOOKI NA POCZĄTKU
   const { incomeCategories, expenseCategories } = useFinance()
   const [period, setPeriod] = useState('month')
   const [reportType, setReportType] = useState('income')
 
-  // Zachowaj wszystkie funkcje z oryginalnego ReportsTab
+  // 2. HOOKI useMemo/useCallback
+  const filteredTransactions = useMemo(() => {
+    const now = new Date()
+    let startDate
+
+    switch (period) {
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        break
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+    }
+
+    return transactions.filter(transaction => {
+      let transactionDate
+      try {
+        if (transaction.date?.toDate) {
+          transactionDate = transaction.date.toDate()
+        } else if (transaction.date instanceof Date) {
+          transactionDate = transaction.date
+        } else {
+          transactionDate = new Date(transaction.date)
+        }
+      } catch (error) {
+        console.error('Błąd parsowania daty:', error)
+        transactionDate = new Date() // wartość domyślna
+      }
+
+      return transactionDate >= startDate && transactionDate <= new Date()
+    })
+  }, [transactions, period])
+
+  const chartData = useMemo(() => {
+    const data = {}
+    filteredTransactions.forEach(transaction => {
+      const category = transaction.category
+      if (!data[category]) {
+        data[category] = { income: 0, expenses: 0 }
+      }
+      if (transaction.type === 'income') {
+        data[category].income += transaction.amount || 0
+      } else {
+        data[category].expenses += transaction.amount || 0
+      }
+    })
+    return data
+  }, [filteredTransactions])
+
+  const reportData = useMemo(() => {
+    const data = reportType === 'income'
+      ? Object.entries(chartData).filter(([_, data]) => data.income > 0)
+      : Object.entries(chartData).filter(([_, data]) => data.expenses > 0)
+
+    return data.map(([category, data]) => ({
+      category,
+      amount: reportType === 'income' ? data.income : data.expenses,
+      type: reportType === 'income' ? 'income' : 'expense'
+    }))
+      .sort((a, b) => (b.amount || 0) - (a.amount || 0))
+  }, [chartData, reportType])
+
+  const totalAmount = useMemo(() => 
+    reportData.reduce((sum, item) => sum + (item.amount || 0), 0), 
+    [reportData]
+  )
+
+  // 3. DOPIERO TERAZ ZWYKŁE FUNKCJE
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return '0,00 zł'
@@ -31,81 +104,11 @@ const FinancialAnalysis = ({ transactions, summary }) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
   }
 
- // Filtruj transakcje według okresu
-   const filteredTransactions = useMemo(() => {
-     const now = new Date()
-     let startDate
- 
-     switch (period) {
-       case 'week':
-         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-         break
-       case 'month':
-         startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-         break
-       case 'year':
-         startDate = new Date(now.getFullYear(), 0, 1)
-         break
-       default:
-         startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-     }
- 
-     return transactions.filter(transaction => {
-       let transactionDate
- 
-       if (transaction.date?.toDate) {
-         transactionDate = transaction.date.toDate()
-       } else if (transaction.date instanceof Date) {
-         transactionDate = transaction.date
-       } else {
-         transactionDate = new Date(transaction.date)
-       }
- 
-       return transactionDate >= startDate && transactionDate <= new Date()
-     })
-   }, [transactions, period])
-
-  // Generuj dane dla wykresów
-    const chartData = useMemo(() => {
-      const data = {}
-  
-      filteredTransactions.forEach(transaction => {
-        const category = transaction.category
-        if (!data[category]) {
-          data[category] = { income: 0, expenses: 0 }
-        }
-  
-        if (transaction.type === 'income') {
-          data[category].income += transaction.amount
-        } else {
-          data[category].expenses += transaction.amount
-        }
-      })
-  
-      return data
-    }, [filteredTransactions])
-  
-    // Przygotuj dane dla wybranego typu raportu
-    const reportData = useMemo(() => {
-      const data = reportType === 'income'
-        ? Object.entries(chartData).filter(([_, data]) => data.income > 0)
-        : Object.entries(chartData).filter(([_, data]) => data.expenses > 0)
-  
-      return data.map(([category, data]) => ({
-        category,
-        amount: reportType === 'income' ? data.income : data.expenses,
-        type: reportType === 'income' ? 'income' : 'expense'
-      }))
-        .sort((a, b) => b.amount - a.amount)
-    }, [chartData, reportType])
-  
-    const totalAmount = reportData.reduce((sum, item) => sum + item.amount, 0)
-  
-    // Funkcja do formatowania daty
-    const formatDate = (date) => {
-      if (!date) return ''
-  
-      let transactionDate
+  const formatDate = (date) => {
+    if (!date) return ''
+    
+    let transactionDate
+    try {
       if (date?.toDate) {
         transactionDate = date.toDate()
       } else if (date instanceof Date) {
@@ -113,15 +116,18 @@ const FinancialAnalysis = ({ transactions, summary }) => {
       } else {
         transactionDate = new Date(date)
       }
-  
-      return transactionDate.toLocaleDateString('pl-PL')
+    } catch (error) {
+      console.error('Błąd formatowania daty:', error)
+      return 'Błąd daty'
     }
-  
-    // Funkcja do znalezienia kategorii
-    const findCategory = (categoryId, type) => {
-      const categories = type === 'income' ? incomeCategories : expenseCategories
-      return categories.find(cat => cat.id === categoryId) || { name: categoryId, icon: '💰' }
-    }
+
+    return transactionDate.toLocaleDateString('pl-PL')
+  }
+
+  const findCategory = (categoryId, type) => {
+    const categories = type === 'income' ? incomeCategories : expenseCategories
+    return categories.find(cat => cat.id === categoryId) || { name: categoryId, icon: '💰' }
+  }
 
      // Tytuły okresów
   const periodTitles = {
