@@ -42,6 +42,44 @@ export const useFinance = () => {
     { id: 'inne_koszty', name: 'Inne koszty', icon: '📉', color: '#e91e63' }
   ]
 
+  // Mapowanie kategorii dla budżetów
+  const categoryMapping = {
+    // Transakcje przychodowe → Kategorie budżetowe
+    'sprzedaz_plonow': 'food',
+    'sprzedaz_zwierzat': 'animals',
+    'produkty_zwierzece': 'animals',
+    'dotacje': 'other',
+    'inne_przychody': 'other',
+    
+    // Transakcje wydatkowe → Kategorie budżetowe  
+    'nasiona': 'food',
+    'nawozy': 'supplies',
+    'pasze': 'supplies',
+    'paliwo': 'transport',
+    'sprzet_czesci': 'tools',
+    'zakup_zwierzat': 'animals',
+    'naprawy_konserwacja': 'maintenance',
+    'podatki_oplaty': 'taxes',
+    'inne_koszty': 'other'
+  }
+
+  // Mapowanie odwrotne
+  const reverseCategoryMapping = {
+    'food': ['nasiona', 'sprzedaz_plonow'],
+    'supplies': ['nawozy', 'pasze'],
+    'transport': ['paliwo'],
+    'tools': ['sprzet_czesci'],
+    'animals': ['zakup_zwierzat', 'sprzedaz_zwierzat', 'produkty_zwierzece'],
+    'maintenance': ['naprawy_konserwacja'],
+    'taxes': ['podatki_oplaty'],
+    'other': ['dotacje', 'inne_przychody', 'inne_koszty']
+  }
+
+  // Funkcja do mapowania kategorii
+  const getBudgetCategory = (transactionCategory) => {
+    return categoryMapping[transactionCategory] || 'other'
+  }
+
   // Pobieranie transakcji w czasie rzeczywistym
   useEffect(() => {
     const q = query(
@@ -93,11 +131,16 @@ export const useFinance = () => {
     return () => unsubscribe()
   }, [])
 
-  // Dodawanie transakcji
+  // Dodawanie transakcji z automatycznym mapowaniem kategorii
   const addTransaction = async (transactionData) => {
     try {
+      // Mapuj kategorię do budżetu
+      const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
+      
       const docRef = await addDoc(collection(db, 'finance_transactions'), {
         ...transactionData,
+        category: transactionData.category, // Zachowaj oryginalną kategorię
+        budgetCategory: mappedCategory, // Dodaj kategorię dla budżetu
         date: Timestamp.fromDate(new Date(transactionData.date)),
         createdAt: new Date(),
         amount: parseFloat(transactionData.amount)
@@ -112,9 +155,13 @@ export const useFinance = () => {
   // Automatyczne dodawanie transakcji z innych modułów
   const addAutoTransaction = async (type, data) => {
     try {
+      // Mapuj kategorię do budżetu
+      const mappedCategory = getBudgetCategory(data.category) || data.category
+      
       const transactionData = {
         type: type, // 'income' lub 'expense'
         category: data.category,
+        budgetCategory: mappedCategory,
         amount: parseFloat(data.amount),
         description: data.description,
         source: data.source, // 'fields', 'animals', 'warehouse', 'garage'
@@ -136,6 +183,13 @@ export const useFinance = () => {
   const updateTransaction = async (transactionId, updateData) => {
     try {
       const transactionRef = doc(db, 'finance_transactions', transactionId)
+      
+      // Jeśli zmieniono kategorię, zaktualizuj też budgetCategory
+      if (updateData.category) {
+        const mappedCategory = getBudgetCategory(updateData.category) || updateData.category
+        updateData.budgetCategory = mappedCategory
+      }
+      
       await updateDoc(transactionRef, {
         ...updateData,
         lastUpdate: new Date(),
@@ -224,6 +278,53 @@ export const useFinance = () => {
     }
   }
 
+  // OBLICZANIE STANU BUDŻETÓW NA PODSTAWIE TRANSAKCJI
+  const getBudgetsWithStatus = () => {
+    const currentMonth = new Date().getMonth()
+    const currentYear = new Date().getFullYear()
+    
+    return budgets.map(budget => {
+      // Wydatki dla tego budżetu (według kategorii budżetowej)
+      const expensesForBudget = transactions
+        .filter(t => t.type === 'expense' && 
+          t.budgetCategory === budget.category &&
+          t.date?.getMonth?.() === currentMonth &&
+          t.date?.getFullYear?.() === currentYear)
+        .reduce((sum, t) => sum + (t.amount || 0), 0)
+
+      // Przychody dla tego budżetu
+      const incomeForBudget = transactions
+        .filter(t => t.type === 'income' && 
+          t.budgetCategory === budget.category &&
+          t.date?.getMonth?.() === currentMonth &&
+          t.date?.getFullYear?.() === currentYear)
+        .reduce((sum, t) => sum + (t.amount || 0), 0)
+
+      const spent = expensesForBudget
+      const budgetAmount = parseFloat(budget.amount) || 0
+      const remaining = Math.max(0, budgetAmount - spent)
+      const percentage = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0
+      
+      // Znajdź powiązane transakcje
+      const relatedTransactions = transactions
+        .filter(t => t.budgetCategory === budget.category)
+        .slice(0, 5) // Tylko 5 ostatnich
+
+      return {
+        ...budget,
+        spent,
+        remaining,
+        percentage: Math.min(percentage, 100), // Maksymalnie 100%
+        income: incomeForBudget,
+        relatedTransactions,
+        status: percentage > 100 ? 'exceeded' : 
+                percentage > 80 ? 'warning' : 'good',
+        // Dodaj info o powiązanych kategoriach transakcji
+        relatedCategories: reverseCategoryMapping[budget.category] || []
+      }
+    })
+  }
+
   return {
     transactions,
     budgets,
@@ -237,6 +338,10 @@ export const useFinance = () => {
     deleteTransaction,
     addBudget,
     updateBudget,
-    getFinancialSummary
+    getFinancialSummary,
+    getBudgetsWithStatus,
+    getBudgetCategory,
+    categoryMapping,
+    reverseCategoryMapping
   }
 }

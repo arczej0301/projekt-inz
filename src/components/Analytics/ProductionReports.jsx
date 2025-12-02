@@ -8,18 +8,35 @@ const ProductionReports = ({ fieldAnalytics, animalAnalytics }) => {
   const [cropFilter, setCropFilter] = useState('all')
 
   const tabOptions = [
-    { value: 'fields', label: 'Pola uprawne', icon: '🌾' },
-    { value: 'animals', label: 'Zwierzęta', icon: '🐄' },
-    { value: 'efficiency', label: 'Wydajność', icon: '📊' }
+    { value: 'fields', label: 'Pola uprawne'},
+    { value: 'animals', label: 'Zwierzęta'},
+    { value: 'efficiency', label: 'Wydajność'}
   ]
 
   const cropOptions = [
-    { value: 'all', label: 'Wszystkie uprawy', icon: '🌱' },
-    { value: 'pszenica', label: 'Pszenica', icon: '🌾' },
-    { value: 'kukurydza', label: 'Kukurydza', icon: '🌽' },
-    { value: 'rzepak', label: 'Rzepak', icon: '🟡' },
-    { value: 'buraki', label: 'Buraki', icon: '🍠' }
+    { value: 'all', label: 'Wszystkie uprawy'},
+    { value: 'pszenica', label: 'Pszenica'  },
+    { value: 'kukurydza', label: 'Kukurydza' },
+    { value: 'rzepak', label: 'Rzepak' },
+    { value: 'ziemniaki', label: 'Ziemniaki' },
+    { value: 'buraki', label: 'Buraki cukrowe' },
+    { value: 'owies', label: 'Owies' },
+    { value: 'jęczmień', label: 'Jęczmień' },
+    { value: 'żyto', label: 'Żyto' }
   ]
+  
+//   const soilOptions = [
+//     { value: '', label: 'Wybierz typ gleby' },
+//     { value: 'gliniasta', label: 'Gliniasta' },
+//     { value: 'piaszczysta', label: 'Piaszczysta' },
+//     { value: 'ilasta', label: 'Ilasta' },
+//     { value: 'torfowa', label: 'Torfowa' },
+//     { value: 'mada', label: 'Mada rzeczna' }
+//   ];
+
+
+
+
 
   return (
     <div className="production-reports">

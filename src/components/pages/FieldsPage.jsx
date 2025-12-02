@@ -813,18 +813,8 @@ const FieldsPage = () => {
           )}
 
           {/* Instrukcja zoomu */}
-          <div className="zoom-instruction" style={{
-            position: 'absolute',
-            bottom: '10px',
-            right: '10px',
-            background: 'rgba(255, 255, 255, 0.9)',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-            zIndex: 1000
-          }}>
-            <i className="fas fa-info-circle" style={{ marginRight: '5px', color: '#3498db' }}></i>
+          <div className="zoom-instruction">
+            <i className="fas fa-info-circle"></i>
             <strong>Zoom:</strong> Przytrzymaj Ctrl + scroll
           </div>
         </div>
