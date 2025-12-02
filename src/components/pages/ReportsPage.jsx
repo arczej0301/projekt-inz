@@ -246,36 +246,6 @@ const ReportsPage = () => {
           />
         )}
       </div>
-
-      {/* Alerty w stopce */}
-      {criticalAlerts.length > 0 && (
-        <div className="floating-alerts">
-          <div className="floating-alert critical">
-            <div className="alert-header">
-              <span className="alert-icon">🚨</span>
-              <strong>Krytyczne alerty wymagają Twojej uwagi!</strong>
-            </div>
-            <div className="alert-messages">
-              {criticalAlerts.slice(0, 2).map((alert, index) => (
-                <div key={index} className="alert-message">
-                  {alert.title}
-                </div>
-              ))}
-              {criticalAlerts.length > 2 && (
-                <div className="alert-message">
-                  +{criticalAlerts.length - 2} więcej...
-                </div>
-              )}
-            </div>
-            <button 
-              className="btn btn-small"
-              onClick={() => setActiveTab('dashboard')}
-            >
-              Sprawdź
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
