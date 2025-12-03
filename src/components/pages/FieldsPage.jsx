@@ -635,16 +635,6 @@ const FieldsPage = () => {
 
         <div className="actions-bar">
           <div className="action-buttons">
-
-            <button className="btn btn-primary" onClick={() => openFieldModal()}>
-              <i className="fas fa-plus"></i> Dodaj pole
-            </button>
-            <button
-              className="btn btn-info"
-              onClick={() => openStatusModal()}
-            >
-              <i className="fas fa-seedling"></i> Zarządzaj stanem pól
-            </button>
             <button
               className={`btn ${isDrawing ? 'btn-danger' : 'btn-secondary'}`}
               onClick={isDrawing ? cancelDrawing : startDrawing}

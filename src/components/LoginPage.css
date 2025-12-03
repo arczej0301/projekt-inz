@@ -74,19 +74,20 @@
 }
 
 .login-divider {
+  position: relative;
   text-align: center;
   margin: 20px 0;
-  position: relative;
 }
 
-.login-divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-color: var(--gray);
+
+
+.divider-text {
+  position: relative;
+  display: inline-block;
+  padding: 0 15px;
+  background-color: white; /* lub tło kontenera */
+  color: var(--gray);
+  z-index: 2;
 }
 
 .login-divider span {

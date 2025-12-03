@@ -23,12 +23,12 @@ export const useWarehouse = () => {
   // Kategorie magazynu
   const categories = [
     { id: 'zboza', name: 'Zboża', icon: '🌾', color: '#4caf50' },
-    { id: 'mleko', name: 'Produkty mleczne', icon: '🥛', color: '#2196f3' },
+    // { id: 'mleko', name: 'Produkty mleczne', icon: '🥛', color: '#2196f3' },
     { id: 'nawozy', name: 'Nawozy', icon: '🧪', color: '#ff9800' },
-    { id: 'paliwo', name: 'Paliwa i oleje', icon: '⛽', color: '#f44336' },
     { id: 'pasze', name: 'Pasze', icon: '🌿', color: '#8bc34a' },
-    { id: 'warzywa', name: 'Warzywa', icon: '🥔', color: '#795548' },
-    { id: 'owoce', name: 'Owoce', icon: '🍎', color: '#e91e63' },
+    { id: 'paliwo', name: 'Paliwa i oleje', icon: '⛽', color: '#f44336' },
+    // { id: 'warzywa', name: 'Warzywa', icon: '🥔', color: '#795548' },
+    // { id: 'owoce', name: 'Owoce', icon: '🍎', color: '#e91e63' },
     { id: 'narzedzia', name: 'Narzędzia i części', icon: '🛠️', color: '#607d8b' }
   ]
 
@@ -119,29 +119,46 @@ export const useWarehouse = () => {
   }
 
   // Aktualizacja stanu magazynowego
-  const updateStock = async (productId, newQuantity, operation = 'update') => {
-    try {
-      const productRef = doc(db, 'warehouse', productId)
-      const productDoc = await getDoc(productRef)
-      
-      if (!productDoc.exists()) {
-        return { success: false, error: 'Produkt nie istnieje' }
-      }
-
-      const product = productDoc.data()
-      
-      await updateDoc(productRef, {
-        quantity: newQuantity,
-        lastUpdate: new Date(),
-        lastOperation: operation
-      })
-
-      return { success: true }
-    } catch (error) {
-      console.error('Błąd przy aktualizacji stanu:', error)
-      return { success: false, error: error.message }
+const updateStock = async (productId, newQuantity, operation = 'update', metadata = {}) => {
+  try {
+    const productRef = doc(db, 'warehouse', productId)
+    const productDoc = await getDoc(productRef)
+    
+    if (!productDoc.exists()) {
+      return { success: false, error: 'Produkt nie istnieje' }
     }
+
+    const product = productDoc.data()
+    const previousQuantity = product.quantity || 0
+    
+    await updateDoc(productRef, {
+      quantity: newQuantity,
+      lastUpdate: new Date(),
+      lastOperation: operation,
+      ...(metadata.updatedBy && { updatedBy: metadata.updatedBy })
+    })
+
+    // Dodaj do historii
+    await addDoc(collection(db, 'warehouseHistory'), {
+      productId: productId,
+      productName: product.name,
+      operation: operation,
+      quantity: Math.abs(newQuantity - previousQuantity),
+      previousQuantity: previousQuantity,
+      newQuantity: newQuantity,
+      timestamp: new Date(),
+      source: metadata.source || 'manual',
+      transactionId: metadata.transactionId,
+      description: metadata.description,
+      userId: metadata.userId
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Błąd przy aktualizacji stanu:', error)
+    return { success: false, error: error.message }
   }
+}
 
   // Pobieranie historii zmian produktu
   const getProductHistory = async (productId) => {

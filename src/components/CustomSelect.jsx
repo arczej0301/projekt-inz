@@ -16,6 +16,7 @@ const CustomSelect = ({
   const selectRef = useRef(null)
   const searchInputRef = useRef(null)
 
+  
   // Filtruj opcje jeśli włączone wyszukiwanie
   const filteredOptions = searchable 
     ? options.filter(option => {

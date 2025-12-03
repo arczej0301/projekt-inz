@@ -63,12 +63,12 @@ const TaskList = ({ tasks, onEditTask, TASK_TYPES }) => {
     return type ? type.label : 'Nieznany typ';
   };
 
-  const handleTaskClick = (task) => {
-    // Tylko aktywne zadania można edytować
-    if (task.status !== 'completed') {
-      onEditTask(task);
-    }
-  };
+ const handleTaskClick = (task) => {
+  // Tylko aktywne zadania można edytować (nie zakończone i nie anulowane)
+  if (task.status !== 'completed' && task.status !== 'cancelled') {
+    onEditTask(task);
+  }
+};
 
   if (tasks.length === 0) {
     return (

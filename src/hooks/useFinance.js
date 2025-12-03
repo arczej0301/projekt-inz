@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { 
   collection, 
   doc, 
+  getDoc,
   getDocs, 
   addDoc, 
   updateDoc, 
@@ -132,25 +133,100 @@ export const useFinance = () => {
   }, [])
 
   // Dodawanie transakcji z automatycznym mapowaniem kategorii
-  const addTransaction = async (transactionData) => {
-    try {
-      // Mapuj kategorię do budżetu
-      const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
-      
-      const docRef = await addDoc(collection(db, 'finance_transactions'), {
-        ...transactionData,
-        category: transactionData.category, // Zachowaj oryginalną kategorię
-        budgetCategory: mappedCategory, // Dodaj kategorię dla budżetu
-        date: Timestamp.fromDate(new Date(transactionData.date)),
-        createdAt: new Date(),
-        amount: parseFloat(transactionData.amount)
+const addTransaction = async (transactionData) => {
+  try {
+    // Mapuj kategorię do budżetu
+    
+    const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
+    
+    const transactionToAdd = {
+      ...transactionData,
+      category: transactionData.category,
+      budgetCategory: mappedCategory,
+      date: Timestamp.fromDate(new Date(transactionData.date)),
+      createdAt: new Date(),
+      amount: parseFloat(transactionData.amount),
+      // Dodaj dane magazynowe jeśli są
+      ...(transactionData.productId && {
+        productId: transactionData.productId,
+        productName: transactionData.productName,
+        quantity: transactionData.quantity,
+        unit: transactionData.unit,
+        unitPrice: transactionData.unitPrice,
+        source: 'warehouse'
       })
-      return { success: true, id: docRef.id }
-    } catch (error) {
-      console.error('Błąd przy dodawaniu transakcji:', error)
-      return { success: false, error: error.message }
     }
+
+     const docRef = await addDoc(collection(db, 'finance_transactions'), transactionToAdd)
+    
+    // AUTOMATYCZNA AKTUALIZACJA MAGAZYNU DLA SPRZEDAŻY PLONÓW
+    if (transactionData.type === 'income' && 
+        transactionData.category === 'sprzedaz_plonow' && 
+        transactionData.productId && 
+        transactionData.quantity) {
+      
+      await updateWarehouseAfterSale(
+        transactionData.productId,
+        transactionData.quantity,
+        docRef.id,
+        transactionData.description
+      )
+    }
+    
+    return { success: true, id: docRef.id }
+  } catch (error) {
+    console.error('Błąd przy dodawaniu transakcji:', error)
+    return { success: false, error: error.message }
   }
+}
+
+// DODAJ NOWĄ FUNKCJĘ DO ZMNIEJSZANIA STANU MAGAZYNOWEGO
+const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, description) => {
+  try {
+    const productRef = doc(db, 'warehouse', productId)
+    const productDoc = await getDoc(productRef)
+    
+    if (!productDoc.exists()) {
+      console.error('Produkt nie istnieje w magazynie:', productId)
+      return { success: false, error: 'Produkt nie istnieje' }
+    }
+    
+    const product = productDoc.data()
+    const currentQuantity = product.quantity || 0
+    const quantity = parseFloat(soldQuantity)
+    const newQuantity = Math.max(0, currentQuantity - quantity)
+    
+    // Aktualizuj stan magazynowy
+    await updateDoc(productRef, {
+      quantity: newQuantity,
+      lastUpdate: new Date(),
+      lastOperation: 'sale'
+    })
+    
+    // Dodaj do historii magazynu
+    await addDoc(collection(db, 'warehouseHistory'), {
+      productId: productId,
+      productName: product.name,
+      operation: 'sale',
+      quantity: quantity,
+      previousQuantity: currentQuantity,
+      newQuantity: newQuantity,
+      timestamp: new Date(),
+      source: 'finance_sale',
+      transactionId: transactionId,
+      description: description || `Sprzedaż produktu`,
+      category: product.category,
+      unit: product.unit,
+      unitPrice: product.price || 0
+    })
+    
+    console.log(`✅ Magazyn zaktualizowany: ${product.name} -${quantity} ${product.unit}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Błąd przy aktualizacji magazynu:', error)
+    return { success: false, error: error.message }
+  }
+}
 
   // Automatyczne dodawanie transakcji z innych modułów
   const addAutoTransaction = async (type, data) => {

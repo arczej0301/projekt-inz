@@ -39,20 +39,21 @@ const TasksPage = () => {
 
   useEffect(() => {
     const checkAndRemoveOldTasks = () => {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      tasks.forEach(task => {
-        if (task.status === 'completed' && task.completedAt) {
-          const completionDate = task.completedAt?.toDate ? task.completedAt.toDate() : new Date(task.completedAt);
+  tasks.forEach(task => {
+    // Sprawdź czy zadanie jest zakończone LUB anulowane
+    if ((task.status === 'completed' || task.status === 'cancelled') && task.completedAt) {
+      const completionDate = task.completedAt?.toDate ? task.completedAt.toDate() : new Date(task.completedAt);
 
-          if (completionDate < thirtyDaysAgo) {
-            console.log(`Automatyczne usuwanie starego zadania: ${task.title}`);
-            deleteTask(task.id);
-          }
-        }
-      });
-    };
+      if (completionDate < thirtyDaysAgo) {
+        console.log(`Automatyczne usuwanie starego zadania: ${task.title}`);
+        deleteTask(task.id);
+      }
+    }
+  });
+};
 
     const interval = setInterval(checkAndRemoveOldTasks, 60000);
     checkAndRemoveOldTasks();
@@ -66,14 +67,14 @@ const TasksPage = () => {
   };
 
   const handleEditTask = (task) => {
-    if (task.status === 'completed') {
-      alert('Nie można edytować zadań zakończonych.');
-      return;
-    }
+  if (task.status === 'completed' || task.status === 'cancelled') {
+    alert('Nie można edytować zadań zakończonych lub anulowanych.');
+    return;
+  }
 
-    setEditingTask(task);
-    setShowModal(true);
-  };
+  setEditingTask(task);
+  setShowModal(true);
+};
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -82,24 +83,28 @@ const TasksPage = () => {
   };
 
   const handleFilterChange = async (newFilters) => {
-  setFilters(newFilters);
-  setFilterLoading(true);
-  
-  try {
-    await fetchTasks(newFilters);
-  } catch (error) {
-    console.error('Błąd podczas filtrowania:', error);
-  } finally {
-    setFilterLoading(false);
-  }
-};
+    setFilters(newFilters);
+    setFilterLoading(true);
+
+    try {
+      await fetchTasks(newFilters);
+    } catch (error) {
+      console.error('Błąd podczas filtrowania:', error);
+    } finally {
+      setFilterLoading(false);
+    }
+  };
 
   const handleClearError = () => {
     clearError();
   };
 
-  const activeTasks = tasks.filter(task => task.status !== 'completed');
-  const completedTasks = tasks.filter(task => task.status === 'completed');
+  const activeTasks = tasks.filter(task => 
+  task.status !== 'completed' && task.status !== 'cancelled'
+);
+const completedTasks = tasks.filter(task => 
+  task.status === 'completed' || task.status === 'cancelled'
+);
 
   if (loading && tasks.length === 0) {
     return <div className="loading">Ładowanie zadań...</div>;
@@ -138,19 +143,19 @@ const TasksPage = () => {
       )}
 
       {filterLoading && (
-  <div className="loading-filter">
-    <div className="loading-spinner"></div>
-    <span>Filtrowanie zadań...</span>
-  </div>
-)}
+        <div className="loading-filter">
+          <div className="loading-spinner"></div>
+          <span>Filtrowanie zadań...</span>
+        </div>
+      )}
 
       <TaskFilters
-  onFilterChange={handleFilterChange}
-  currentFilters={filters}
-  TASK_TYPES={TASK_TYPES}
-  TASK_STATUS={TASK_STATUS}
-  PRIORITIES={PRIORITIES}
-/>
+        onFilterChange={handleFilterChange}
+        currentFilters={filters}
+        TASK_TYPES={TASK_TYPES}
+        TASK_STATUS={TASK_STATUS}
+        PRIORITIES={PRIORITIES}
+      />
 
       <div className="tasks-content">
         {activeView === 'list' ? (
@@ -182,7 +187,7 @@ const TasksPage = () => {
                 <div className="tasks-info-banner">
                   <div className="info-icon">ℹ️</div>
                   <div className="info-content">
-                    <strong>Informacja:</strong> Zadania zakończone nie mogą być edytowane i są automatycznie usuwane po 30 dniach.
+                    <strong>Informacja:</strong> Zadania zakończone i anulowane nie mogą być edytowane i są automatycznie usuwane po 30 dniach.
                   </div>
                 </div>
 
