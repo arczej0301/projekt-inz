@@ -1,13 +1,13 @@
 // hooks/useFinance.js
 import { useState, useEffect } from 'react'
-import { 
-  collection, 
-  doc, 
+import {
+  collection,
+  doc,
   getDoc,
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -51,7 +51,7 @@ export const useFinance = () => {
     'produkty_zwierzece': 'animals',
     'dotacje': 'other',
     'inne_przychody': 'other',
-    
+
     // Transakcje wydatkowe → Kategorie budżetowe  
     'nasiona': 'food',
     'nawozy': 'supplies',
@@ -83,25 +83,22 @@ export const useFinance = () => {
 
   // Pobieranie transakcji w czasie rzeczywistym
   useEffect(() => {
-    const q = query(
-      collection(db, 'finance_transactions'),
-      orderBy('date', 'desc')
-    )
-    
-    const unsubscribe = onSnapshot(q, 
-      (querySnapshot) => {
-        const transactionsData = []
-        querySnapshot.forEach((doc) => {
-          const data = doc.data()
-          transactionsData.push({ 
-            id: doc.id, 
-            ...data,
-            date: data.date?.toDate?.() || data.date
-          })
+  const q = query(collection(db, 'finance_transactions'))
+
+  const unsubscribe = onSnapshot(q,
+    (querySnapshot) => {
+      const transactionsData = []
+      querySnapshot.forEach((doc) => {
+        const data = doc.data()
+        transactionsData.push({
+          id: doc.id,
+          ...data,
+          date: data.date?.toDate?.() || data.date
         })
-        setTransactions(transactionsData)
-        setLoading(false)
-      },
+      })
+      setTransactions(transactionsData) // NIE sortuj tutaj
+      setLoading(false)
+    },
       (error) => {
         console.error('Błąd przy pobieraniu transakcji:', error)
         setError(`Błąd przy pobieraniu danych: ${error.message}`)
@@ -115,8 +112,8 @@ export const useFinance = () => {
   // Pobieranie budżetów
   useEffect(() => {
     const q = query(collection(db, 'finance_budgets'))
-    
-    const unsubscribe = onSnapshot(q, 
+
+    const unsubscribe = onSnapshot(q,
       (querySnapshot) => {
         const budgetsData = []
         querySnapshot.forEach((doc) => {
@@ -133,107 +130,141 @@ export const useFinance = () => {
   }, [])
 
   // Dodawanie transakcji z automatycznym mapowaniem kategorii
-const addTransaction = async (transactionData) => {
-  try {
-    // Mapuj kategorię do budżetu
-    
-    const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
-    
-    const transactionToAdd = {
-      ...transactionData,
-      category: transactionData.category,
-      budgetCategory: mappedCategory,
-      date: Timestamp.fromDate(new Date(transactionData.date)),
-      createdAt: new Date(),
-      amount: parseFloat(transactionData.amount),
-      // Dodaj dane magazynowe jeśli są
-      ...(transactionData.productId && {
-        productId: transactionData.productId,
-        productName: transactionData.productName,
-        quantity: transactionData.quantity,
-        unit: transactionData.unit,
-        unitPrice: transactionData.unitPrice,
-        source: 'warehouse'
+  const deleteAnimalAfterSale = async (animalId, transactionId, description) => {
+    try {
+      // Tu użyj swojej istniejącej funkcji do usuwania zwierząt
+      await deleteDoc(doc(db, 'animals', animalId))
+
+      // Możesz też dodać do historii
+      await addDoc(collection(db, 'animalsHistory'), {
+        animalId: animalId,
+        operation: 'sale',
+        timestamp: new Date(),
+        transactionId: transactionId,
+        description: description || 'Sprzedaż zwierzęcia'
       })
-    }
 
-     const docRef = await addDoc(collection(db, 'finance_transactions'), transactionToAdd)
-    
-    // AUTOMATYCZNA AKTUALIZACJA MAGAZYNU DLA SPRZEDAŻY PLONÓW
-    if (transactionData.type === 'income' && 
-        transactionData.category === 'sprzedaz_plonow' && 
-        transactionData.productId && 
+      console.log(`✅ Zwierzę usunięte po sprzedaży: ${animalId}`)
+      return { success: true }
+    } catch (error) {
+      console.error('Błąd przy usuwaniu zwierzęcia:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  // Dodawanie transakcji z automatycznym mapowaniem kategorii
+  const addTransaction = async (transactionData) => {
+    try {
+      // Mapuj kategorię do budżetu
+      const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
+
+      const transactionToAdd = {
+        ...transactionData,
+        category: transactionData.category,
+        budgetCategory: mappedCategory,
+        date: Timestamp.fromDate(new Date(transactionData.date)),
+        createdAt: Timestamp.now(), 
+        amount: parseFloat(transactionData.amount),
+        // Dodaj dane magazynowe jeśli są
+        ...(transactionData.productId && {
+          productId: transactionData.productId,
+          productName: transactionData.productName,
+          quantity: transactionData.quantity,
+          unit: transactionData.unit,
+          unitPrice: transactionData.unitPrice,
+          source: 'warehouse'
+        })
+      }
+
+      const docRef = await addDoc(collection(db, 'finance_transactions'), transactionToAdd)
+
+      // AUTOMATYCZNA AKTUALIZACJA MAGAZYNU DLA SPRZEDAŻY PLONÓW
+      if (transactionData.type === 'income' &&
+        transactionData.category === 'sprzedaz_plonow' &&
+        transactionData.productId &&
         transactionData.quantity) {
-      
-      await updateWarehouseAfterSale(
-        transactionData.productId,
-        transactionData.quantity,
-        docRef.id,
-        transactionData.description
-      )
-    }
-    
-    return { success: true, id: docRef.id }
-  } catch (error) {
-    console.error('Błąd przy dodawaniu transakcji:', error)
-    return { success: false, error: error.message }
-  }
-}
 
-// DODAJ NOWĄ FUNKCJĘ DO ZMNIEJSZANIA STANU MAGAZYNOWEGO
-const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, description) => {
-  try {
-    const productRef = doc(db, 'warehouse', productId)
-    const productDoc = await getDoc(productRef)
-    
-    if (!productDoc.exists()) {
-      console.error('Produkt nie istnieje w magazynie:', productId)
-      return { success: false, error: 'Produkt nie istnieje' }
+        await updateWarehouseAfterSale(
+          transactionData.productId,
+          transactionData.quantity,
+          docRef.id,
+          transactionData.description
+        )
+      }
+
+      // AUTOMATYCZNE USUWANIE ZWIERZĘCIA DLA SPRZEDAŻY ZWIERZĄT
+      if (transactionData.type === 'income' &&
+        transactionData.category === 'sprzedaz_zwierzat' &&
+        transactionData.animalId) {
+
+        await deleteAnimalAfterSale(
+          transactionData.animalId,
+          docRef.id,
+          transactionData.description
+        )
+      }
+
+      return { success: true, id: docRef.id }
+    } catch (error) {
+      console.error('Błąd przy dodawaniu transakcji:', error)
+      return { success: false, error: error.message }
     }
-    
-    const product = productDoc.data()
-    const currentQuantity = product.quantity || 0
-    const quantity = parseFloat(soldQuantity)
-    const newQuantity = Math.max(0, currentQuantity - quantity)
-    
-    // Aktualizuj stan magazynowy
-    await updateDoc(productRef, {
-      quantity: newQuantity,
-      lastUpdate: new Date(),
-      lastOperation: 'sale'
-    })
-    
-    // Dodaj do historii magazynu
-    await addDoc(collection(db, 'warehouseHistory'), {
-      productId: productId,
-      productName: product.name,
-      operation: 'sale',
-      quantity: quantity,
-      previousQuantity: currentQuantity,
-      newQuantity: newQuantity,
-      timestamp: new Date(),
-      source: 'finance_sale',
-      transactionId: transactionId,
-      description: description || `Sprzedaż produktu`,
-      category: product.category,
-      unit: product.unit,
-      unitPrice: product.price || 0
-    })
-    
-    console.log(`✅ Magazyn zaktualizowany: ${product.name} -${quantity} ${product.unit}`)
-    return { success: true }
-  } catch (error) {
-    console.error('Błąd przy aktualizacji magazynu:', error)
-    return { success: false, error: error.message }
   }
-}
+
+  // DODAJ NOWĄ FUNKCJĘ DO ZMNIEJSZANIA STANU MAGAZYNOWEGO
+  const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, description) => {
+    try {
+      const productRef = doc(db, 'warehouse', productId)
+      const productDoc = await getDoc(productRef)
+
+      if (!productDoc.exists()) {
+        console.error('Produkt nie istnieje w magazynie:', productId)
+        return { success: false, error: 'Produkt nie istnieje' }
+      }
+
+      const product = productDoc.data()
+      const currentQuantity = product.quantity || 0
+      const quantity = parseFloat(soldQuantity)
+      const newQuantity = Math.max(0, currentQuantity - quantity)
+
+      // Aktualizuj stan magazynowy
+      await updateDoc(productRef, {
+        quantity: newQuantity,
+        lastUpdate: new Date(),
+        lastOperation: 'sale'
+      })
+
+      // Dodaj do historii magazynu
+      await addDoc(collection(db, 'warehouseHistory'), {
+        productId: productId,
+        productName: product.name,
+        operation: 'sale',
+        quantity: quantity,
+        previousQuantity: currentQuantity,
+        newQuantity: newQuantity,
+        timestamp: new Date(),
+        source: 'finance_sale',
+        transactionId: transactionId,
+        description: description || `Sprzedaż produktu`,
+        category: product.category,
+        unit: product.unit,
+        unitPrice: product.price || 0
+      })
+
+      console.log(`✅ Magazyn zaktualizowany: ${product.name} -${quantity} ${product.unit}`)
+      return { success: true }
+    } catch (error) {
+      console.error('Błąd przy aktualizacji magazynu:', error)
+      return { success: false, error: error.message }
+    }
+  }
 
   // Automatyczne dodawanie transakcji z innych modułów
   const addAutoTransaction = async (type, data) => {
     try {
       // Mapuj kategorię do budżetu
       const mappedCategory = getBudgetCategory(data.category) || data.category
-      
+
       const transactionData = {
         type: type, // 'income' lub 'expense'
         category: data.category,
@@ -259,13 +290,13 @@ const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, 
   const updateTransaction = async (transactionId, updateData) => {
     try {
       const transactionRef = doc(db, 'finance_transactions', transactionId)
-      
+
       // Jeśli zmieniono kategorię, zaktualizuj też budgetCategory
       if (updateData.category) {
         const mappedCategory = getBudgetCategory(updateData.category) || updateData.category
         updateData.budgetCategory = mappedCategory
       }
-      
+
       await updateDoc(transactionRef, {
         ...updateData,
         lastUpdate: new Date(),
@@ -325,14 +356,14 @@ const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, 
     const currentYear = new Date().getFullYear()
 
     const monthlyIncome = transactions
-      .filter(t => t.type === 'income' && 
-        t.date?.getMonth?.() === currentMonth && 
+      .filter(t => t.type === 'income' &&
+        t.date?.getMonth?.() === currentMonth &&
         t.date?.getFullYear?.() === currentYear)
       .reduce((sum, t) => sum + (t.amount || 0), 0)
 
     const monthlyExpenses = transactions
-      .filter(t => t.type === 'expense' && 
-        t.date?.getMonth?.() === currentMonth && 
+      .filter(t => t.type === 'expense' &&
+        t.date?.getMonth?.() === currentMonth &&
         t.date?.getFullYear?.() === currentYear)
       .reduce((sum, t) => sum + (t.amount || 0), 0)
 
@@ -358,11 +389,11 @@ const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, 
   const getBudgetsWithStatus = () => {
     const currentMonth = new Date().getMonth()
     const currentYear = new Date().getFullYear()
-    
+
     return budgets.map(budget => {
       // Wydatki dla tego budżetu (według kategorii budżetowej)
       const expensesForBudget = transactions
-        .filter(t => t.type === 'expense' && 
+        .filter(t => t.type === 'expense' &&
           t.budgetCategory === budget.category &&
           t.date?.getMonth?.() === currentMonth &&
           t.date?.getFullYear?.() === currentYear)
@@ -370,7 +401,7 @@ const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, 
 
       // Przychody dla tego budżetu
       const incomeForBudget = transactions
-        .filter(t => t.type === 'income' && 
+        .filter(t => t.type === 'income' &&
           t.budgetCategory === budget.category &&
           t.date?.getMonth?.() === currentMonth &&
           t.date?.getFullYear?.() === currentYear)
@@ -380,7 +411,7 @@ const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, 
       const budgetAmount = parseFloat(budget.amount) || 0
       const remaining = Math.max(0, budgetAmount - spent)
       const percentage = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0
-      
+
       // Znajdź powiązane transakcje
       const relatedTransactions = transactions
         .filter(t => t.budgetCategory === budget.category)
@@ -393,8 +424,8 @@ const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, 
         percentage: Math.min(percentage, 100), // Maksymalnie 100%
         income: incomeForBudget,
         relatedTransactions,
-        status: percentage > 100 ? 'exceeded' : 
-                percentage > 80 ? 'warning' : 'good',
+        status: percentage > 100 ? 'exceeded' :
+          percentage > 80 ? 'warning' : 'good',
         // Dodaj info o powiązanych kategoriach transakcji
         relatedCategories: reverseCategoryMapping[budget.category] || []
       }

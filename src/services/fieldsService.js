@@ -15,6 +15,8 @@ import { db } from '../config/firebase';
 
 const FIELDS_COLLECTION = 'fields';
 const FIELD_STATUS_COLLECTION = 'field_status';
+const FIELD_YIELDS_COLLECTION = 'field_yields';
+const FIELD_COSTS_COLLECTION = 'field_costs';
 
 // Cache dla pól
 let fieldsCache = null;
@@ -110,9 +112,8 @@ export const deleteField = async (fieldId) => {
   }
 };
 
-// NOWE FUNKCJE DLA STATUSÓW PÓL - POPRAWIONE
+// FUNKCJE DLA STATUSÓW PÓL
 
-// Pobierz status dla konkretnego pola - BEZ ZŁOŻONEGO ZAPYTania
 export const getFieldStatus = async (fieldId) => {
   try {
     const querySnapshot = await getDocs(collection(db, FIELD_STATUS_COLLECTION));
@@ -140,7 +141,6 @@ export const getFieldStatus = async (fieldId) => {
   }
 };
 
-// Pobierz wszystkie statusy dla wszystkich pól
 export const getAllFieldStatuses = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, FIELD_STATUS_COLLECTION));
@@ -171,7 +171,6 @@ export const getAllFieldStatuses = async () => {
   }
 };
 
-// Dodaj nowy status pola
 export const addFieldStatus = async (statusData) => {
   try {
     const docRef = await addDoc(collection(db, FIELD_STATUS_COLLECTION), {
@@ -185,7 +184,6 @@ export const addFieldStatus = async (statusData) => {
   }
 };
 
-// Aktualizuj status pola
 export const updateFieldStatus = async (statusId, statusData) => {
   try {
     await updateDoc(doc(db, FIELD_STATUS_COLLECTION, statusId), {
@@ -198,7 +196,161 @@ export const updateFieldStatus = async (statusId, statusData) => {
   }
 };
 
-// Subskrybuj zmiany w statusach - POPRAWIONE
+// NOWE FUNKCJE DLA ZBIORÓW
+
+export const addFieldYield = async (yieldData) => {
+  try {
+    const docRef = await addDoc(collection(db, FIELD_YIELDS_COLLECTION), {
+      ...yieldData,
+      date_created: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Error adding field yield:', error);
+    throw error;
+  }
+};
+
+export const getFieldYields = async (fieldId) => {
+  try {
+    const q = query(
+      collection(db, FIELD_YIELDS_COLLECTION),
+      where("field_id", "==", fieldId),
+      orderBy("date_created", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const yields = [];
+    querySnapshot.forEach((doc) => {
+      yields.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return yields;
+  } catch (error) {
+    console.error('Error getting field yields:', error);
+    throw error;
+  }
+};
+
+export const getLatestFieldYield = async (fieldId) => {
+  try {
+    const q = query(
+      collection(db, FIELD_YIELDS_COLLECTION),
+      where("field_id", "==", fieldId),
+      orderBy("date_created", "desc"),
+      limit(1)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting latest field yield:', error);
+    throw error;
+  }
+};
+
+export const getAllFieldYields = async () => {
+  try {
+    const q = query(
+      collection(db, FIELD_YIELDS_COLLECTION),
+      orderBy("date_created", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const yields = [];
+    querySnapshot.forEach((doc) => {
+      yields.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return yields;
+  } catch (error) {
+    console.error('Error getting all field yields:', error);
+    throw error;
+  }
+};
+
+// NOWE FUNKCJE DLA KOSZTÓW
+
+export const addFieldCost = async (costData) => {
+  try {
+    const docRef = await addDoc(collection(db, FIELD_COSTS_COLLECTION), {
+      ...costData,
+      date_created: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Error adding field cost:', error);
+    throw error;
+  }
+};
+
+export const getFieldCosts = async (fieldId) => {
+  try {
+    const q = query(
+      collection(db, FIELD_COSTS_COLLECTION),
+      where("field_id", "==", fieldId),
+      orderBy("date_created", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const costs = [];
+    querySnapshot.forEach((doc) => {
+      costs.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return costs;
+  } catch (error) {
+    console.error('Error getting field costs:', error);
+    throw error;
+  }
+};
+
+export const getFieldTotalCost = async (fieldId) => {
+  try {
+    const q = query(
+      collection(db, FIELD_COSTS_COLLECTION),
+      where("field_id", "==", fieldId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    let total = 0;
+    querySnapshot.forEach((doc) => {
+      const costData = doc.data();
+      total += parseFloat(costData.total_cost) || 0;
+    });
+    
+    return total;
+  } catch (error) {
+    console.error('Error calculating total cost:', error);
+    return 0;
+  }
+};
+
+export const getAllFieldCosts = async () => {
+  try {
+    const q = query(
+      collection(db, FIELD_COSTS_COLLECTION),
+      orderBy("date_created", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const costs = [];
+    querySnapshot.forEach((doc) => {
+      costs.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return costs;
+  } catch (error) {
+    console.error('Error getting all field costs:', error);
+    throw error;
+  }
+};
+
+// Subskrybuj zmiany w statusach
 export const subscribeToFieldStatus = (callback) => {
   return onSnapshot(collection(db, FIELD_STATUS_COLLECTION), 
     (querySnapshot) => {
@@ -229,3 +381,36 @@ export const subscribeToFieldStatus = (callback) => {
     }
   );
 };
+
+// Subskrybuj zmiany w zbiorach
+export const subscribeToFieldYields = (callback) => {
+  return onSnapshot(collection(db, FIELD_YIELDS_COLLECTION), 
+    (querySnapshot) => {
+      const yields = [];
+      querySnapshot.forEach((doc) => {
+        yields.push({ id: doc.id, ...doc.data() });
+      });
+      callback(yields);
+    },
+    (error) => {
+      console.error('Error in field yields subscription:', error);
+    }
+  );
+};
+
+// Subskrybuj zmiany w kosztach
+export const subscribeToFieldCosts = (callback) => {
+  return onSnapshot(collection(db, FIELD_COSTS_COLLECTION), 
+    (querySnapshot) => {
+      const costs = [];
+      querySnapshot.forEach((doc) => {
+        costs.push({ id: doc.id, ...doc.data() });
+      });
+      callback(costs);
+    },
+    (error) => {
+      console.error('Error in field costs subscription:', error);
+    }
+  );
+};
+
