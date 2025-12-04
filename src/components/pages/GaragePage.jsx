@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useFinance } from '../../hooks/useFinance';
 import { garageService } from '../../services/garageService';
 import './GaragePage.css';
 
@@ -13,9 +14,10 @@ const GaragePage = () => {
   const [showRepairHistory, setShowRepairHistory] = useState(false);
   const [currentRepairMachine, setCurrentRepairMachine] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [repairHistory, setRepairHistory] = useState([]); // Nowy stan dla historii napraw
-  const [showRepairList, setShowRepairList] = useState(false); // Nowy stan dla listy napraw
+  const [repairHistory, setRepairHistory] = useState([]);
+  const [showRepairList, setShowRepairList] = useState(false);
   const [loadingRepairHistory, setLoadingRepairHistory] = useState(false);
+  const { addAutoTransaction } = useFinance();
 
   // Stany dla custom selectów
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -241,10 +243,21 @@ const GaragePage = () => {
         createdAt: new Date()
       };
 
-      // Dodaj naprawę do historii
+      // 1. Dodaj naprawę do historii
       await garageService.addRepair(repairData);
 
-      // Aktualizuj maszynę z nowymi danymi przeglądów
+      // 2. Automatycznie dodaj do finansów (JEŚLI JEST KOSZT)
+      if (repairForm.cost && repairForm.cost > 0) {
+        await addAutoTransaction('expense', {
+          category: 'naprawy_konserwacja', // Musi być zgodne z ID z expenseCategories
+          amount: parseFloat(repairForm.cost),
+          description: `Naprawa/przegląd: ${currentRepairMachine.name} - ${repairForm.description || 'Brak opisu'}`,
+          source: 'garage',
+          sourceId: currentRepairMachine.id
+        });
+      }
+
+      // 3. Aktualizuj maszynę z nowymi danymi przeglądów
       const updateData = {
         ...currentRepairMachine,
         lastService: repairForm.lastService,
@@ -259,14 +272,13 @@ const GaragePage = () => {
 
       await garageService.updateMachine(currentRepairMachine.id, updateData);
 
-      alert('Naprawa/przegląd został zapisany!');
+      alert('Naprawa/przegląd został zapisany!' + (repairForm.cost > 0 ? ' Koszt dodano do finansów.' : ''));
       closeRepairHistory();
       loadMachines();
     } catch (error) {
-      alert('Błąd podczas zapisywania naprawy');
+      alert('Błąd podczas zapisywania naprawy: ' + error.message);
     }
   };
-
   // Nowa funkcja do sprawdzania czy maszyna wymaga przeglądu
   const checkServiceDueStatus = (nextServiceDate, status) => {
     if (!nextServiceDate || status === 'sold') return status;
