@@ -18,6 +18,8 @@ const GaragePage = () => {
   const [showRepairList, setShowRepairList] = useState(false);
   const [loadingRepairHistory, setLoadingRepairHistory] = useState(false);
   const { addAutoTransaction } = useFinance();
+  const [createFinanceTransaction, setCreateFinanceTransaction] = useState(true);
+  const [transactionType, setTransactionType] = useState('expense');
 
   // Stany dla custom selectów
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -125,7 +127,55 @@ const GaragePage = () => {
     }
 
     try {
-      // ... reszta kodu
+      // 1. Zapisz maszynę do bazy
+      const machineData = {
+        ...formData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        // Status domyślnie "active" dla zakupionej maszyny
+        status: formData.status || 'active'
+      };
+
+      let machineId;
+      if (editingId) {
+        // Edycja istniejącej maszyny
+        await garageService.updateMachine(editingId, machineData);
+        machineId = editingId;
+      } else {
+        // Dodanie nowej maszyny
+        const docRef = await garageService.addMachine(machineData);
+        machineId = docRef.id;
+      }
+
+      // 2. AUTOMATYCZNA TRANSAKCJA FINANSOWA (TYLKO DLA NOWYCH MASZYN)
+      if (!editingId && formData.purchasePrice > 0) {
+        const transactionData = {
+          type: 'expense', // ZMIENIONE: 'expense' zamiast 'income' - to jest KOSZT!
+          category: 'maszyny', // ZMIENIONE: 'maszyny' (kategoria wydatków)
+          amount: parseFloat(formData.purchasePrice),
+          description: `Zakup maszyny: ${formData.name}`,
+          source: 'garage',
+          sourceId: machineId,
+          date: formData.purchaseDate || new Date().toISOString().split('T')[0]
+        };
+
+        const result = await addAutoTransaction('expense', transactionData);
+
+        if (result.success) {
+          alert(`✅ Maszyna "${formData.name}" dodana! Dodano również do kosztów finansowych.`);
+        } else {
+          alert(`✅ Maszyna "${formData.name}" dodana. Błąd przy dodawaniu do finansów: ${result.error}`);
+        }
+      } else if (editingId) {
+        alert(`✅ Maszyna "${formData.name}" zaktualizowana.`);
+      } else {
+        alert(`✅ Maszyna "${formData.name}" dodana (bez transakcji - brak ceny).`);
+      }
+
+      // 3. Odśwież listę i zamknij formularz
+      loadMachines();
+      resetForm();
+
     } catch (error) {
       alert('Błąd podczas zapisywania maszyny: ' + error.message);
     }
@@ -175,7 +225,7 @@ const GaragePage = () => {
       model: '',
       year: new Date().getFullYear(),
       serialNumber: '',
-      status: 'active',
+      status: 'active', // ZMIENIONE: 'active' zamiast 'sold'
       lastService: '',
       nextService: '',
       serviceInterval: 12,
@@ -482,22 +532,6 @@ const GaragePage = () => {
     <div className="garage-page">
       <div className="garage-header">
         <h2>Zarządzanie garażem</h2>
-        <div className="actions-bar">
-          <div className="search-box">
-            <i className="fas fa-search"></i>
-            <input
-              type="text"
-              placeholder="Szukaj maszyny..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="action-buttons">
-            <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-              <i className="fas fa-plus"></i> Dodaj maszynę
-            </button>
-          </div>
-        </div>
       </div>
 
       <div className="garage-content">
@@ -550,6 +584,18 @@ const GaragePage = () => {
           <div className="list-header">
             <h3>Lista maszyn ({filteredMachines.length})</h3>
             <div className="filter-controls">
+              <div className="actions-bar">
+                <div className="search-box">
+                  <i className="fas fa-search"></i>
+                  <input
+                    type="text"
+                    placeholder="Szukaj maszyny..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                
+              </div>
               <div className="custom-select">
                 <div
                   className={`select-header ${isFilterStatusOpen ? 'open' : ''}`}
@@ -599,6 +645,11 @@ const GaragePage = () => {
                   </div>
                 )}
               </div>
+              <div className="action-buttons">
+                  <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+                    <i className="fas fa-plus"></i> Dodaj maszynę
+                  </button>
+                </div>
             </div>
           </div>
 
@@ -745,7 +796,7 @@ const GaragePage = () => {
         <MachineModal
           formData={formData}
           onFormDataChange={setFormData}
-          onSave={handleSubmit}
+          onSave={handleSubmit} // TYLKO TO - prosto wywołaj handleSubmit
           onClose={resetForm}
           editingId={editingId}
           isCategoryOpen={isCategoryOpen}
@@ -813,9 +864,10 @@ const MachineModal = ({
   statusOptions,
   fuelTypeOptions
 }) => {
+  // DODAJ TĘ FUNKCJĘ - BRAKUJE JEJ!
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    onFormDataChange(prev => ({
       ...prev,
       [name]: name.includes('Price') || name.includes('Value') || name === 'cost'
         ? (value === '' ? '' : parseFloat(value.replace(',', '.')))
@@ -823,6 +875,12 @@ const MachineModal = ({
           ? (value === '' ? '' : parseInt(value) || 0)
           : value)
     }));
+  };
+
+  // DODAJ TAKŻE FUNKCJĘ DO ZAPISU:
+  const handleSaveClick = (e) => {
+    e.preventDefault();
+    onSave(e);
   };
 
   return (
@@ -833,7 +891,8 @@ const MachineModal = ({
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
-          <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
+          {/* FORMULARZ */}
+          <form onSubmit={handleSaveClick}>
             <div className="form-grid">
               <div className="form-group">
                 <label htmlFor="machineName">Nazwa maszyny *</label>
@@ -1041,7 +1100,10 @@ const MachineModal = ({
           <button className="btn btn-secondary" onClick={onClose}>
             Anuluj
           </button>
-          <button className="btn btn-primary" onClick={onSave}>
+          <button
+            className="btn btn-primary"
+            onClick={handleSaveClick}
+          >
             {editingId ? 'Zaktualizuj' : 'Dodaj maszynę'}
           </button>
         </div>
@@ -1467,4 +1529,4 @@ const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, o
   );
 };
 
-export default GaragePage;
+export default GaragePage; 

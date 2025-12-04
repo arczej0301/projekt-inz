@@ -6,11 +6,11 @@ import './FinanceComponents.css'
 const ExpensesTab = ({ transactions }) => {
   const { expenseCategories, addTransaction } = useFinance()
   const [showAddForm, setShowAddForm] = useState(false)
-  
+
   // Stan dla sortowania
   const [sortOption, setSortOption] = useState('date_desc')
   const [filterOption, setFilterOption] = useState('all')
-  
+
   const [newTransaction, setNewTransaction] = useState({
     type: 'expense',
     category: '',
@@ -24,7 +24,7 @@ const ExpensesTab = ({ transactions }) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return '0,00 zł'
     }
-    
+
     const numAmount = parseFloat(amount)
     const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
     return `${formatted} zł`
@@ -40,7 +40,7 @@ const ExpensesTab = ({ transactions }) => {
   ]
 
   const filterOptions = [
-    { value: 'all', label: 'Wszystkie' },
+    { value: 'all', label: 'Wszystkie kategorie' },
     { value: 'zwierzeta', label: 'Zwierzęta' },
     { value: 'maszyny', label: 'Maszyny' },
     { value: 'zboza', label: 'Zboża' },
@@ -63,7 +63,7 @@ const ExpensesTab = ({ transactions }) => {
   // Sortowanie i filtrowanie transakcji
   const sortedTransactions = useMemo(() => {
     let filtered = [...transactions]
-    
+
     // Filtrowanie
     if (filterOption !== 'all') {
       if (filterOption === 'auto') {
@@ -75,7 +75,7 @@ const ExpensesTab = ({ transactions }) => {
         filtered = filtered.filter(t => t.category === filterOption)
       }
     }
-    
+
     // Sortowanie
     return filtered.sort((a, b) => {
       const getDate = (t) => {
@@ -84,30 +84,30 @@ const ExpensesTab = ({ transactions }) => {
         if (t.createdAt?.toDate) return t.createdAt.toDate()
         return new Date(t.date || t.createdAt || 0)
       }
-      
-      switch(sortOption) {
+
+      switch (sortOption) {
         case 'date_asc':
           return getDate(a).getTime() - getDate(b).getTime()
-          
+
         case 'date_desc':
           return getDate(b).getTime() - getDate(a).getTime()
-          
+
         case 'amount_desc':
           return b.amount - a.amount
-          
+
         case 'amount_asc':
           return a.amount - b.amount
-          
+
         case 'category':
           const catA = expenseCategories.find(c => c.id === a.category)?.name || a.category
           const catB = expenseCategories.find(c => c.id === b.category)?.name || b.category
           return catA.localeCompare(catB)
-          
+
         default:
           return getDate(b).getTime() - getDate(a).getTime()
       }
     })
-   }, [transactions, sortOption, filterOption, expenseCategories])
+  }, [transactions, sortOption, filterOption, expenseCategories])
 
   const handleAddTransaction = async (e) => {
     e.preventDefault()
@@ -141,19 +141,26 @@ const ExpensesTab = ({ transactions }) => {
           {/* SEKCJA SORTOWANIA I FILTROWANIA */}
           <div className="sort-filter-section">
             <label>Sortowanie</label>
-            <select 
+
+            {/* PIERWSZY select - Filtrowanie */}
+            <select
               className="control-select"
               value={filterOption}
               onChange={(e) => setFilterOption(e.target.value)}
             >
-              {filterOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              <option value="all">Wszystkie kategorie</option>
+              {expenseCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
                 </option>
               ))}
+              {/* Możesz zachować opcje auto/manual jeśli potrzebujesz */}
+              <option value="auto">Auto-generowane</option>
+              <option value="manual">Ręczne</option>
             </select>
-            
-            <select 
+
+            {/* DRUGI select - Sortowanie */}
+            <select
               className="control-select"
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value)}
@@ -165,8 +172,8 @@ const ExpensesTab = ({ transactions }) => {
               ))}
             </select>
           </div>
-          
-          <button 
+
+          <button
             className="btn btn-primary"
             onClick={() => setShowAddForm(true)}
           >
@@ -198,7 +205,7 @@ const ExpensesTab = ({ transactions }) => {
                 <CustomSelect
                   options={categoryOptions}
                   value={newTransaction.category}
-                  onChange={(value) => setNewTransaction(prev => ({...prev, category: value}))}
+                  onChange={(value) => setNewTransaction(prev => ({ ...prev, category: value }))}
                   placeholder="Wybierz kategorię..."
                   searchable={true}
                 />
@@ -206,31 +213,31 @@ const ExpensesTab = ({ transactions }) => {
 
               <div className="form-group">
                 <label>Kwota (zł) *</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="0.01"
                   value={newTransaction.amount}
-                  onChange={(e) => setNewTransaction(prev => ({...prev, amount: e.target.value}))}
+                  onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
                   required
                 />
               </div>
 
               <div className="form-group">
                 <label>Opis *</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={newTransaction.description}
-                  onChange={(e) => setNewTransaction(prev => ({...prev, description: e.target.value}))}
+                  onChange={(e) => setNewTransaction(prev => ({ ...prev, description: e.target.value }))}
                   required
                 />
               </div>
 
               <div className="form-group">
                 <label>Data</label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   value={newTransaction.date}
-                  onChange={(e) => setNewTransaction(prev => ({...prev, date: e.target.value}))}
+                  onChange={(e) => setNewTransaction(prev => ({ ...prev, date: e.target.value }))}
                 />
               </div>
 
@@ -255,7 +262,8 @@ const ExpensesTab = ({ transactions }) => {
               <th>Kategoria</th>
               <th>Opis</th>
               <th>Kwota</th>
-              <th>Źródło</th>
+              <th>Szczegóły</th>
+              <th>Typ</th>
             </tr>
           </thead>
           <tbody>
@@ -272,6 +280,22 @@ const ExpensesTab = ({ transactions }) => {
                 </td>
                 <td>{transaction.description}</td>
                 <td className="amount negative">-{formatCurrency(transaction.amount)}</td>
+
+                {/* NOWA KOLUMNA - Szczegóły */}
+                <td>
+                  {transaction.productName ? (
+                    <span className="product-badge">
+                      {transaction.productName}
+                      {transaction.quantity && ` (${transaction.quantity} ${transaction.unit})`}
+                    </span>
+                  ) : transaction.autoGenerated ? (
+                    <span className="auto-details">Transakcja automatyczna</span>
+                  ) : (
+                    <span className="manual-details">Brak szczegółów</span>
+                  )}
+                </td>
+
+                {/* Kolumna Typ */}
                 <td>
                   {transaction.autoGenerated ? (
                     <span className="auto-badge">Auto</span>
@@ -283,7 +307,7 @@ const ExpensesTab = ({ transactions }) => {
             ))}
             {sortedTransactions.length === 0 && (
               <tr>
-                <td colSpan="5" className="no-data">Brak transakcji kosztowych</td>
+                <td colSpan="6" className="no-data">Brak transakcji kosztowych</td> {/* Zmień colSpan na 6 */}
               </tr>
             )}
           </tbody>

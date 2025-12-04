@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import { useWarehouse } from '../../hooks/useWarehouse'
 import { getAnimals, deleteAnimal } from '../../services/animalsService'
+import { garageService } from '../../services/garageService';
 import CustomSelect from '../common/CustomSelect'
 import './FinanceComponents.css'
 
@@ -10,11 +11,16 @@ const IncomeTab = ({ transactions }) => {
   const { incomeCategories, addTransaction } = useFinance()
   const { warehouseData, categories: warehouseCategories } = useWarehouse()
   const [showAddForm, setShowAddForm] = useState(false)
-  
-  // Stan dla sortowania
-  const [sortOption, setSortOption] = useState('date_desc')
-  const [filterOption, setFilterOption] = useState('all')
-  
+
+  const [machinesData, setMachinesData] = useState([])
+  const [selectedMachine, setSelectedMachine] = useState(null)
+  const [loadingMachines, setLoadingMachines] = useState(false)
+
+  /// Stan dla sortowania
+const [sortOption, setSortOption] = useState('date_desc') 
+const [filterOption, setFilterOption] = useState('all') 
+
+
   const [newTransaction, setNewTransaction] = useState({
     type: 'income',
     category: '',
@@ -26,7 +32,7 @@ const IncomeTab = ({ transactions }) => {
     unit: '',
     animalId: ''
   })
-  
+
   const [availableProducts, setAvailableProducts] = useState([])
   const [animalsData, setAnimalsData] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -57,6 +63,21 @@ const IncomeTab = ({ transactions }) => {
     }
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
   }
+
+  // Funkcja do tłumaczenia statusu maszyny
+  const translateMachineStatus = (status) => {
+    const statusMap = {
+      'active': 'Aktywy',
+      'inactive': 'Nieaktywny',
+      'maintenance': 'W konserwacji',
+      'repair': 'W naprawie',
+      'sold': 'Sprzedany',
+      'available': 'Dostępny',
+      'unavailable': 'Niedostępny'
+    };
+
+    return statusMap[status.toLowerCase()] || status;
+  };
 
   // Funkcja do ikon zwierząt
   const getAnimalIcon = (animalType) => {
@@ -108,17 +129,17 @@ const IncomeTab = ({ transactions }) => {
     [animalsData]
   )
 
-    // Opcje sortowania i filtrowania
+  // Opcje sortowania i filtrowania
   const sortOptions = [
-    { value: 'date_desc', label: 'Najnowsze' },
-    { value: 'date_asc', label: 'Najstarsze' },
-    { value: 'amount_desc', label: 'Największe kwoty' },
-    { value: 'amount_asc', label: 'Najmniejsze kwoty' },
-    { value: 'category', label: 'Kategoria A-Z' }
-  ]
+  { value: 'date_desc', label: 'Najnowsze' },
+  { value: 'date_asc', label: 'Najstarsze' },
+  { value: 'amount_desc', label: 'Największe kwoty' },
+  { value: 'amount_asc', label: 'Najmniejsze kwoty' },
+  { value: 'category', label: 'Kategoria A-Z' }
+]
 
   const filterOptions = [
-    { value: 'all', label: 'Wszystkie' },
+    { value: 'all', label: 'Wszystkie kategorie' },
     { value: 'sprzedaz_plonow', label: 'Sprzedaż plonów' },
     { value: 'sprzedaz_zwierzat', label: 'Sprzedaż zwierząt' },
     { value: 'other', label: 'Inne przychody' }
@@ -250,6 +271,97 @@ const IncomeTab = ({ transactions }) => {
     }
   }, [newTransaction.quantity, selectedProduct])
 
+  const fetchMachines = async () => {
+    try {
+      setLoadingMachines(true)
+      const machines = await garageService.getAllMachines()
+      // Filtruj tylko maszyny które NIE są sprzedane
+      const availableMachines = machines.filter(machine =>
+        machine.status !== 'sold' && machine.status !== 'sprzedany'
+      )
+      setMachinesData(availableMachines)
+    } catch (error) {
+      console.error('Błąd przy pobieraniu maszyn:', error)
+      setMachinesData([])
+    } finally {
+      setLoadingMachines(false)
+    }
+  }
+
+  // Effect 3: Pobieranie maszyn dla sprzedaży maszyn
+  useEffect(() => {
+    if (newTransaction.category === 'sprzedaz_maszyn') {
+      fetchMachines()
+    } else {
+      setMachinesData([])
+      setSelectedMachine(null)
+      // Czyść pola związane z maszynami
+      if (newTransaction.machineId) {
+        setNewTransaction(prev => ({
+          ...prev,
+          machineId: '',
+          amount: ''
+        }))
+      }
+    }
+  }, [newTransaction.category])
+
+  // Effect 6: Ustawianie selectedMachine gdy zmienia się machineId
+  useEffect(() => {
+    if (newTransaction.machineId && machinesData.length > 0) {
+      const machine = machinesData.find(m => m.id === newTransaction.machineId)
+      setSelectedMachine(machine || null)
+
+      // Automatycznie ustaw opis
+      if (machine && !newTransaction.description.includes(machine.name)) {
+        setNewTransaction(prev => ({
+          ...prev,
+          description: `Sprzedaż maszyny: ${machine.name}`,
+          amount: machine.purchasePrice ? machine.purchasePrice.toString() : ''
+        }))
+      }
+    } else if (!newTransaction.machineId && selectedMachine) {
+      setSelectedMachine(null)
+    }
+  }, [newTransaction.machineId, machinesData])
+
+  const handleMachineChange = useCallback((machineId) => {
+    if (newTransaction.machineId === machineId) return
+
+    setNewTransaction(prev => ({
+      ...prev,
+      machineId: machineId,
+      amount: ''
+    }))
+  }, [newTransaction.machineId])
+
+  const machineOptions = useMemo(() =>
+    machinesData.map(machine => {
+      const categoryText = categoryOptions.find(opt => opt.value === machine.category)?.label || machine.category
+      return {
+        value: machine.id,
+        label: `${machine.name} (${machine.brand || 'Brak marki'} ${machine.model || ''})`,
+        subLabel: `Kategoria: ${categoryText} | Rok: ${machine.year || '?'} | Status: ${translateMachineStatus(machine.status)}`,
+        icon: '🚜'
+      }
+    }),
+    [machinesData, categoryOptions]
+  )
+
+  const getMachineIcon = (category) => {
+    const icons = {
+      'tractor': '🚜',
+      'harvester': '🌾',
+      'plow': '⚙️',
+      'seeder': '🌱',
+      'sprayer': '💧',
+      'trailer': '🚚',
+      'truck': '🚛',
+      'other': '🛠️'
+    }
+    return icons[category] || '🚜'
+  }
+
   // Handlers - useCallback z pustymi zależnościami
   const handleCategoryChange = useCallback((value) => {
     setNewTransaction(prev => {
@@ -374,6 +486,22 @@ const IncomeTab = ({ transactions }) => {
         }
       }
 
+      // Walidacja dla sprzedaży maszyn
+      if (newTransaction.category === 'sprzedaz_maszyn') {
+        if (!newTransaction.machineId) {
+          alert('Proszę wybrać maszynę do sprzedaży')
+          setLoading(false)
+          return
+        }
+
+        const amount = parseFloat(newTransaction.amount)
+        if (isNaN(amount) || amount <= 0) {
+          alert('Proszę podać poprawną cenę sprzedaży')
+          setLoading(false)
+          return
+        }
+      }
+
       // Przygotuj dane transakcji
       const transactionData = {
         type: 'income',
@@ -400,6 +528,15 @@ const IncomeTab = ({ transactions }) => {
         transactionData.earTag = selectedAnimal.earTag
         transactionData.animalType = selectedAnimal.type
         transactionData.source = 'animals'
+      }
+
+      // Dodaj dane maszyny dla sprzedaży maszyn
+      if (newTransaction.category === 'sprzedaz_maszyn' && selectedMachine) {
+        transactionData.machineId = newTransaction.machineId
+        transactionData.machineName = selectedMachine.name
+        transactionData.machineBrand = selectedMachine.brand
+        transactionData.machineModel = selectedMachine.model
+        transactionData.source = 'garage'
       }
 
       // Dodaj transakcję
@@ -429,6 +566,8 @@ const IncomeTab = ({ transactions }) => {
           alert(`✅ Sprzedaż zarejestrowana! Sprzedano ${newTransaction.quantity} ${selectedProduct.unit} ${selectedProduct.name}`)
         } else if (newTransaction.category === 'sprzedaz_zwierzat') {
           alert(`✅ Sprzedaż zarejestrowana! Sprzedano ${selectedAnimal.name} za ${formatCurrency(newTransaction.amount)}`)
+        } else if (newTransaction.category === 'sprzedaz_maszyn') {
+          alert(`✅ Sprzedaż zarejestrowana! Sprzedano ${selectedMachine.name} za ${formatCurrency(newTransaction.amount)}`)
         } else {
           alert('✅ Przychód został dodany!')
         }
@@ -443,58 +582,62 @@ const IncomeTab = ({ transactions }) => {
     }
   }
 
- // Sortowanie i filtrowanie transakcji
+  // Sortowanie i filtrowanie transakcji
   const sortedTransactions = useMemo(() => {
-    let filtered = [...transactions]
-    
-    // Filtrowanie
-    if (filterOption !== 'all') {
-      if (filterOption === 'sprzedaz_plonow') {
-        filtered = filtered.filter(t => t.category === 'sprzedaz_plonow')
-      } else if (filterOption === 'sprzedaz_zwierzat') {
-        filtered = filtered.filter(t => t.category === 'sprzedaz_zwierzat')
-      } else if (filterOption === 'other') {
-        filtered = filtered.filter(t => 
-          t.category !== 'sprzedaz_plonow' && t.category !== 'sprzedaz_zwierzat'
-        )
-      }
-    }
-    
-    // Sortowanie
-    return filtered.sort((a, b) => {
-      const getDate = (t) => {
-        if (t.date?.toDate) return t.date.toDate()
-        if (t.date instanceof Date) return t.date
-        if (t.createdAt?.toDate) return t.createdAt.toDate()
-        return new Date(t.date || t.createdAt || 0)
-      }
-      
-      switch(sortOption) {
-        case 'date_asc':
-          return getDate(a).getTime() - getDate(b).getTime()
-          
-        case 'date_desc':
-          return getDate(b).getTime() - getDate(a).getTime()
-          
-        case 'amount_desc':
-          return b.amount - a.amount
-          
-        case 'amount_asc':
-          return a.amount - b.amount
-          
-        case 'category':
-          const catA = incomeCategories.find(c => c.id === a.category)?.name || a.category
-          const catB = incomeCategories.find(c => c.id === b.category)?.name || b.category
-          return catA.localeCompare(catB)
-          
-        default:
-          return getDate(b).getTime() - getDate(a).getTime()
-      }
-    })
-  }, [transactions, sortOption, filterOption, incomeCategories])
+  let filtered = [...transactions]
 
-  const totalIncome = useMemo(() => 
-    sortedTransactions.reduce((sum, t) => sum + t.amount, 0), 
+  // Filtrowanie
+  if (filterOption !== 'all') {
+    filtered = filtered.filter(t => t.category === filterOption)
+  }
+
+  // Sortowanie - DODAJ poprawne parsowanie daty
+  return filtered.sort((a, b) => {
+    // Poprawiona funkcja do pobierania daty
+    const getDate = (t) => {
+      // Jeśli date jest Timestamp (Firestore)
+      if (t.date?.toDate) {
+        return t.date.toDate()
+      }
+      // Jeśli date jest stringiem
+      if (typeof t.date === 'string') {
+        return new Date(t.date)
+      }
+      // Jeśli date jest obiektem Date
+      if (t.date instanceof Date) {
+        return t.date
+      }
+      // Domyślnie zwróć bieżącą datę
+      return new Date()
+    }
+
+    const dateA = getDate(a)
+    const dateB = getDate(b)
+
+    switch (sortOption) {
+      case 'date_asc':
+        return dateA.getTime() - dateB.getTime()
+        
+      case 'date_desc':
+      default: // DODAJ default dla sortowania domyślnego
+        return dateB.getTime() - dateA.getTime()
+        
+      case 'amount_desc':
+        return b.amount - a.amount
+        
+      case 'amount_asc':
+        return a.amount - b.amount
+        
+      case 'category':
+        const catA = incomeCategories.find(c => c.id === a.category)?.name || a.category
+        const catB = incomeCategories.find(c => c.id === b.category)?.name || b.category
+        return catA.localeCompare(catB)
+    }
+  })
+}, [transactions, sortOption, filterOption, incomeCategories])
+
+  const totalIncome = useMemo(() =>
+    sortedTransactions.reduce((sum, t) => sum + t.amount, 0),
     [sortedTransactions]
   )
 
@@ -528,32 +671,34 @@ const IncomeTab = ({ transactions }) => {
         <div className="tab-actions">
           {/* SEKCJA SORTOWANIA I FILTROWANIA */}
           <div className="sort-filter-section">
-            <label>Sortowanie</label>
-            <select 
-              className="control-select"
-              value={filterOption}
-              onChange={(e) => setFilterOption(e.target.value)}
-            >
-              {filterOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            
-            <select 
-              className="control-select"
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-            >
-              {sortOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          
+  <label>Sortowanie i filtrowanie:</label>
+  
+  <select
+    className="control-select"
+    value={filterOption}
+    onChange={(e) => setFilterOption(e.target.value)}
+  >
+    <option value="all">Wszystkie kategorie</option>
+    {incomeCategories.map(cat => (
+      <option key={cat.id} value={cat.id}>
+        {cat.name}
+      </option>
+    ))}
+  </select>
+
+  <select
+    className="control-select"
+    value={sortOption}
+    onChange={(e) => setSortOption(e.target.value)}
+  >
+    {sortOptions.map(option => (
+      <option key={option.value} value={option.value}>
+        {option.label}
+      </option>
+    ))}
+  </select>
+</div>
+
           <button
             className="btn btn-primary"
             onClick={() => setShowAddForm(true)}
@@ -755,8 +900,91 @@ const IncomeTab = ({ transactions }) => {
                 </div>
               )}
 
+              {/* SEKCJA MASZYNY DLA SPRZEDAŻY MASZYN */}
+              {newTransaction.category === 'sprzedaz_maszyn' && (
+                <div className="warehouse-section">
+                  <div className="section-header">
+                    <span className="section-icon">🚜</span>
+                    <span className="section-title">Wybierz maszynę do sprzedaży</span>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Wybierz maszynę *</label>
+                    <CustomSelect
+                      options={machineOptions}
+                      value={newTransaction.machineId}
+                      onChange={handleMachineChange}
+                      placeholder="Wybierz maszynę do sprzedaży..."
+                      searchable={true}
+                      disabled={loading || loadingMachines || machinesData.length === 0}
+                    />
+                    {loadingMachines && (
+                      <div className="form-hint">
+                        <i className="fas fa-spinner fa-spin"></i> Ładowanie maszyn...
+                      </div>
+                    )}
+                    {!loadingMachines && machinesData.length === 0 && (
+                      <div className="form-hint warning">
+                        ⚠️ Brak dostępnych maszyn do sprzedaży w garażu
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedMachine && (
+                    <div className="product-info-card">
+                      <div className="product-header">
+                        <span className="product-icon">
+                          {getMachineIcon(selectedMachine.category)}
+                        </span>
+                        <div className="product-details">
+                          <h5>{selectedMachine.name}</h5>
+                          <div className="product-stats">
+                            <span className="stat">
+                              <strong>Marka/Model:</strong> {selectedMachine.brand || 'Brak'} {selectedMachine.model || ''}
+                            </span>
+                            <span className="stat">
+                              <strong>Kategoria:</strong> {categoryOptions.find(opt => opt.value === selectedMachine.category)?.label || selectedMachine.category}
+                            </span>
+                            <span className="stat">
+                              <strong>Rok:</strong> {selectedMachine.year || '?'}
+                            </span>
+                            <span className="stat">
+                              <strong>Status:</strong> {translateMachineStatus(selectedMachine.status)}
+                            </span>
+                            {selectedMachine.purchasePrice > 0 && (
+                              <span className="stat">
+                                <strong>Cena zakupu:</strong> {formatCurrency(selectedMachine.purchasePrice)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Cena sprzedaży (zł) *</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={newTransaction.amount}
+                          onChange={handleAmountChange}
+                          required
+                          disabled={loading}
+                          placeholder="Wprowadź cenę sprzedaży..."
+                        />
+                        {selectedMachine.purchasePrice > 0 && (
+                          <div className="form-hint info">
+                            💡 Cena zakupu tej maszyny: {formatCurrency(selectedMachine.purchasePrice)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* KWOTA DLA INNYCH KATEGORII */}
-              {newTransaction.category !== 'sprzedaz_plonow' && newTransaction.category !== 'sprzedaz_zwierzat' && (
+              {newTransaction.category !== 'sprzedaz_plonow' && newTransaction.category !== 'sprzedaz_zwierzat' && newTransaction.category !== 'sprzedaz_maszyn' && (
                 <div className="form-group">
                   <label>Kwota (zł) *</label>
                   <input
@@ -830,8 +1058,8 @@ const IncomeTab = ({ transactions }) => {
               <th>Kategoria</th>
               <th>Opis</th>
               <th>Kwota</th>
-              <th>Kategoria</th>
-              <th>Źródło</th>
+              <th>Szczegóły</th>
+              <th>Typ</th>
             </tr>
           </thead>
           <tbody>
@@ -850,6 +1078,8 @@ const IncomeTab = ({ transactions }) => {
                   </td>
                   <td>{transaction.description}</td>
                   <td className="amount positive">+{formatCurrency(transaction.amount)}</td>
+
+                  {/* Kolumna Szczegóły */}
                   <td>
                     {transaction.productName ? (
                       <span className="product-badge">
@@ -860,8 +1090,21 @@ const IncomeTab = ({ transactions }) => {
                       <span className="animal-badge">
                         {transaction.animalName} ({transaction.earTag})
                       </span>
+                    ) : transaction.machineName ? (
+                      <div className="machine-details">
+                        <span className="machine-badge">
+                          {transaction.machineName}
+                        </span>
+                        {transaction.machineStatus && (
+                          <span className="machine-status">
+                            Status: {translateMachineStatus(transaction.machineStatus)}
+                          </span>
+                        )}
+                      </div>
                     ) : '-'}
                   </td>
+
+                  {/* Kolumna Typ - ZMIENIONE wyświetlanie */}
                   <td>
                     {transaction.source === 'warehouse' ? (
                       <span className="warehouse-badge">Magazyn</span>
@@ -878,7 +1121,7 @@ const IncomeTab = ({ transactions }) => {
             })}
             {transactions.length === 0 && (
               <tr>
-                <td colSpan="6" className="no-data">
+                <td colSpan="6" className="no-data"> {/* Zmień colSpan na 6 */}
                   Brak transakcji przychodowych
                 </td>
               </tr>

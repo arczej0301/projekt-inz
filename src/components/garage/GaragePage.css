@@ -1060,3 +1060,187 @@
     justify-content: flex-start;
   }
 }
+
+/* Sekcja finansowa */
+.finance-section {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.section-icon {
+  font-size: 20px;
+  margin-right: 10px;
+}
+
+.section-title {
+  font-weight: 600;
+  color: #333;
+}
+
+/* Checkbox grupa */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Radio grupa */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: white;
+}
+
+.radio-option:hover {
+  background-color: #f8f9fa;
+  border-color: #007bff;
+}
+
+.radio-option input[type="radio"] {
+  margin-right: 12px;
+  width: 18px;
+  height: 18px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.radio-label .icon {
+  font-size: 20px;
+  min-width: 24px;
+}
+
+.radio-label .text {
+  font-weight: 500;
+  color: #333;
+}
+
+/* Podgląd transakcji */
+.transaction-preview {
+  margin: 20px 0;
+}
+
+.preview-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.preview-icon {
+  font-size: 24px;
+  margin-right: 12px;
+}
+
+.preview-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.preview-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 5px 0;
+}
+
+.preview-row .label {
+  color: #666;
+  font-size: 14px;
+  min-width: 80px;
+}
+
+.preview-row .value {
+  font-weight: 500;
+  text-align: right;
+  flex: 1;
+  padding-left: 10px;
+}
+
+.amount-positive {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.amount-negative {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.form-hint.warning {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  color: #856404;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.form-hint.warning strong {
+  color: #856404;
+}
+
+/* Responsywność dla formularza */
+@media (max-width: 768px) {
+  .finance-section {
+    padding: 12px;
+  }
+  
+  .preview-row {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .preview-row .value {
+    text-align: left;
+    padding-left: 0;
+  }
+}

@@ -24,9 +24,9 @@ export const useFinance = () => {
 
   // Kategorie transakcji - ZMIENIONE NA POLSKIE IDENTYFIKATORY
   const incomeCategories = [
-    { id: 'sprzedaz_plonow', name: 'Sprzedaż plonów', icon: '🌾', color: '#4caf50' },
-    { id: 'sprzedaz_zwierzat', name: 'Sprzedaż zwierząt', icon: '🐄', color: '#8bc34a' },
-    { id: 'sprzedaz_maszyn', name: 'Sprzedaż maszyn', icon: '🚜', color: '#607d8b' },
+    { id: 'sprzedaz_plonow', name: 'Plony', icon: '🌾', color: '#4caf50' },
+    { id: 'sprzedaz_zwierzat', name: 'Zwierzęta', icon: '🐄', color: '#8bc34a' },
+    { id: 'sprzedaz_maszyn', name: 'Maszyny', icon: '🚜', color: '#607d8b' },
     { id: 'dotacje', name: 'Dotacje', icon: '💰', color: '#ffc107' },
     { id: 'inne_przychody', name: 'Inne przychody', icon: '📈', color: '#9c27b0' }
   ]
@@ -34,11 +34,11 @@ export const useFinance = () => {
   const expenseCategories = [
     { id: 'zwierzeta', name: 'Zwierzęta', icon: '🐄', color: '#795548' },
     { id: 'maszyny', name: 'Maszyny', icon: '🚜', color: '#607d8b' },
-    { id: 'zboza', name: 'Zboża', icon: '🌾', color: '#4caf50' },
+    { id: 'zboza', name: 'Plony', icon: '🌾', color: '#4caf50' },
     { id: 'nawozy_nasiona', name: 'Nawozy i nasiona', icon: '🌱', color: '#8bc34a' },
-    { id: 'pasze', name: 'Pasze', icon: '🌿', color: '#ff9800' },
+    { id: 'pasze', name: 'Pasza', icon: '🌿', color: '#ff9800' },
     { id: 'paliwo', name: 'Paliwo', icon: '⛽', color: '#f44336' },
-    { id: 'sprzet_czesci', name: 'Sprzęt i części', icon: '🛠️', color: '#ff5722' },
+    { id: 'sprzet_czesci', name: 'Narzędzia i części', icon: '🛠️', color: '#ff5722' },
     { id: 'naprawy_konserwacja', name: 'Naprawa i konserwacja', icon: '🔧', color: '#3f51b5' },
     { id: 'inne_koszty', name: 'Inne koszty', icon: '📉', color: '#e91e63' }
   ]
@@ -56,13 +56,15 @@ export const useFinance = () => {
     'sprzet_czesci': 'tools',
     'naprawa_konserwacja': 'maintenance',
     'inne_koszty': 'other',
+    'sprzedaz_maszyn': 'tools',
     
     // Transakcje przychodowe (pozostają bez zmian)
     'sprzedaz_plonow': 'food',
     'sprzedaz_zwierzat': 'animals',
     'produkty_zwierzece': 'animals',
     'dotacje': 'other',
-    'inne_przychody': 'other'
+    'inne_przychody': 'other',
+    'maszyny': 'tools'
   }
 
   // Mapowanie odwrotne - ZAKTUALIZOWANE
@@ -74,7 +76,8 @@ export const useFinance = () => {
     'animals': ['zwierzeta', 'sprzedaz_zwierzat', 'produkty_zwierzece', 'zakup_zwierzat'],
     'maintenance': ['naprawa_konserwacja'],
     'taxes': ['podatki_oplaty'],
-    'other': ['dotacje', 'inne_przychody', 'inne_koszty']
+    'other': ['dotacje', 'inne_przychody', 'inne_koszty'],
+    'tools': ['maszyny', 'sprzet_czesci', 'sprzedaz_maszyn'],
   }
 
   // Funkcja do mapowania kategorii
@@ -87,19 +90,30 @@ export const useFinance = () => {
   const q = query(collection(db, 'finance_transactions'))
 
   const unsubscribe = onSnapshot(q,
-    (querySnapshot) => {
-      const transactionsData = []
-      querySnapshot.forEach((doc) => {
-        const data = doc.data()
-        transactionsData.push({
-          id: doc.id,
-          ...data,
-          date: data.date?.toDate?.() || data.date
-        })
+  (querySnapshot) => {
+    const transactionsData = []
+    querySnapshot.forEach((doc) => {
+      const data = doc.data()
+      transactionsData.push({
+        id: doc.id,
+        ...data,
+        date: data.date?.toDate?.() || data.date
       })
-      setTransactions(transactionsData) // NIE sortuj tutaj
-      setLoading(false)
-    },
+    })
+
+    // DODAJ sortowanie od najnowszych
+    const sortedTransactions = transactionsData.sort((a, b) => {
+      const getDate = (t) => {
+        if (t.date?.toDate) return t.date.toDate()
+        if (t.date instanceof Date) return t.date
+        return new Date(t.date || 0)
+      }
+      return getDate(b).getTime() - getDate(a).getTime()
+    })
+    
+    setTransactions(sortedTransactions)
+    setLoading(false)
+  },
       (error) => {
         console.error('Błąd przy pobieraniu transakcji:', error)
         setError(`Błąd przy pobieraniu danych: ${error.message}`)
@@ -204,14 +218,39 @@ export const useFinance = () => {
           transactionData.description
         )
       }
-
+      
       return { success: true, id: docRef.id }
     } catch (error) {
       console.error('Błąd przy dodawaniu transakcji:', error)
       return { success: false, error: error.message }
     }
   }
+  const updateMachineStatusAfterSale = async (machineId, transactionId, description) => {
+  try {
+    // Tu potrzebujesz garageService lub bezpośredniego Firestore
+    await updateDoc(doc(db, 'garage', machineId), {
+      status: 'sold',
+      soldDate: new Date(),
+      soldTransactionId: transactionId,
+      lastUpdate: new Date()
+    })
 
+    // Możesz też dodać do historii
+    await addDoc(collection(db, 'garageHistory'), {
+      machineId: machineId,
+      operation: 'sale',
+      timestamp: new Date(),
+      transactionId: transactionId,
+      description: description || 'Sprzedaż maszyny'
+    })
+
+    console.log(`✅ Maszyna oznaczona jako sprzedana: ${machineId}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Błąd przy aktualizacji statusu maszyny:', error)
+    return { success: false, error: error.message }
+  }
+}
   // DODAJ NOWĄ FUNKCJĘ DO ZMNIEJSZANIA STANU MAGAZYNOWEGO
   const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, description) => {
     try {
@@ -450,6 +489,7 @@ export const useFinance = () => {
     getBudgetsWithStatus,
     getBudgetCategory,
     categoryMapping,
-    reverseCategoryMapping
+    reverseCategoryMapping,
+    updateMachineStatusAfterSale,
   }
 }
