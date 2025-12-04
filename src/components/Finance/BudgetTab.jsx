@@ -6,21 +6,21 @@ import CustomSelect from '../common/CustomSelect'
 import './FinanceComponents.css'
 
 const BudgetTab = () => {
-  const { 
-    budgets, 
-    transactions, 
-    expenseCategories, 
+  const {
+    budgets,
+    transactions,
+    expenseCategories,
     incomeCategories,
-    addBudget, 
-    updateBudget, 
+    addBudget,
+    updateBudget,
     addTransaction,
     getBudgetsWithStatus,
     categoryMapping,
     reverseCategoryMapping
   } = useFinance()
-  
+
   const { warehouseData, categories: warehouseCategories, updateStock } = useWarehouse()
-  
+
   const [showAddForm, setShowAddForm] = useState(false)
   const [newBudget, setNewBudget] = useState({
     category: '',
@@ -34,7 +34,7 @@ const BudgetTab = () => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return '0,00 zł'
     }
-    
+
     const numAmount = parseFloat(amount)
     const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
     return `${formatted} zł`
@@ -43,14 +43,14 @@ const BudgetTab = () => {
   // Poprawiona funkcja do formatowania liczb
   const formatNumber = (number) => {
     if (number === null || number === undefined || isNaN(number)) return '0'
-    
+
     const num = parseFloat(number)
-    
+
     // Dla liczb zmiennoprzecinkowych - formatuj z 2 miejscami po przecinku
     if (num % 1 !== 0) {
       return num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
     }
-    
+
     // Dla liczb całkowitych
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
   }
@@ -59,7 +59,7 @@ const BudgetTab = () => {
   const getBudgetCategoryFromWarehouse = (warehouseCategory) => {
     const warehouseToBudgetMap = {
       'zboza': 'food',
-      'mleko': 'food', 
+      'mleko': 'food',
       'nawozy': 'supplies',
       'paliwo': 'transport',
       'pasze': 'supplies',
@@ -115,49 +115,49 @@ const BudgetTab = () => {
     return budgetsWithStatus.map(budget => {
       // Znajdź powiązane kategorie magazynowe
       const relatedWarehouseCategories = getWarehouseCategoriesFromBudget(budget.category)
-      
+
       // Zbierz wszystkie produkty z powiązanych kategorii
       let categoryInventory = []
       let totalInventoryValue = 0
       let lowStockItems = []
       let estimatedRestockCost = 0
-      
+
       if (relatedWarehouseCategories.length > 0) {
         relatedWarehouseCategories.forEach(catId => {
           const items = warehouseData[catId] || []
           categoryInventory = [...categoryInventory, ...items]
         })
-        
+
         // Oblicz wartość magazynu
-        totalInventoryValue = categoryInventory.reduce((sum, item) => 
+        totalInventoryValue = categoryInventory.reduce((sum, item) =>
           sum + ((item.quantity || 0) * (item.price || 0)), 0
         )
-        
+
         // Znajdź produkty z niskim stanem
-        lowStockItems = categoryInventory.filter(item => 
+        lowStockItems = categoryInventory.filter(item =>
           (item.quantity || 0) < (item.minStock || 0)
         )
-        
+
         // Oblicz koszt uzupełnienia
-        estimatedRestockCost = lowStockItems.reduce((sum, item) => 
+        estimatedRestockCost = lowStockItems.reduce((sum, item) =>
           sum + (((item.minStock || 0) - (item.quantity || 0)) * (item.price || 0)), 0
         )
       }
-      
+
       // Znajdź transakcje powiązane z magazynem dla tego budżetu
-      const inventoryTransactions = transactions.filter(t => 
-        t.budgetCategory === budget.category && 
+      const inventoryTransactions = transactions.filter(t =>
+        t.budgetCategory === budget.category &&
         (t.inventoryRelated === true || t.source === 'warehouse')
       )
-      
+
       const purchaseExpenses = inventoryTransactions
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + (t.amount || 0), 0)
-      
+
       const salesIncome = inventoryTransactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + (t.amount || 0), 0)
-      
+
       return {
         ...budget,
         categoryInventory,
@@ -168,7 +168,7 @@ const BudgetTab = () => {
         inventoryTransactions,
         purchaseExpenses,
         salesIncome,
-        relatedWarehouseCategories: relatedWarehouseCategories.map(id => 
+        relatedWarehouseCategories: relatedWarehouseCategories.map(id =>
           warehouseCategories.find(cat => cat.id === id)?.name || id
         ),
         hasWarehouseIntegration: relatedWarehouseCategories.length > 0
@@ -179,15 +179,15 @@ const BudgetTab = () => {
   // PODSUMOWANIE MAGAZYNOWE
   const inventorySummary = useMemo(() => {
     const allInventory = Object.values(warehouseData).flat()
-    const totalInventoryValue = allInventory.reduce((sum, item) => 
+    const totalInventoryValue = allInventory.reduce((sum, item) =>
       sum + ((item.quantity || 0) * (item.price || 0)), 0
     )
-    
-    const lowStockItems = allInventory.filter(item => 
+
+    const lowStockItems = allInventory.filter(item =>
       (item.quantity || 0) < (item.minStock || 0)
     )
-    
-    const totalEstimatedRestockCost = lowStockItems.reduce((sum, item) => 
+
+    const totalEstimatedRestockCost = lowStockItems.reduce((sum, item) =>
       sum + (((item.minStock || 0) - (item.quantity || 0)) * (item.price || 0)), 0
     )
 
@@ -200,7 +200,7 @@ const BudgetTab = () => {
 
   const handleAddBudget = async (e) => {
     e.preventDefault()
-    
+
     if (!newBudget.category || !newBudget.amount) {
       alert('Proszę wypełnić wszystkie wymagane pola')
       return
@@ -223,7 +223,7 @@ const BudgetTab = () => {
   // FUNKCJA DO AUTOMATYCZNEGO ZAKUPU PRODUKTU Z BUDŻETU
   const handleAutoPurchase = async (budget, product, quantityToBuy) => {
     const totalCost = quantityToBuy * (product.price || 0)
-    
+
     if (totalCost > budget.remaining) {
       alert(`Brak środków w budżecie! Potrzeba: ${formatCurrency(totalCost)}, dostępne: ${formatCurrency(budget.remaining)}`)
       return
@@ -231,21 +231,20 @@ const BudgetTab = () => {
 
     // 1. Znajdź kategorię transakcji dla tego produktu
     let transactionCategory = 'inne_koszty'
-    
+
     // Mapuj kategorię magazynową na finansową
     const warehouseCategory = product.category
     if (warehouseCategory === 'zboza' || warehouseCategory === 'warzywa' || warehouseCategory === 'owoce') {
-      transactionCategory = 'nasiona'
+      transactionCategory = 'zboza' // było: 'nasiona'
     } else if (warehouseCategory === 'nawozy') {
-      transactionCategory = 'nawozy'
+      transactionCategory = 'nawozy_nasiona' // było: 'nawozy'
     } else if (warehouseCategory === 'pasze') {
-      transactionCategory = 'pasze'
+      transactionCategory = 'pasze' // bez zmian
     } else if (warehouseCategory === 'paliwo') {
-      transactionCategory = 'paliwo'
+      transactionCategory = 'paliwo' // bez zmian
     } else if (warehouseCategory === 'narzedzia') {
-      transactionCategory = 'sprzet_czesci'
+      transactionCategory = 'sprzet_czesci' // było: 'sprzet_czesci'
     }
-
     // 2. Dodaj transakcję wydatku
     const transactionResult = await addTransaction({
       type: 'expense',
@@ -283,10 +282,10 @@ const BudgetTab = () => {
     }
 
     const totalIncome = quantityToSell * (product.price || 0)
-    
+
     // 1. Znajdź kategorię transakcji dla tego produktu
     let transactionCategory = 'inne_przychody'
-    
+
     // Mapuj kategorię magazynową na finansową
     const warehouseCategory = product.category
     if (warehouseCategory === 'zboza' || warehouseCategory === 'warzywa' || warehouseCategory === 'owoce') {
@@ -326,8 +325,8 @@ const BudgetTab = () => {
 
   // Znajdź kategorię budżetową dla wyświetlania
   const getBudgetCategoryInfo = (categoryId) => {
-    return budgetCategoryOptions.find(cat => cat.value === categoryId) || 
-           { label: categoryId, icon: '💰', color: '#9c27b0' }
+    return budgetCategoryOptions.find(cat => cat.value === categoryId) ||
+      { label: categoryId, icon: '💰', color: '#9c27b0' }
   }
 
   return (
@@ -335,7 +334,7 @@ const BudgetTab = () => {
       <div className="tab-header">
         <h3>Budżet Magazynowy</h3>
         <div className="tab-actions">
-          <button 
+          <button
             className="btn btn-primary"
             onClick={() => setShowAddForm(true)}
           >
@@ -353,7 +352,7 @@ const BudgetTab = () => {
             <div className="card-amount">{formatCurrency(inventorySummary.totalInventoryValue)}</div>
           </div>
         </div>
-        
+
         <div className="summary-card low-stock">
           <div className="card-icon">⚠️</div>
           <div className="card-content">
@@ -361,7 +360,7 @@ const BudgetTab = () => {
             <div className="card-amount">{inventorySummary.totalLowStockItems} szt.</div>
           </div>
         </div>
-        
+
         <div className="summary-card restock-cost">
           <div className="card-icon">💰</div>
           <div className="card-content">
@@ -385,7 +384,7 @@ const BudgetTab = () => {
                 <CustomSelect
                   options={budgetCategoryOptions}
                   value={newBudget.category}
-                  onChange={(value) => setNewBudget(prev => ({...prev, category: value}))}
+                  onChange={(value) => setNewBudget(prev => ({ ...prev, category: value }))}
                   placeholder="Wybierz kategorię..."
                   searchable={true}
                 />
@@ -400,12 +399,12 @@ const BudgetTab = () => {
 
               <div className="form-group">
                 <label>Budżet na okres (zł) *</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="0.01"
                   min="0"
                   value={newBudget.amount}
-                  onChange={(e) => setNewBudget(prev => ({...prev, amount: e.target.value}))}
+                  onChange={(e) => setNewBudget(prev => ({ ...prev, amount: e.target.value }))}
                   required
                 />
               </div>
@@ -415,17 +414,17 @@ const BudgetTab = () => {
                 <CustomSelect
                   options={periodOptions}
                   value={newBudget.period}
-                  onChange={(value) => setNewBudget(prev => ({...prev, period: value}))}
+                  onChange={(value) => setNewBudget(prev => ({ ...prev, period: value }))}
                   placeholder="Wybierz okres..."
                 />
               </div>
 
               <div className="form-group">
                 <label>Opis (opcjonalnie)</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={newBudget.description}
-                  onChange={(e) => setNewBudget(prev => ({...prev, description: e.target.value}))}
+                  onChange={(e) => setNewBudget(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="np. 'Budżet na zakup nasion na wiosnę'"
                 />
               </div>
@@ -453,12 +452,12 @@ const BudgetTab = () => {
         ) : (
           budgetsWithInventoryData.map(budget => {
             const categoryInfo = getBudgetCategoryInfo(budget.category)
-            
+
             return (
               <div key={budget.id} className="budget-item">
                 <div className="budget-header">
                   <div className="budget-category">
-                    <span 
+                    <span
                       className="category-icon"
                       style={{ color: categoryInfo.color }}
                     >
@@ -467,12 +466,12 @@ const BudgetTab = () => {
                     <div>
                       <div className="category-name">{categoryInfo.label}</div>
                       <div className="budget-period">
-                        {budget.period === 'monthly' ? 'Miesięczny' : 
-                         budget.period === 'quarterly' ? 'Kwartalny' : 'Roczny'}
+                        {budget.period === 'monthly' ? 'Miesięczny' :
+                          budget.period === 'quarterly' ? 'Kwartalny' : 'Roczny'}
                       </div>
                       <div className="budget-stats">
                         <small>
-                          Wydano: {formatCurrency(budget.spent)} / 
+                          Wydano: {formatCurrency(budget.spent)} /
                           Budżet: {formatCurrency(budget.amount)}
                         </small>
                       </div>
@@ -511,7 +510,7 @@ const BudgetTab = () => {
                 {/* PROGRES BUDŻETU */}
                 <div className="budget-progress">
                   <div className="progress-bar">
-                    <div 
+                    <div
                       className={`progress-fill ${budget.status}`}
                       style={{ width: `${Math.min(budget.percentage, 100)}%` }}
                     ></div>
@@ -532,7 +531,7 @@ const BudgetTab = () => {
                     {budget.lowStockProducts.map(product => {
                       const quantityToBuy = (product.minStock || 0) - (product.quantity || 0)
                       const totalCost = quantityToBuy * (product.price || 0)
-                      
+
                       return (
                         <div key={product.id} className="purchase-item">
                           <div className="product-info">
@@ -543,7 +542,7 @@ const BudgetTab = () => {
                           </div>
                           <div className="purchase-actions">
                             <span className="product-cost">{formatCurrency(totalCost)}</span>
-                            <button 
+                            <button
                               className="btn-buy"
                               onClick={() => handleAutoPurchase(budget, product, quantityToBuy)}
                               disabled={totalCost > budget.remaining}

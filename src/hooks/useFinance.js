@@ -26,52 +26,53 @@ export const useFinance = () => {
   const incomeCategories = [
     { id: 'sprzedaz_plonow', name: 'Sprzedaż plonów', icon: '🌾', color: '#4caf50' },
     { id: 'sprzedaz_zwierzat', name: 'Sprzedaż zwierząt', icon: '🐄', color: '#8bc34a' },
-    { id: 'produkty_zwierzece', name: 'Produkty zwierzęce', icon: '🥛', color: '#2196f3' },
+    { id: 'sprzedaz_maszyn', name: 'Sprzedaż maszyn', icon: '🚜', color: '#607d8b' },
     { id: 'dotacje', name: 'Dotacje', icon: '💰', color: '#ffc107' },
     { id: 'inne_przychody', name: 'Inne przychody', icon: '📈', color: '#9c27b0' }
   ]
 
   const expenseCategories = [
-    { id: 'nasiona', name: 'Nasiona', icon: '🌱', color: '#4caf50' },
-    { id: 'nawozy', name: 'Nawozy', icon: '🧪', color: '#ff9800' },
-    { id: 'pasze', name: 'Pasze', icon: '🌿', color: '#8bc34a' },
+    { id: 'zwierzeta', name: 'Zwierzęta', icon: '🐄', color: '#795548' },
+    { id: 'maszyny', name: 'Maszyny', icon: '🚜', color: '#607d8b' },
+    { id: 'zboza', name: 'Zboża', icon: '🌾', color: '#4caf50' },
+    { id: 'nawozy_nasiona', name: 'Nawozy i nasiona', icon: '🌱', color: '#8bc34a' },
+    { id: 'pasze', name: 'Pasze', icon: '🌿', color: '#ff9800' },
     { id: 'paliwo', name: 'Paliwo', icon: '⛽', color: '#f44336' },
-    { id: 'sprzet_czesci', name: 'Sprzęt i części', icon: '🛠️', color: '#607d8b' },
-    { id: 'zakup_zwierzat', name: 'Zakup zwierząt', icon: '🐄', color: '#795548' },
-    { id: 'naprawy_konserwacja', name: 'Naprawy i konserwacja', icon: '🔧', color: '#ff5722' },
-    { id: 'podatki_oplaty', name: 'Podatki i opłaty', icon: '🏛️', color: '#3f51b5' },
+    { id: 'sprzet_czesci', name: 'Sprzęt i części', icon: '🛠️', color: '#ff5722' },
+    { id: 'naprawy_konserwacja', name: 'Naprawa i konserwacja', icon: '🔧', color: '#3f51b5' },
     { id: 'inne_koszty', name: 'Inne koszty', icon: '📉', color: '#e91e63' }
   ]
 
-  // Mapowanie kategorii dla budżetów
+  
+  // Mapowanie kategorii dla budżetów - ZAKTUALIZOWANE
   const categoryMapping = {
-    // Transakcje przychodowe → Kategorie budżetowe
+    // Transakcje wydatkowe → Kategorie budżetowe  
+    'zwierzeta': 'animals',
+    'maszyny': 'tools',
+    'zboza': 'food',
+    'nawozy_nasiona': 'supplies',
+    'pasze': 'supplies',
+    'paliwo': 'transport',
+    'sprzet_czesci': 'tools',
+    'naprawa_konserwacja': 'maintenance',
+    'inne_koszty': 'other',
+    
+    // Transakcje przychodowe (pozostają bez zmian)
     'sprzedaz_plonow': 'food',
     'sprzedaz_zwierzat': 'animals',
     'produkty_zwierzece': 'animals',
     'dotacje': 'other',
-    'inne_przychody': 'other',
-
-    // Transakcje wydatkowe → Kategorie budżetowe  
-    'nasiona': 'food',
-    'nawozy': 'supplies',
-    'pasze': 'supplies',
-    'paliwo': 'transport',
-    'sprzet_czesci': 'tools',
-    'zakup_zwierzat': 'animals',
-    'naprawy_konserwacja': 'maintenance',
-    'podatki_oplaty': 'taxes',
-    'inne_koszty': 'other'
+    'inne_przychody': 'other'
   }
 
-  // Mapowanie odwrotne
+  // Mapowanie odwrotne - ZAKTUALIZOWANE
   const reverseCategoryMapping = {
-    'food': ['nasiona', 'sprzedaz_plonow'],
-    'supplies': ['nawozy', 'pasze'],
+    'food': ['zboza', 'sprzedaz_plonow'],
+    'supplies': ['nawozy_nasiona', 'pasze'],
     'transport': ['paliwo'],
-    'tools': ['sprzet_czesci'],
-    'animals': ['zakup_zwierzat', 'sprzedaz_zwierzat', 'produkty_zwierzece'],
-    'maintenance': ['naprawy_konserwacja'],
+    'tools': ['maszyny', 'sprzet_czesci'],
+    'animals': ['zwierzeta', 'sprzedaz_zwierzat', 'produkty_zwierzece', 'zakup_zwierzat'],
+    'maintenance': ['naprawa_konserwacja'],
     'taxes': ['podatki_oplaty'],
     'other': ['dotacje', 'inne_przychody', 'inne_koszty']
   }
