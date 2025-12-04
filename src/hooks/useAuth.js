@@ -192,6 +192,36 @@ export const useAuth = () => {
     }
   };
 
+  const registerWithEmail = async (email, password, userData) => {
+    try {
+      // 1. Rejestracja w Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // 2. Zapis dodatkowych danych w Firestore
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email,
+        ...userData,
+        uid: userCredential.user.uid,
+        createdAt: serverTimestamp()
+      })
+      
+      return { success: true }
+      
+    } catch (error) {
+      let errorMessage = 'Wystąpił błąd podczas rejestracji'
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Adres email jest już używany'
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Nieprawidłowy adres email'
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Hasło jest zbyt słabe'
+      }
+      
+      return { success: false, error: errorMessage }
+    }
+  }
+  
   const loginWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -281,6 +311,7 @@ export const useAuth = () => {
     showWarning,
     countdown,
     updateUserProfile,
-    changePassword
+    changePassword,
+    registerWithEmail
   };
 };

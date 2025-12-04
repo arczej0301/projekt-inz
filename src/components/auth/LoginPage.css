@@ -145,3 +145,51 @@
   margin-bottom: 15px;
   text-align: center;
 }
+
+.register-mode .login-container {
+  max-width: 500px; /* Większy kontener dla formularza rejestracji */
+}
+
+.toggle-register {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--gray);
+}
+
+.toggle-register p {
+  color: #666;
+  margin: 0;
+}
+
+.toggle-button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 5px;
+  text-decoration: underline;
+}
+
+.toggle-button:hover {
+  color: var(--primary-dark);
+}
+
+/* Styl dla formularza rejestracji - możesz dostosować */
+.register-mode .login-form {
+  margin-bottom: 10px;
+}
+
+.register-mode .form-group {
+  margin-bottom: 15px;
+}
+
+.register-mode .form-group label {
+  font-size: 0.9rem;
+}
+
+.register-mode .form-group input {
+  padding: 8px 10px;
+  font-size: 0.95rem;
+}
