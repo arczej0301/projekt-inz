@@ -13,6 +13,9 @@ const GaragePage = () => {
   const [showRepairHistory, setShowRepairHistory] = useState(false);
   const [currentRepairMachine, setCurrentRepairMachine] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [repairHistory, setRepairHistory] = useState([]); // Nowy stan dla historii napraw
+  const [showRepairList, setShowRepairList] = useState(false); // Nowy stan dla listy napraw
+  const [loadingRepairHistory, setLoadingRepairHistory] = useState(false);
 
   // Stany dla custom selectów
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -46,7 +49,10 @@ const GaragePage = () => {
     cost: '',
     parts: '',
     mechanic: '',
-    nextServiceDate: ''
+    nextServiceDate: '',
+    lastService: new Date().toISOString().split('T')[0],
+    serviceInterval: 12,
+    changeStatusToActive: true
   });
 
   useEffect(() => {
@@ -59,10 +65,28 @@ const GaragePage = () => {
       const data = await garageService.getAllMachines();
       setMachines(data);
     } catch (error) {
-      console.error('Błąd ładowania maszyn:', error);
       alert('Błąd podczas ładowania danych garażu');
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  // Funkcja do ładowania historii napraw
+  const loadRepairHistory = async (machineId) => {
+    setLoadingRepairHistory(true);
+
+    try {
+      const history = await garageService.getRepairHistory(machineId);
+
+      setRepairHistory(history);
+      return history; // Zwróć dane
+
+    } catch (error) {
+      setRepairHistory([]);
+      return [];
+    } finally {
+      setLoadingRepairHistory(false);
     }
   };
 
@@ -78,7 +102,6 @@ const GaragePage = () => {
 
   // POPRAWIONE: Funkcja do custom select
   const handleCustomSelect = (field, value) => {
-    console.log('Setting', field, 'to:', value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -92,22 +115,21 @@ const GaragePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Walidacja
+    if (!formData.name.trim()) {
+      alert('Nazwa maszyny jest wymagana');
+      return;
+    }
+
     try {
-      if (editingId) {
-        await garageService.updateMachine(editingId, formData);
-      } else {
-        await garageService.addMachine(formData);
-      }
-      resetForm();
-      loadMachines();
+      // ... reszta kodu
     } catch (error) {
-      console.error('Błąd zapisu:', error);
-      alert('Błąd podczas zapisywania maszyny');
+      alert('Błąd podczas zapisywania maszyny: ' + error.message);
     }
   };
 
   const handleEdit = (machine) => {
-    console.log('Editing machine:', machine);
     setFormData({
       name: machine.name || '',
       category: machine.category || '',
@@ -138,7 +160,6 @@ const GaragePage = () => {
         setSelectedMachine(null);
       }
     } catch (error) {
-      console.error('Error deleting machine:', error);
       alert('Błąd podczas usuwania maszyny: ' + error.message);
       setDeleteConfirm(null);
     }
@@ -173,6 +194,20 @@ const GaragePage = () => {
   // Funkcje do zarządzania historią napraw
   const openRepairHistory = (machine) => {
     setCurrentRepairMachine(machine);
+
+    // Ustaw wartości z maszyny do formularza naprawy
+    setRepairForm({
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      cost: '',
+      parts: '',
+      mechanic: '',
+      nextServiceDate: machine.nextService || '',
+      lastService: machine.lastService || new Date().toISOString().split('T')[0],
+      serviceInterval: machine.serviceInterval || 12,
+      changeStatusToActive: true
+    });
+
     setShowRepairHistory(true);
   };
 
@@ -185,7 +220,10 @@ const GaragePage = () => {
       cost: '',
       parts: '',
       mechanic: '',
-      nextServiceDate: ''
+      nextServiceDate: '',
+      lastService: new Date().toISOString().split('T')[0],
+      serviceInterval: 12,
+      changeStatusToActive: true
     });
   };
 
@@ -197,46 +235,126 @@ const GaragePage = () => {
       const repairData = {
         ...repairForm,
         machineId: currentRepairMachine.id,
+        machineName: currentRepairMachine.name,
         cost: parseFloat(repairForm.cost) || 0,
+        serviceInterval: parseInt(repairForm.serviceInterval) || 12,
         createdAt: new Date()
       };
 
-      if (repairForm.nextServiceDate) {
-        await garageService.updateMachine(currentRepairMachine.id, {
-          ...currentRepairMachine,
-          lastService: repairForm.date,
-          nextService: repairForm.nextServiceDate
-        });
+      // Dodaj naprawę do historii
+      await garageService.addRepair(repairData);
+
+      // Aktualizuj maszynę z nowymi danymi przeglądów
+      const updateData = {
+        ...currentRepairMachine,
+        lastService: repairForm.lastService,
+        nextService: repairForm.nextServiceDate,
+        serviceInterval: repairForm.serviceInterval
+      };
+
+      // Automatyczna zmiana statusu na "sprawny" jeśli zaznaczono
+      if (repairForm.changeStatusToActive) {
+        updateData.status = 'active';
       }
 
-      alert('Naprawa została zapisana!');
+      await garageService.updateMachine(currentRepairMachine.id, updateData);
+
+      alert('Naprawa/przegląd został zapisany!');
       closeRepairHistory();
       loadMachines();
     } catch (error) {
-      console.error('Błąd zapisu naprawy:', error);
       alert('Błąd podczas zapisywania naprawy');
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'status-active';
-      case 'maintenance': return 'status-maintenance';
-      case 'broken': return 'status-broken';
-      case 'sold': return 'status-sold';
-      default: return 'status-default';
+  // Nowa funkcja do sprawdzania czy maszyna wymaga przeglądu
+  const checkServiceDueStatus = (nextServiceDate, status) => {
+    if (!nextServiceDate || status === 'sold') return status;
+
+    const today = new Date();
+    const nextService = new Date(nextServiceDate);
+
+    // Ustaw godzinę na 00:00:00 dla poprawnego porównania
+    today.setHours(0, 0, 0, 0);
+    nextService.setHours(0, 0, 0, 0);
+
+    // Jeśli data przeglądu minęła i NIE ma już statusu "wymaga przeglądu"
+    if (nextService <= today && status !== 'needs_service') {
+      return 'needs_service';
     }
+
+    return status;
   };
 
+  // Funkcja do otwierania listy historii napraw
+  const openRepairList = async (machine) => {
+    setCurrentRepairMachine(machine);
+    setShowRepairList(true);
+
+    // Załaduj dane po otwarciu modala
+    await loadRepairHistory(machine.id);
+    setCurrentRepairMachine(machine);
+    setShowRepairList(true); // NAJPIERW pokaż modal
+
+    const history = await loadRepairHistory(machine.id);
+  };
+
+  const closeRepairList = () => {
+    setShowRepairList(false);
+    setCurrentRepairMachine(null);
+    setRepairHistory([]);
+  };
+
+  // Zaktualizuj funkcję getStatusText
   const getStatusText = (status) => {
     switch (status) {
       case 'active': return 'Sprawny';
       case 'maintenance': return 'W serwisie';
       case 'broken': return 'Awaria';
       case 'sold': return 'Sprzedany';
+      case 'needs_service': return 'Wymaga przeglądu';
       default: return status;
     }
   };
+
+  // Zaktualizuj funkcję getStatusColor
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return 'status-active';
+      case 'maintenance': return 'status-maintenance';
+      case 'broken': return 'status-broken';
+      case 'sold': return 'status-sold';
+      case 'needs_service': return 'status-warning';
+      default: return 'status-default';
+    }
+  };
+
+  // Funkcja do automatycznego sprawdzania przeglądów przy ładowaniu
+  useEffect(() => {
+    const updateMachineStatuses = async () => {
+      const updatedMachines = await Promise.all(
+        machines.map(async (machine) => {
+          const newStatus = checkServiceDueStatus(machine.nextService, machine.status);
+
+          if (newStatus !== machine.status && newStatus === 'needs_service') {
+            // Aktualizuj w bazie danych
+            await garageService.updateMachine(machine.id, {
+              ...machine,
+              status: newStatus
+            });
+            return { ...machine, status: newStatus };
+          }
+          return machine;
+        })
+      );
+
+      setMachines(updatedMachines);
+    };
+
+    if (machines.length > 0) {
+      updateMachineStatuses();
+    }
+  }, [machines]);
 
   // Opcje dla custom selectów
   const categoryOptions = [
@@ -255,7 +373,8 @@ const GaragePage = () => {
     { value: 'active', label: 'Sprawny' },
     { value: 'maintenance', label: 'W serwisie' },
     { value: 'broken', label: 'Awaria' },
-    { value: 'sold', label: 'Sprzedany' }
+    { value: 'sold', label: 'Sprzedany' },
+    { value: 'needs_service', label: 'Wymaga przeglądu' }
   ];
 
   const fuelTypeOptions = [
@@ -293,9 +412,7 @@ const GaragePage = () => {
   });
 
   const machinesNeedingService = machines.filter(machine => {
-    if (!machine.nextService) return false;
-    const nextServiceDate = new Date(machine.nextService);
-    return nextServiceDate <= new Date() && machine.status !== 'sold';
+    return machine.status === 'needs_service';
   });
 
   if (loading) {
@@ -313,51 +430,47 @@ const GaragePage = () => {
       'active': 'Sprawne',
       'maintenance': 'W serwisie',
       'broken': 'Awaria',
-      'sold': 'Sprzedane'
+      'sold': 'Sprzedane',
+      'needs_service': 'Wymagają przeglądu'
     };
     return options[filterStatus] || 'Wszystkie statusy';
   };
 
   // Dodaj tę funkcję do obsługi zmiany filtra
   const handleFilterStatusChange = (value) => {
-    console.log('Changing filter to:', value);
     setFilterStatus(value);
     setIsFilterStatusOpen(false);
   };
 
-  // DODAJ TE FUNKCJE do komponentu GaragePage (przed return)
+  const handleEditMachine = (machineId) => {
+    const machine = machines.find(m => m.id === machineId);
+    if (machine) {
+      handleEdit(machine);
+    }
+  };
 
-const handleEditMachine = (machineId) => {
-  const machine = machines.find(m => m.id === machineId);
-  if (machine) {
-    handleEdit(machine);
-  }
-};
+  const handleServiceRecord = (machineId) => {
+    const machine = machines.find(m => m.id === machineId);
+    if (machine) {
+      openRepairHistory(machine);
+    }
+  };
 
-const handleServiceRecord = (machineId) => {
-  const machine = machines.find(m => m.id === machineId);
-  if (machine) {
-    openRepairHistory(machine);
-  }
-};
-
-const deleteMachine = async (machineId) => {
-  try {
-    await garageService.deleteMachine(machineId);
-    setMachines(prev => prev.filter(m => m.id !== machineId));
-    alert('Maszyna została usunięta pomyślnie');
-  } catch (error) {
-    console.error('Błąd usuwania maszyny:', error);
-    throw error;
-  }
-};
+  const deleteMachine = async (machineId) => {
+    try {
+      await garageService.deleteMachine(machineId);
+      setMachines(prev => prev.filter(m => m.id !== machineId));
+      alert('Maszyna została usunięta pomyślnie');
+    } catch (error) {
+      throw error;
+    }
+  };
 
   return (
     <div className="garage-page">
       <div className="garage-header">
         <h2>Zarządzanie garażem</h2>
         <div className="actions-bar">
-
           <div className="search-box">
             <i className="fas fa-search"></i>
             <input
@@ -465,6 +578,12 @@ const deleteMachine = async (machineId) => {
                     >
                       Sprzedane
                     </div>
+                    <div
+                      className={`select-option ${filterStatus === 'needs_service' ? 'selected' : ''}`}
+                      onClick={() => handleFilterStatusChange('needs_service')}
+                    >
+                      Wymagają przeglądu
+                    </div>
                   </div>
                 )}
               </div>
@@ -530,34 +649,43 @@ const deleteMachine = async (machineId) => {
                         </div>
                       </td>
                       <td className="action-buttons">
-  <button
-    className="action-btn btn-primary"
-    onClick={(e) => {
-      e.stopPropagation();
-      handleEdit(machine); // Używamy bezpośrednio handleEdit
-    }}
-  >
-    <i className="fas fa-edit"></i> Edytuj
-  </button>
-  <button
-    className="action-btn btn-info"
-    onClick={(e) => {
-      e.stopPropagation();
-      openRepairHistory(machine); // Używamy bezpośrednio openRepairHistory
-    }}
-  >
-    <i className="fas fa-tools"></i> Serwis
-  </button>
-  <button
-    className="action-btn btn-danger"
-    onClick={(e) => {
-      e.stopPropagation();
-      setDeleteConfirm(machine);
-    }}
-  >
-    <i className="fas fa-trash"></i> Usuń
-  </button>
-</td>
+                        <button
+                          className="action-btn btn-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(machine);
+                          }}
+                        >
+                          <i className="fas fa-edit"></i> Edytuj
+                        </button>
+                        <button
+                          className="action-btn btn-info"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRepairHistory(machine);
+                          }}
+                        >
+                          <i className="fas fa-tools"></i> Serwis
+                        </button>
+                        <button
+                          className="action-btn btn-secondary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRepairList(machine);
+                          }}
+                        >
+                          <i className="fas fa-history"></i> Historia
+                        </button>
+                        <button
+                          className="action-btn btn-danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirm(machine);
+                          }}
+                        >
+                          <i className="fas fa-trash"></i> Usuń
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -599,6 +727,7 @@ const deleteMachine = async (machineId) => {
           </div>
         </div>
       )}
+
       {/* Modal dodawania/edycji maszyny */}
       {showForm && (
         <MachineModal
@@ -623,7 +752,21 @@ const deleteMachine = async (machineId) => {
         />
       )}
 
-      {/* Modal historii napraw */}
+      {/* Modal listy historii napraw */}
+      {showRepairList && currentRepairMachine && (
+        <RepairListModal
+          machine={currentRepairMachine}
+          repairHistory={repairHistory}
+          loading={loadingRepairHistory}
+          onClose={closeRepairList}
+          onRepairsUpdated={() => {
+            // Odśwież historię napraw po usunięciu
+            loadRepairHistory(currentRepairMachine.id);
+          }}
+        />
+      )}
+
+      {/* Modal formularza naprawy */}
       {showRepairHistory && currentRepairMachine && (
         <RepairHistoryModal
           machine={currentRepairMachine}
@@ -660,11 +803,13 @@ const MachineModal = ({
 }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    onFormDataChange(prev => ({
+    setFormData(prev => ({
       ...prev,
-      [name]: name === 'year' || name === 'serviceInterval' || name === 'purchasePrice' || name === 'currentValue'
-        ? (value === '' ? '' : parseFloat(value))
-        : value
+      [name]: name.includes('Price') || name.includes('Value') || name === 'cost'
+        ? (value === '' ? '' : parseFloat(value.replace(',', '.')))
+        : (name === 'year' || name === 'serviceInterval' || name === 'power'
+          ? (value === '' ? '' : parseInt(value) || 0)
+          : value)
     }));
   };
 
@@ -807,35 +952,61 @@ const MachineModal = ({
               </div>
 
               <div className="form-group">
-                <label htmlFor="lastService">Ostatni przegląd</label>
-                <input
-                  type="date"
-                  id="lastService"
-                  name="lastService"
-                  value={formData?.lastService || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="nextService">Następny przegląd</label>
-                <input
-                  type="date"
-                  id="nextService"
-                  name="nextService"
-                  value={formData?.nextService || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="serviceInterval">Interwał przeglądu (mies.)</label>
+                <label htmlFor="power">Moc (KM)</label>
                 <input
                   type="number"
-                  id="serviceInterval"
-                  name="serviceInterval"
-                  min="1"
-                  value={formData?.serviceInterval || ''}
+                  id="power"
+                  name="power"
+                  min="0"
+                  value={formData?.power || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="serialNumber">Numer seryjny</label>
+                <input
+                  type="text"
+                  id="serialNumber"
+                  name="serialNumber"
+                  value={formData?.serialNumber || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="purchaseDate">Data zakupu</label>
+                <input
+                  type="date"
+                  id="purchaseDate"
+                  name="purchaseDate"
+                  value={formData?.purchaseDate || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="purchasePrice">Cena zakupu (zł)</label>
+                <input
+                  type="number"
+                  id="purchasePrice"
+                  name="purchasePrice"
+                  step="0.01"
+                  min="0"
+                  value={formData?.purchasePrice || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="currentValue">Aktualna wartość (zł)</label>
+                <input
+                  type="number"
+                  id="currentValue"
+                  name="currentValue"
+                  step="0.01"
+                  min="0"
+                  value={formData?.currentValue || ''}
                   onChange={handleInputChange}
                 />
               </div>
@@ -867,28 +1038,294 @@ const MachineModal = ({
   );
 };
 
-// Komponent modala dla napraw
-const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, onClose }) => {
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    onRepairFormChange(prev => ({
-      ...prev,
-      [name]: name === 'cost' ? (value === '' ? '' : parseFloat(value)) : value
-    }));
+// Nowy komponent dla listy historii napraw
+const RepairListModal = ({ machine, repairHistory, onClose, loading, onRepairsUpdated }) => {
+  const [editingMode, setEditingMode] = useState(false);
+  const [selectedRepairs, setSelectedRepairs] = useState([]);
+  const [deleting, setDeleting] = useState(false);
+
+  // Sortuj naprawy od najnowszej do najstarszej
+  const sortedRepairs = [...repairHistory].sort((a, b) => {
+    const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.date || a.createdAt);
+    const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.date || b.createdAt);
+    return new Date(dateB) - new Date(dateA);
+  });
+
+  // Obsługa zaznaczania/odznaczania napraw
+  const handleSelectRepair = (repairId) => {
+    setSelectedRepairs(prev => {
+      if (prev.includes(repairId)) {
+        return prev.filter(id => id !== repairId);
+      } else {
+        return [...prev, repairId];
+      }
+    });
+  };
+
+  // Obsługa zaznaczania wszystkich
+  const handleSelectAll = () => {
+    if (selectedRepairs.length === sortedRepairs.length) {
+      // Jeśli wszystkie już zaznaczone - odznacz wszystkie
+      setSelectedRepairs([]);
+    } else {
+      // W przeciwnym razie zaznacz wszystkie
+      setSelectedRepairs(sortedRepairs.map(repair => repair.id));
+    }
+  };
+
+  // Funkcja usuwania zaznaczonych napraw
+  const handleDeleteSelected = async () => {
+    if (selectedRepairs.length === 0) {
+      alert('Nie zaznaczono żadnych napraw do usunięcia');
+      return;
+    }
+
+    if (!window.confirm(`Czy na pewno chcesz usunąć ${selectedRepairs.length} zaznaczonych napraw? Tej operacji nie można cofnąć.`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      // Usuwanie napraw z backendu
+      const deletePromises = selectedRepairs.map(repairId =>
+        garageService.deleteRepair(repairId)
+      );
+
+      // Wykonaj wszystkie usunięcia równolegle
+      await Promise.all(deletePromises);
+
+      // Pokaż potwierdzenie
+      alert(`Pomyślnie usunięto ${selectedRepairs.length} napraw`);
+
+      // Resetuj stan
+      setSelectedRepairs([]);
+      setEditingMode(false);
+
+      // Powiadom komponent nadrzędny o zmianie
+      if (typeof onRepairsUpdated === 'function') {
+        onRepairsUpdated();
+      }
+
+    } catch (error) {
+      console.error('Błąd podczas usuwania napraw:', error);
+      alert('Błąd podczas usuwania napraw: ' + error.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Resetuj zaznaczenia przy wyjściu z trybu edycji
+  const handleCancelEditing = () => {
+    setEditingMode(false);
+    setSelectedRepairs([]);
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content repair-history-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Dodaj naprawę - {machine.name}</h3>
+          <h3>
+            <i className="fas fa-history"></i> Historia napraw - {machine.name}
+          </h3>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+
+        <div className="modal-body">
+          {/* Ładowanie */}
+          {loading ? (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>Ładowanie historii napraw...</p>
+            </div>
+          ) : (
+            <>
+              {/* Statystyki */}
+              {repairHistory.length > 0 && (
+                <div className="repair-stats">
+                  <div className="stat-item">
+                    <i className="fas fa-calculator"></i>
+                    <span>Łączny koszt: <strong>{repairHistory.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0).toFixed(2)} zł</strong></span>
+                  </div>
+                  <div className="stat-item">
+                    <i className="fas fa-list"></i>
+                    <span>Liczba napraw: <strong>{repairHistory.length}</strong></span>
+                  </div>
+                </div>
+              )}
+
+              {repairHistory.length === 0 ? (
+                <div className="no-repairs">
+                  <i className="fas fa-inbox fa-2x"></i>
+                  <p>Brak historii napraw dla tej maszyny</p>
+                </div>
+              ) : (
+                <div className="repair-list-container">
+                  <div className="repair-list-header">
+                    <h4>Wszystkie naprawy i przeglądy:</h4>
+                    <div className="header-actions">
+                      <span className="repair-count">{repairHistory.length} wpisów</span>
+
+                      {!editingMode ? (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setEditingMode(true)}
+                        >
+                          <i className="fas fa-edit"></i> Edytuj wpisy
+                        </button>
+                      ) : (
+                        <div className="editing-controls">
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={handleCancelEditing}
+                          >
+                            <i className="fas fa-times"></i> Anuluj
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={handleDeleteSelected}
+                            disabled={selectedRepairs.length === 0 || deleting}
+                          >
+                            {deleting ? (
+                              <>
+                                <i className="fas fa-spinner fa-spin"></i> Usuwanie...
+                              </>
+                            ) : (
+                              <>
+                                <i className="fas fa-trash"></i> Usuń ({selectedRepairs.length})
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {editingMode && (
+                    <div className="select-all-control">
+                      <label className="select-all-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedRepairs.length === sortedRepairs.length && sortedRepairs.length > 0}
+                          onChange={handleSelectAll}
+                        />
+                        <span>Zaznacz wszystkie ({selectedRepairs.length}/{sortedRepairs.length})</span>
+                      </label>
+                    </div>
+                  )}
+
+                  <div className="repairs-table-container">
+                    <table className="repairs-table">
+                      <thead>
+                        <tr>
+                          {editingMode && <th className="repair-select-column"></th>}
+                          <th>#</th>
+                          <th>Data naprawy</th>
+                          <th>Koszt</th>
+                          <th>Wymienione części</th>
+                          <th>Opis naprawy</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedRepairs.map((repair, index) => {
+                          const repairDate = repair.date ? new Date(repair.date).toLocaleDateString('pl-PL') : 'Brak daty';
+                          const cost = repair.cost > 0 ? `${parseFloat(repair.cost).toFixed(2)} zł` : '-';
+                          const parts = repair.parts || '-';
+                          const description = repair.description || '-';
+                          const mechanic = repair.mechanic || repair.mechanik || null;
+                          const isSelected = selectedRepairs.includes(repair.id);
+
+                          return (
+                            <tr
+                              key={repair.id || index}
+                              className={`repair-row ${isSelected ? 'selected' : ''}`}
+                            >
+                              {editingMode && (
+                                <td className="repair-select-cell">
+                                  <div className="repair-checkbox">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => handleSelectRepair(repair.id)}
+                                      id={`repair-${repair.id || index}`}
+                                    />
+                                  </div>
+                                </td>
+                              )}
+                              <td className="repair-number" data-label="Numer naprawy">
+                                <span className="repeir-index">{sortedRepairs.length - index}</span>
+                              </td>
+                              <td className="repair-date" data-label="Data naprawy">
+                                <div className="date-main">{repairDate}</div>
+                                {mechanic && (
+                                  <div className="mechanic-info">
+                                    <i className="fas fa-user-cog"></i> {mechanic}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="repair-cost" data-label="Koszt">
+                                <div className={`cost-value ${repair.cost > 0 ? 'has-cost' : 'no-cost'}`}>
+                                  {cost}
+                                </div>
+                              </td>
+                              <td className="repair-parts" data-label="Wymienione części">
+                                <div className="parts-content">
+                                  {parts}
+                                </div>
+                              </td>
+                              <td className="repair-description" data-label="Opis naprawy">
+                                <div className="description-content">
+                                  {description}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-primary" onClick={onClose}>
+            <i className="fas fa-times"></i> Zamknij
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Komponent modala dla napraw
+const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, onClose }) => {
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    onRepairFormChange(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : (name === 'cost' ? (value === '' ? '' : parseFloat(value)) : value)
+    }));
+  };
+
+  // Sprawdź czy aktualny status maszyny wymaga zmiany na sprawny
+  const needsStatusChange = machine.status === 'broken' ||
+    machine.status === 'maintenance' ||
+    machine.status === 'needs_service';
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content repair-service-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Dodaj naprawę/przegląd - {machine.name}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
           <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
             <div className="form-grid">
               <div className="form-group">
-                <label htmlFor="repairDate">Data naprawy *</label>
+                <label htmlFor="repairDate">Data naprawy/przeglądu *</label>
                 <input
                   type="date"
                   id="repairDate"
@@ -911,13 +1348,39 @@ const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, o
                 />
               </div>
 
+              {/* NOWE POLA - przeniesione z formularza maszyny */}
               <div className="form-group">
-                <label htmlFor="nextServiceDate">Następny przegląd</label>
+                <label htmlFor="lastService">Ostatni przegląd *</label>
+                <input
+                  type="date"
+                  id="lastService"
+                  name="lastService"
+                  value={repairForm.lastService || repairForm.date}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="nextServiceDate">Następny przegląd *</label>
                 <input
                   type="date"
                   id="nextServiceDate"
                   name="nextServiceDate"
-                  value={repairForm.nextServiceDate}
+                  value={repairForm.nextServiceDate || ''}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="serviceInterval">Interwał przeglądu (mies.)</label>
+                <input
+                  type="number"
+                  id="serviceInterval"
+                  name="serviceInterval"
+                  min="1"
+                  value={repairForm.serviceInterval || 12}
                   onChange={handleInputChange}
                 />
               </div>
@@ -936,7 +1399,7 @@ const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, o
             </div>
 
             <div className="form-group">
-              <label htmlFor="repairDescription">Opis naprawy *</label>
+              <label htmlFor="repairDescription">Opis naprawy/przeglądu *</label>
               <textarea
                 id="repairDescription"
                 name="description"
@@ -959,6 +1422,24 @@ const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, o
                 placeholder="Lista wymienionych części..."
               />
             </div>
+
+            {/* Opcja zmiany statusu na sprawny */}
+            {needsStatusChange && (
+              <div className="form-group">
+                <div className="checkbox-group">
+                  <input
+                    type="checkbox"
+                    id="changeStatusToActive"
+                    name="changeStatusToActive"
+                    checked={repairForm.changeStatusToActive}
+                    onChange={handleInputChange}
+                  />
+                  <label htmlFor="changeStatusToActive">
+                    Zmień status maszyny na <strong>Sprawny</strong> po naprawie/przeglądzie
+                  </label>
+                </div>
+              </div>
+            )}
           </form>
         </div>
         <div className="modal-footer">
@@ -966,11 +1447,10 @@ const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, o
             Anuluj
           </button>
           <button className="btn btn-primary" onClick={onSave}>
-            Zapisz naprawę
+            Zapisz naprawę/przegląd
           </button>
         </div>
       </div>
-
     </div>
   );
 };

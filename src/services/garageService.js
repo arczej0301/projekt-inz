@@ -1,4 +1,3 @@
-
 import { db } from '../config/firebase';
 import { 
   collection, 
@@ -14,6 +13,7 @@ import {
 } from 'firebase/firestore';
 
 const garageCollection = collection(db, 'garage');
+const repairsCollection = collection(db, 'repairs'); // Nowa kolekcja
 
 export const garageService = {
   // Pobierz wszystkie maszyny
@@ -51,6 +51,13 @@ export const garageService = {
   async deleteMachine(id) {
     const docRef = doc(db, 'garage', id);
     await deleteDoc(docRef);
+    
+    // Usuń również powiązane naprawy
+    const repairsQuery = query(repairsCollection, where('machineId', '==', id));
+    const repairsSnapshot = await getDocs(repairsQuery);
+    repairsSnapshot.docs.forEach(async (repairDoc) => {
+      await deleteDoc(doc(db, 'repairs', repairDoc.id));
+    });
   },
 
   // Pobierz maszyny wymagające przeglądu
@@ -73,5 +80,56 @@ export const garageService = {
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  },
+
+  // =========== NOWE FUNKCJE DLA HISTORII NAPRAW ===========
+
+  // Dodaj naprawę
+  async addRepair(repairData) {
+    return await addDoc(repairsCollection, {
+      ...repairData,
+      createdAt: new Date()
+    });
+  },
+
+
+  // Pobierz historię napraw dla maszyny
+async getRepairHistory(machineId) {
+  try {
+    const q = query(
+      repairsCollection, 
+      where('machineId', '==', machineId),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const snapshot = await getDocs(q);
+    const repairs = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data 
+      };
+    });
+    
+    return repairs;
+  } catch (error) {
+    console.error('❌ Błąd w getRepairHistory:', error);
+    return [];
+  }
+},
+
+  // Usuń naprawę
+  async deleteRepair(repairId) {
+    const docRef = doc(db, 'repairs', repairId);
+    await deleteDoc(docRef);
+  },
+
+  // Aktualizuj naprawę
+  async updateRepair(repairId, repairData) {
+    const docRef = doc(db, 'repairs', repairId);
+    await updateDoc(docRef, {
+      ...repairData,
+      updatedAt: new Date()
+    });
   }
 };
