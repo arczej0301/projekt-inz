@@ -1,10 +1,10 @@
 // src/pages/TasksPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTasks } from '../../hooks/useTasks';
-import TaskList from '../../components/TaskList';
-import TaskModal from '../../components/TaskModal';
-import TaskFilters from '../../components/TaskFilters';
-import TaskCalendar from '../../components/TaskCalendar';
+import TaskList from './TaskList';
+import TaskModal from './TaskModal';
+import TaskFilters from './TaskFilters';
+import TaskCalendar from './TaskCalendar';
 import './TasksPage.css';
 
 const TasksPage = () => {

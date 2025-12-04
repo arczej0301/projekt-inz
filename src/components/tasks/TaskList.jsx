@@ -1,6 +1,6 @@
 // src/components/TaskList.jsx - BEZ MOŻLIWOŚCI KLIKNIĘCIA ZAKOŃCZONYCH ZADAŃ
 import React from 'react';
-import { useTasks } from '../hooks/useTasks';
+import { useTasks } from '../../hooks/useTasks';
 import './TaskList.css';
 
 const TaskList = ({ tasks, onEditTask, TASK_TYPES }) => {

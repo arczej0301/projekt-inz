@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { useFinance } from '../../hooks/useFinance'
-import CustomSelect from '../CustomSelect'
+import CustomSelect from '../common/CustomSelect'
 import './FinanceComponents.css'
 
 const ExpensesTab = ({ transactions }) => {

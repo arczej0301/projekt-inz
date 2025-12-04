@@ -1,6 +1,6 @@
 // components/Analytics/CostAnalysis.jsx
 import React, { useState } from 'react'
-import CustomSelect from '../CustomSelect'
+import CustomSelect from '../common/CustomSelect'
 import './AnalyticsComponents.css'
 
 const CostAnalysis = ({ financialAnalytics, fieldAnalytics, animalAnalytics }) => {

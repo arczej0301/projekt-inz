@@ -1,12 +1,12 @@
 // pages/ReportsPage.jsx - poprawiona wersja formatowania
 import React, { useState } from 'react'
 import { useAnalytics } from '../../hooks/useAnalytics'
-import AnalyticsDashboard from '../../components/Analytics/AnalyticsDashboard'
-import FinancialReports from '../../components/Analytics/FinancialReports'
-import ProductionReports from '../../components/Analytics/ProductionReports'
-import CostAnalysis from '../../components/Analytics/CostAnalysis'
-import ExportPanel from '../../components/Analytics/ExportPanel'
-import FinancialAnalysis from '../../components/Analytics/FinancialAnalysis'
+import AnalyticsDashboard from './AnalyticsDashboard'
+import FinancialReports from './FinancialReports'
+import ProductionReports from './ProductionReports'
+import CostAnalysis from './CostAnalysis'
+import ExportPanel from './ExportPanel'
+import FinancialAnalysis from './FinancialAnalysis'
 import './ReportsPage.css'
 
 const ReportsPage = () => {

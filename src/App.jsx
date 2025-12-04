@@ -1,22 +1,23 @@
 // App.jsx - POPRAWIONA WERSJA BEZ CONSOLE.LOG
 import React, { useState, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
-import Sidebar from './components/Sidebar'
-import Header from './components/Header'
-import Dashboard from './components/Dashboard'
-import FieldsPage from './components/pages/FieldsPage'
-import AnimalsPage from './components/pages/AnimalsPage'
-import TasksPage from './components/pages/TasksPage'
-import FinancePage from './components/pages/FinancePage'
-import ReportsPage from './components/pages/ReportsPage'
-import MagazinePage from './components/pages/MagazinePage'
-import LoginPage from './components/LoginPage'
-import InactivityWarning from './components/InactivityWarning'
-import GaragePage from './components/pages/GaragePage'
-import SettingsPage from './components/Settings/SettingsPage' 
+import Sidebar from './components/common/Sidebar';
+import Header from './components/common/Header';
+import Dashboard from './components/dashboard/Dashboard';
+import FieldsPage from './components/fields/FieldsPage';
+import AnimalsPage from './components/animals/AnimalsPage';
+import TasksPage from './components/tasks/TasksPage';
+import FinancePage from './components/finance/FinancePage';
+import ReportsPage from './components/analytics/ReportsPage';
+import MagazinePage from './components/warehouse/MagazinePage';
+import GaragePage from './components/garage/GaragePage';
+import InactivityWarning from './components/common/InactivityWarning';
+import LoginPage from './components/auth/LoginPage';
+import SettingsPage from './components/settings/SettingsPage';
+import './components/dashboard/MainContent.css';
 import { LoadScript } from '@react-google-maps/api'
 import './App.css'
-import './components/MainContent.css'
+
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA";
 

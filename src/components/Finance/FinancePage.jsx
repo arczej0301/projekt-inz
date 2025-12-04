@@ -1,10 +1,10 @@
 // pages/FinancePage.jsx
 import React, { useState } from 'react'
 import { useFinance } from '../../hooks/useFinance'
-import FinanceDashboard from '../../components/Finance/FinanceDashboard'
-import IncomeTab from '../../components/Finance/IncomeTab'
-import ExpensesTab from '../../components/Finance/ExpensesTab'
-import BudgetTab from '../../components/Finance/BudgetTab'
+import FinanceDashboard from './FinanceDashboard'
+import IncomeTab from './IncomeTab'
+import ExpensesTab from './ExpensesTab'
+import BudgetTab from './BudgetTab'
 import './FinancePage.css'
 
 function FinancePage() {

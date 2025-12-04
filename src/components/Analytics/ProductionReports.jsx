@@ -1,6 +1,6 @@
 // components/Analytics/ProductionReports.jsx
 import React, { useState } from 'react'
-import CustomSelect from '../CustomSelect'
+import CustomSelect from '../common/CustomSelect'
 import './AnalyticsComponents.css'
 
 const ProductionReports = ({ fieldAnalytics, animalAnalytics }) => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react' // DODANY useState
-import CustomSelect from '../CustomSelect'
+import CustomSelect from '../common/CustomSelect'
 import './AnalyticsComponents.css'
 
 const AnalyticsDashboard = ({ 

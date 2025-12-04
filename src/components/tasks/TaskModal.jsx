@@ -1,8 +1,8 @@
 // src/components/TaskModal.jsx - POPRAWIONA WERSJA (SPÓJNE ETYKIETY)
 import React, { useState, useEffect } from 'react';
-import { useTasks } from '../hooks/useTasks';
-import { useAuth } from '../hooks/useAuth';
-import CustomSelect from './CustomSelect';
+import { useTasks } from '../../hooks/useTasks';
+import { useAuth } from '../../hooks/useAuth';
+import CustomSelect from '../common/CustomSelect';
 import './TaskModal.css';
 
 

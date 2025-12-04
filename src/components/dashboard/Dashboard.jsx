@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useFinance } from '../hooks/useFinance'
-import { useTasks } from '../hooks/useTasks'
-import { useAnalytics } from '../hooks/useAnalytics'
+import { useFinance } from '../../hooks/useFinance'
+import { useTasks } from '../../hooks/useTasks'
+import { useAnalytics } from '../../hooks/useAnalytics'
 import './Dashboard.css';
 
 function Dashboard() {

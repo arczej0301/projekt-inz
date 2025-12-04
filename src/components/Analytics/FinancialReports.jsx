@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import CustomSelect from '../CustomSelect'
+import CustomSelect from '../common/CustomSelect.jsx' 
 import { useFormatters } from '../../hooks/useFormatters' // NOWY IMPORT
 import './AnalyticsComponents.css'
 

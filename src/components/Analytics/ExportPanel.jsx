@@ -1,6 +1,6 @@
 // components/Analytics/ExportPanel.jsx
 import React, { useState } from 'react'
-import CustomSelect from '../CustomSelect'
+import CustomSelect from '../common/CustomSelect'
 import './AnalyticsComponents.css'
 
 const ExportPanel = ({ financialAnalytics, fieldAnalytics, animalAnalytics }) => {

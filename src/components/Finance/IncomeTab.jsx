@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import { useWarehouse } from '../../hooks/useWarehouse'
 import { getAnimals, deleteAnimal } from '../../services/animalsService'
-import CustomSelect from '../CustomSelect'
+import CustomSelect from '../common/CustomSelect'
 import './FinanceComponents.css'
 
 const IncomeTab = ({ transactions }) => {
