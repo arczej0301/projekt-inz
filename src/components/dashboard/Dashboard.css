@@ -270,7 +270,7 @@
 
 .actions-grid {
   display: grid;
-  grid-template-columns: repeat(6, 100px);
+  grid-template-columns: repeat(7, 100px);
   gap: 12px;
   justify-content: start;
 }

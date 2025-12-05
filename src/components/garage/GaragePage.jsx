@@ -27,6 +27,17 @@ const GaragePage = () => {
   const [isFuelTypeOpen, setIsFuelTypeOpen] = useState(false);
   const [isFilterStatusOpen, setIsFilterStatusOpen] = useState(false);
 
+  useEffect(() => {
+  const shouldOpenMachineModal = localStorage.getItem('shouldOpenMachineModal');
+  
+  if (shouldOpenMachineModal === 'true') {
+    resetForm(); 
+    setShowForm(true);
+    
+    localStorage.removeItem('shouldOpenMachineModal');
+  }
+}, []); 
+
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -585,17 +596,29 @@ const GaragePage = () => {
             <h3>Lista maszyn ({filteredMachines.length})</h3>
             <div className="filter-controls">
               <div className="actions-bar">
-                <div className="search-box">
-                  <i className="fas fa-search"></i>
-                  <input
-                    type="text"
-                    placeholder="Szukaj maszyny..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                
               </div>
+              <div className="action-buttons">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    resetForm();
+                    setShowForm(true);
+                  }}
+                >
+                  <i className="fas fa-plus"></i> Dodaj maszynę
+                </button>
+              </div>
+              <div className="search-box">
+                <i className="fas fa-search"></i>
+                <input
+                  type="text"
+                  placeholder="Szukaj maszyny..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+
               <div className="custom-select">
                 <div
                   className={`select-header ${isFilterStatusOpen ? 'open' : ''}`}
@@ -645,11 +668,7 @@ const GaragePage = () => {
                   </div>
                 )}
               </div>
-              <div className="action-buttons">
-                  <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-                    <i className="fas fa-plus"></i> Dodaj maszynę
-                  </button>
-                </div>
+
             </div>
           </div>
 

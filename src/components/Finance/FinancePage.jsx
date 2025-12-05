@@ -1,5 +1,5 @@
-// pages/FinancePage.jsx
-import React, { useState } from 'react'
+// src/pages/FinancePage.jsx
+import React, { useState, useEffect } from 'react' // DODAJ useEffect
 import { useFinance } from '../../hooks/useFinance'
 import FinanceDashboard from './FinanceDashboard'
 import IncomeTab from './IncomeTab'
@@ -16,6 +16,44 @@ function FinancePage() {
     error,
     getFinancialSummary 
   } = useFinance()
+
+  // DODAJ TEN useEffect
+  useEffect(() => {
+  // Sprawdź czy otworzyć zakładkę przychodów
+  const shouldOpenIncomeModal = localStorage.getItem('shouldOpenIncomeModal');
+  const shouldOpenExpenseModal = localStorage.getItem('shouldOpenExpenseModal');
+  const financeTab = localStorage.getItem('financeActiveTab');
+  
+  if (financeTab === 'income') {
+    setActiveTab('income');
+  } else if (financeTab === 'expenses') {
+    setActiveTab('expenses');
+  }
+  
+  if (shouldOpenIncomeModal === 'true') {
+    // Otwórz formularz przychodu
+    localStorage.setItem('openIncomeForm', 'true');
+    
+    // Wyczyść flagi
+    localStorage.removeItem('shouldOpenIncomeModal');
+    localStorage.removeItem('financeActiveTab');
+    
+    // Przewiń do góry
+    window.scrollTo(0, 0);
+  }
+  
+  if (shouldOpenExpenseModal === 'true') {
+    // Otwórz formularz kosztów
+    localStorage.setItem('openExpenseForm', 'true');
+    
+    // Wyczyść flagi
+    localStorage.removeItem('shouldOpenExpenseModal');
+    localStorage.removeItem('financeActiveTab');
+    
+    // Przewiń do góry
+    window.scrollTo(0, 0);
+  }
+}, []);
 
   const financialSummary = getFinancialSummary()
 

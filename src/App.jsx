@@ -65,7 +65,7 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard farmData={farmData} />
+        return <Dashboard farmData={farmData} onTabChange={setActiveTab} />
       case 'fields':
         return mapsLoaded ? <FieldsPage /> : (
           <div className="loading">
@@ -108,7 +108,7 @@ function App() {
   }
 
   return (
-    <LoadScript 
+    <LoadScript
       googleMapsApiKey={GOOGLE_MAPS_API_KEY}
       libraries={['geometry']}
       onLoad={() => setMapsLoaded(true)}

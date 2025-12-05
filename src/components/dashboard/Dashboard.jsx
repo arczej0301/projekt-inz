@@ -1,10 +1,11 @@
+// src/components/dashboard/Dashboard.jsx
 import { useState, useEffect } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import { useTasks } from '../../hooks/useTasks'
 import { useAnalytics } from '../../hooks/useAnalytics'
 import './Dashboard.css';
 
-function Dashboard() {
+function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
   const { getFinancialSummary, transactions } = useFinance()
   const { tasks } = useTasks()
   const {
@@ -16,7 +17,7 @@ function Dashboard() {
     loading: analyticsLoading
   } = useAnalytics()
 
-  const [farmData, setFarmData] = useState({
+  const [dashboardFarmData, setDashboardFarmData] = useState({
     area: 0,
     animals: 0,
     crops: 0,
@@ -27,12 +28,11 @@ function Dashboard() {
 
   const [recentActivities, setRecentActivities] = useState([])
 
-  // Uproszczony useEffect
   useEffect(() => {
     const financialSummary = getFinancialSummary()
 
     const updatedFarmData = {
-      area: fieldAnalytics?.totalArea || 125, // Używamy danych z hooków lub statycznych
+      area: fieldAnalytics?.totalArea || 125,
       animals: animalAnalytics?.totalAnimals || 340,
       crops: fieldAnalytics?.activeCrops || fieldAnalytics?.cropPerformance?.length || 5,
       tasks: tasks.filter(task => task.status === 'pending').length || 12,
@@ -40,8 +40,8 @@ function Dashboard() {
       expenses: financialSummary?.monthlyExpenses || 28750
     }
 
-    setFarmData(updatedFarmData)
-  }, [fieldAnalytics, animalAnalytics, tasks]) // Uproszczone zależności
+    setDashboardFarmData(updatedFarmData)
+  }, [fieldAnalytics, animalAnalytics, tasks, getFinancialSummary])
 
   // Efekt dla aktywności
   useEffect(() => {
@@ -96,13 +96,62 @@ function Dashboard() {
   }, [transactions, tasks])
 
   const quickActions = [
-    { id: 1, title: 'Dodaj zadanie', icon: '➕', color: '#4caf50', link: '/tasks' },
-    { id: 2, title: 'Zarejestruj sprzedaż', icon: '💰', color: '#ff9800', link: '/finance' },
-    { id: 3, title: 'Dodaj zwierzę', icon: '🐄', color: '#795548', link: '/animals' },
-    { id: 4, title: 'Planuj zasiew', icon: '🌱', color: '#8bc34a', link: '/fields' },
-    { id: 5, title: 'Raport finansowy', icon: '📊', color: '#2196f3', link: '/reports' },
-    { id: 6, title: 'Kalendarz prac', icon: '📅', color: '#9c27b0', link: '/tasks' }
-  ]
+    {
+      id: 1,
+      title: 'Dodaj zadanie',
+      icon: '➕',
+      color: '#4caf50',
+      tab: 'tasks',
+      action: 'openTaskModal'
+    },
+    {
+      id: 2,
+      title: 'Zarejestruj sprzedaż',
+      icon: '💰',
+      color: '#ff9800',
+      tab: 'finance',
+      action: 'openIncomeModal'
+    },
+    {
+      id: 3,
+      title: 'Dodaj koszt',
+      icon: '💸',
+      color: '#f44336',
+      tab: 'finance',
+      action: 'openExpenseModal'
+    },
+    {
+      id: 4,
+      title: 'Dodaj zwierzę',
+      icon: '🐄',
+      color: '#795548',
+      tab: 'animals',
+      action: 'openAnimalModal'
+    },
+    {
+      id: 5,
+      title: 'Dodaj maszynę',
+      icon: '🚜',
+      color: '#8bc34a',
+      tab: 'garage',
+      action: 'openMachineModal'
+    },
+    {
+      id: 6,
+      title: 'Raport finansowy',
+      icon: '📊',
+      color: '#2196f3',
+      tab: 'reports'
+    },
+    {
+      id: 7,
+    title: 'Kalendarz prac',
+    icon: '📅',
+    color: '#9c27b0',
+    tab: 'tasks',
+    action: 'openCalendarView' 
+    }
+  ];
 
   // Funkcja pomocnicza do formatowania czasu
   function formatTimeAgo(date) {
@@ -124,19 +173,32 @@ function Dashboard() {
   }
 
   const handleQuickAction = (action) => {
-    if (action.link) {
-      window.location.href = action.link
+  if (action.tab && onTabChange) {
+    onTabChange(action.tab);
+
+    // Ustaw odpowiednią flagę w localStorage
+    if (action.action === 'openTaskModal') {
+      localStorage.setItem('shouldOpenTaskModal', 'true');
+
+    } else if (action.action === 'openIncomeModal') {
+      localStorage.setItem('shouldOpenIncomeModal', 'true');
+
+      localStorage.setItem('financeActiveTab', 'income');
+    } else if (action.action === 'openExpenseModal') {
+      localStorage.setItem('shouldOpenExpenseModal', 'true');
+
+      localStorage.setItem('financeActiveTab', 'expenses');
+    } else if (action.action === 'openAnimalModal') {
+      localStorage.setItem('openAnimalForm', 'true');
+
+     } else if (action.action === 'openMachineModal') {
+      localStorage.setItem('shouldOpenMachineModal', 'true');
+
+    } else if (action.action === 'openCalendarView') {
+      localStorage.setItem('shouldOpenCalendarView', 'true');
     }
   }
-
-  if (analyticsLoading) {
-    return (
-      <div className="dashboard-loading">
-        <div className="loading-spinner"></div>
-        <p>Ładowanie danych dashboardu...</p>
-      </div>
-    )
-  }
+};
 
   return (
     <div className="dashboard">

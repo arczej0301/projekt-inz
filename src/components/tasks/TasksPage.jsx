@@ -15,6 +15,25 @@ const TasksPage = () => {
   const filterTimeoutRef = useRef(null);
   const [filterLoading, setFilterLoading] = useState(false);
 
+  useEffect(() => {
+    const shouldOpenModal = localStorage.getItem('shouldOpenTaskModal');
+    if (shouldOpenModal === 'true') {
+      setShowModal(true);
+      setEditingTask(null);
+      localStorage.removeItem('shouldOpenTaskModal');
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
+  useEffect(() => {
+    const shouldOpenCalendar = localStorage.getItem('shouldOpenCalendarView');
+    if (shouldOpenCalendar === 'true') {
+      setActiveView('calendar');
+      localStorage.removeItem('shouldOpenCalendarView');
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
   const {
     tasks,
     loading,
@@ -39,21 +58,20 @@ const TasksPage = () => {
 
   useEffect(() => {
     const checkAndRemoveOldTasks = () => {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  tasks.forEach(task => {
-    // Sprawdź czy zadanie jest zakończone LUB anulowane
-    if ((task.status === 'completed' || task.status === 'cancelled') && task.completedAt) {
-      const completionDate = task.completedAt?.toDate ? task.completedAt.toDate() : new Date(task.completedAt);
+      tasks.forEach(task => {
+        if ((task.status === 'completed' || task.status === 'cancelled') && task.completedAt) {
+          const completionDate = task.completedAt?.toDate ? task.completedAt.toDate() : new Date(task.completedAt);
 
-      if (completionDate < thirtyDaysAgo) {
-        console.log(`Automatyczne usuwanie starego zadania: ${task.title}`);
-        deleteTask(task.id);
-      }
-    }
-  });
-};
+          if (completionDate < thirtyDaysAgo) {
+            console.log(`Automatyczne usuwanie starego zadania: ${task.title}`);
+            deleteTask(task.id);
+          }
+        }
+      });
+    };
 
     const interval = setInterval(checkAndRemoveOldTasks, 60000);
     checkAndRemoveOldTasks();
@@ -67,14 +85,14 @@ const TasksPage = () => {
   };
 
   const handleEditTask = (task) => {
-  if (task.status === 'completed' || task.status === 'cancelled') {
-    alert('Nie można edytować zadań zakończonych lub anulowanych.');
-    return;
-  }
+    if (task.status === 'completed' || task.status === 'cancelled') {
+      alert('Nie można edytować zadań zakończonych lub anulowanych.');
+      return;
+    }
 
-  setEditingTask(task);
-  setShowModal(true);
-};
+    setEditingTask(task);
+    setShowModal(true);
+  };
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -99,12 +117,12 @@ const TasksPage = () => {
     clearError();
   };
 
-  const activeTasks = tasks.filter(task => 
-  task.status !== 'completed' && task.status !== 'cancelled'
-);
-const completedTasks = tasks.filter(task => 
-  task.status === 'completed' || task.status === 'cancelled'
-);
+  const activeTasks = tasks.filter(task =>
+    task.status !== 'completed' && task.status !== 'cancelled'
+  );
+  const completedTasks = tasks.filter(task =>
+    task.status === 'completed' || task.status === 'cancelled'
+  );
 
   if (loading && tasks.length === 0) {
     return <div className="loading">Ładowanie zadań...</div>;

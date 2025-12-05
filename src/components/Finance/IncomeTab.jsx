@@ -10,16 +10,27 @@ import './FinanceComponents.css'
 const IncomeTab = ({ transactions }) => {
   const { incomeCategories, addTransaction } = useFinance()
   const { warehouseData, categories: warehouseCategories } = useWarehouse()
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(() => {
+    return localStorage.getItem('openIncomeForm') === 'true';
+  })
+
+  useEffect(() => {
+    // Jeśli jest flaga w localStorage, otwórz formularz
+    const shouldOpenForm = localStorage.getItem('openIncomeForm');
+    if (shouldOpenForm === 'true') {
+      setShowAddForm(true);
+      // Wyczyść flagę po otwarciu
+      localStorage.removeItem('openIncomeForm');
+    }
+  }, []);
 
   const [machinesData, setMachinesData] = useState([])
   const [selectedMachine, setSelectedMachine] = useState(null)
   const [loadingMachines, setLoadingMachines] = useState(false)
 
   /// Stan dla sortowania
-const [sortOption, setSortOption] = useState('date_desc') 
-const [filterOption, setFilterOption] = useState('all') 
-
+  const [sortOption, setSortOption] = useState('date_desc')
+  const [filterOption, setFilterOption] = useState('all')
 
   const [newTransaction, setNewTransaction] = useState({
     type: 'income',
@@ -131,12 +142,12 @@ const [filterOption, setFilterOption] = useState('all')
 
   // Opcje sortowania i filtrowania
   const sortOptions = [
-  { value: 'date_desc', label: 'Najnowsze' },
-  { value: 'date_asc', label: 'Najstarsze' },
-  { value: 'amount_desc', label: 'Największe kwoty' },
-  { value: 'amount_asc', label: 'Najmniejsze kwoty' },
-  { value: 'category', label: 'Kategoria A-Z' }
-]
+    { value: 'date_desc', label: 'Najnowsze' },
+    { value: 'date_asc', label: 'Najstarsze' },
+    { value: 'amount_desc', label: 'Największe kwoty' },
+    { value: 'amount_asc', label: 'Najmniejsze kwoty' },
+    { value: 'category', label: 'Kategoria A-Z' }
+  ]
 
   const filterOptions = [
     { value: 'all', label: 'Wszystkie kategorie' },
@@ -584,57 +595,57 @@ const [filterOption, setFilterOption] = useState('all')
 
   // Sortowanie i filtrowanie transakcji
   const sortedTransactions = useMemo(() => {
-  let filtered = [...transactions]
+    let filtered = [...transactions]
 
-  // Filtrowanie
-  if (filterOption !== 'all') {
-    filtered = filtered.filter(t => t.category === filterOption)
-  }
-
-  // Sortowanie - DODAJ poprawne parsowanie daty
-  return filtered.sort((a, b) => {
-    // Poprawiona funkcja do pobierania daty
-    const getDate = (t) => {
-      // Jeśli date jest Timestamp (Firestore)
-      if (t.date?.toDate) {
-        return t.date.toDate()
-      }
-      // Jeśli date jest stringiem
-      if (typeof t.date === 'string') {
-        return new Date(t.date)
-      }
-      // Jeśli date jest obiektem Date
-      if (t.date instanceof Date) {
-        return t.date
-      }
-      // Domyślnie zwróć bieżącą datę
-      return new Date()
+    // Filtrowanie
+    if (filterOption !== 'all') {
+      filtered = filtered.filter(t => t.category === filterOption)
     }
 
-    const dateA = getDate(a)
-    const dateB = getDate(b)
+    // Sortowanie - DODAJ poprawne parsowanie daty
+    return filtered.sort((a, b) => {
+      // Poprawiona funkcja do pobierania daty
+      const getDate = (t) => {
+        // Jeśli date jest Timestamp (Firestore)
+        if (t.date?.toDate) {
+          return t.date.toDate()
+        }
+        // Jeśli date jest stringiem
+        if (typeof t.date === 'string') {
+          return new Date(t.date)
+        }
+        // Jeśli date jest obiektem Date
+        if (t.date instanceof Date) {
+          return t.date
+        }
+        // Domyślnie zwróć bieżącą datę
+        return new Date()
+      }
 
-    switch (sortOption) {
-      case 'date_asc':
-        return dateA.getTime() - dateB.getTime()
-        
-      case 'date_desc':
-      default: // DODAJ default dla sortowania domyślnego
-        return dateB.getTime() - dateA.getTime()
-        
-      case 'amount_desc':
-        return b.amount - a.amount
-        
-      case 'amount_asc':
-        return a.amount - b.amount
-        
-      case 'category':
-        const catA = incomeCategories.find(c => c.id === a.category)?.name || a.category
-        const catB = incomeCategories.find(c => c.id === b.category)?.name || b.category
-        return catA.localeCompare(catB)
-    }
-  })
-}, [transactions, sortOption, filterOption, incomeCategories])
+      const dateA = getDate(a)
+      const dateB = getDate(b)
+
+      switch (sortOption) {
+        case 'date_asc':
+          return dateA.getTime() - dateB.getTime()
+
+        case 'date_desc':
+        default: // DODAJ default dla sortowania domyślnego
+          return dateB.getTime() - dateA.getTime()
+
+        case 'amount_desc':
+          return b.amount - a.amount
+
+        case 'amount_asc':
+          return a.amount - b.amount
+
+        case 'category':
+          const catA = incomeCategories.find(c => c.id === a.category)?.name || a.category
+          const catB = incomeCategories.find(c => c.id === b.category)?.name || b.category
+          return catA.localeCompare(catB)
+      }
+    })
+  }, [transactions, sortOption, filterOption, incomeCategories])
 
   const totalIncome = useMemo(() =>
     sortedTransactions.reduce((sum, t) => sum + t.amount, 0),
@@ -642,9 +653,11 @@ const [filterOption, setFilterOption] = useState('all')
   )
 
   // Reset form on close
-  const handleCloseForm = useCallback(() => {
+   const handleCloseForm = useCallback(() => {
     if (!loading) {
-      setShowAddForm(false)
+      setShowAddForm(false);
+      // Upewnij się że wyczyścimy flagę
+      localStorage.removeItem('openIncomeForm');
       setNewTransaction({
         type: 'income',
         category: '',
@@ -671,33 +684,33 @@ const [filterOption, setFilterOption] = useState('all')
         <div className="tab-actions">
           {/* SEKCJA SORTOWANIA I FILTROWANIA */}
           <div className="sort-filter-section">
-  <label>Sortowanie i filtrowanie:</label>
-  
-  <select
-    className="control-select"
-    value={filterOption}
-    onChange={(e) => setFilterOption(e.target.value)}
-  >
-    <option value="all">Wszystkie kategorie</option>
-    {incomeCategories.map(cat => (
-      <option key={cat.id} value={cat.id}>
-        {cat.name}
-      </option>
-    ))}
-  </select>
+            <label>Sortowanie i filtrowanie:</label>
 
-  <select
-    className="control-select"
-    value={sortOption}
-    onChange={(e) => setSortOption(e.target.value)}
-  >
-    {sortOptions.map(option => (
-      <option key={option.value} value={option.value}>
-        {option.label}
-      </option>
-    ))}
-  </select>
-</div>
+            <select
+              className="control-select"
+              value={filterOption}
+              onChange={(e) => setFilterOption(e.target.value)}
+            >
+              <option value="all">Wszystkie kategorie</option>
+              {incomeCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="control-select"
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+            >
+              {sortOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button
             className="btn btn-primary"

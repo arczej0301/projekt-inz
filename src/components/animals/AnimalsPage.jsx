@@ -11,7 +11,9 @@ import './AnimalsPage.css';
 function AnimalsPage() {
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(() => {
+    return localStorage.getItem('openAnimalForm') === 'true';
+  });
   const [currentAnimal, setCurrentAnimal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('wszystkie');
@@ -76,6 +78,16 @@ function AnimalsPage() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    // Jeśli jest flaga w localStorage, otwórz formularz
+    const shouldOpenForm = localStorage.getItem('openAnimalForm');
+    if (shouldOpenForm === 'true') {
+      openAnimalModal();
+      // Wyczyść flagę po otwarciu
+      localStorage.removeItem('openAnimalForm');
+    }
+  }, []);
+
   const openAnimalModal = (animal = null) => {
     if (animal) {
       setCurrentAnimal(animal);
@@ -105,6 +117,7 @@ function AnimalsPage() {
     setIsTypeOpen(false);
     setIsStatusOpen(false);
     setIsHealthOpen(false);
+    localStorage.removeItem('openAnimalForm');
   };
 
   // POPRAWIONE: Funkcja do obsługi zmian w polach select
