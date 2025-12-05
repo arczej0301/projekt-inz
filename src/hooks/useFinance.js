@@ -310,7 +310,9 @@ export const useFinance = () => {
         category: data.category,
         budgetCategory: mappedCategory,
         amount: parseFloat(data.amount),
-        description: data.description,
+
+         description: `${data.machineName || ''}`,
+         operationType: `${data.operationType || ''}`,
         source: data.source, // 'fields', 'animals', 'warehouse', 'garage'
         sourceId: data.sourceId,
         date: Timestamp.fromDate(new Date()),

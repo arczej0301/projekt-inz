@@ -4,25 +4,55 @@ import './FinanceComponents.css'
 
 const FinanceDashboard = ({ transactions, budgets, summary }) => {
   // Ostatnie transakcje
-  const recentTransactions = transactions.slice(0, 5)
+  const recentTransactions = transactions.slice(0, 10)
   
   // Mapowanie kategorii z angielskiego na polski
   const categoryTranslations = {
-    'salary': 'Wynagrodzenie',
-    'freelance': 'Freelance',
-    'investment': 'Inwestycje',
-    'business': 'Biznes',
-    'other-income': 'Inne przychody',
-    'food': 'Jedzenie',
-    'transport': 'Transport',
-    'housing': 'Mieszkanie',
-    'entertainment': 'Rozrywka',
-    'health': 'Zdrowie',
-    'shopping': 'Zakupy',
-    'education': 'Edukacja',
-    'bills': 'Rachunki',
-    'other-expenses': 'Inne wydatki'
+    // Z incomeCategories
+  'sprzedaz_plonow': 'Sprzedaż plonów',
+  'sprzedaz_zwierzat': 'Sprzedaż zwierząt',
+  'sprzedaz_maszyn': 'Maszyny i sprzęt',
+  'dotacje': 'Dotacje',
+  'inne_przychody': 'Inne przychody',
+  
+  // Z expenseCategories
+  'zwierzeta': 'Zwierzęta',
+  'maszyny': 'Maszyny i sprzęt',
+  'zboza': 'Zboża',
+  'nawozy_nasiona': 'Nawozy i nasiona',
+  'pasze': 'Pasze',
+  'paliwo': 'Paliwo',
+  'sprzet_czesci': 'Narzędzia i części',
+  'naprawy_konserwacja': 'Naprawa i konserwacja',
+  'naprawa_konserwacja': 'Naprawa i konserwacja', // Dla spójności jeśli są różne wersje
+  'inne_koszty': 'Inne koszty',
+  
+  // Dodatkowe kategorie które mogą się pojawić (z categoryMapping w useFinance.js)
+  'produkty_zwierzece': 'Produkty zwierzęce',
+  'zakup_zwierzat': 'Zakup zwierząt',
+  'podatki_oplaty': 'Podatki i opłaty',
+  'nasiona': 'Nasiona',
+  'nawozy': 'Nawozy',
+
   }
+
+  const parseTransactionDescription = (description) => {
+  // Jeśli opis zawiera dwukropek, podziel na części
+  if (description && description.includes(':')) {
+    const parts = description.split(':')
+    if (parts.length >= 2) {
+      return {
+        machineName: parts[1].trim(), // "Case Puma - 12test12"
+        operationType: parts[0].trim() // "Naprawa/przegląd"
+      }
+    }
+  }
+  // Jeśli nie ma dwukropka, zwróć oryginalny opis
+  return {
+    machineName: description || 'Brak opisu',
+    operationType: ''
+  }
+}
 
   // Poprawiona funkcja do formatowania waluty
   const formatCurrency = (amount) => {
@@ -114,26 +144,39 @@ const FinanceDashboard = ({ transactions, budgets, summary }) => {
             <p className="no-data">Brak transakcji</p>
           ) : (
             <div className="transactions-list">
-              {recentTransactions.map(transaction => (
-                <div key={transaction.id} className="transaction-item">
-                  <div className="transaction-main">
-                    <span className={`transaction-type ${transaction.type}`}>
-                      {transaction.type === 'income' ? '💰' : '📉'}
-                    </span>
-                    <div className="transaction-info">
-                      <div className="transaction-description">
-                        {transaction.description}
-                      </div>
-                      <div className="transaction-category">
-                        {translateCategory(transaction.category)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className={`transaction-amount ${transaction.type}`}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                  </div>
-                </div>
-              ))}
+              {recentTransactions.map(transaction => {
+  const parsed = parseTransactionDescription(transaction.description)
+  const category = translateCategory(transaction.category)
+  
+  return (
+    <div key={transaction.id} className="transaction-item">
+      <div className="transaction-main">
+        <span className={`transaction-type ${transaction.type}`}>
+          {transaction.type === 'income' ? '💰' : '📉'}
+        </span>
+        <div className="transaction-info">
+          {/* NAZWA MASZYNY JAKO GŁÓWNY OPIS */}
+          <div className="transaction-description">
+            {parsed.machineName}
+          </div>
+          {/* TYP OPERACJI */}
+          
+          <div className="transaction-details">
+            {parsed.operationType && (
+              <span className="operation-type">
+                {parsed.operationType}
+              </span>
+            )}
+            
+          </div>
+        </div>
+      </div>
+      <div className={`transaction-amount ${transaction.type}`}>
+        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+      </div>
+    </div>
+  )
+})}
             </div>
           )}
         </div>
