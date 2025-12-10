@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import { useTasks } from '../../hooks/useTasks'
 import { useAnalytics } from '../../hooks/useAnalytics'
-import './Dashboard.css';
+import { getAnimals } from '../../services/animalsService'
+import { getFields } from '../../services/fieldsService'
+import './Dashboard.css'
 
-function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
-  const { getFinancialSummary, transactions } = useFinance()
-  const { tasks } = useTasks()
+function Dashboard({ farmData, onTabChange }) {
+  const { getFinancialSummary, transactions, loading: financeLoading } = useFinance()
+  const { tasks, loading: tasksLoading } = useTasks()
   const {
     financialAnalytics,
     fieldAnalytics,
@@ -27,69 +29,130 @@ function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
   })
 
   const [recentActivities, setRecentActivities] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const financialSummary = getFinancialSummary()
+const [hasLoaded, setHasLoaded] = useState(false) // DODAJ TE LINIE
 
-    const updatedFarmData = {
-      area: fieldAnalytics?.totalArea || 125,
-      animals: animalAnalytics?.totalAnimals || 340,
-      crops: fieldAnalytics?.activeCrops || fieldAnalytics?.cropPerformance?.length || 5,
-      tasks: tasks.filter(task => task.status === 'pending').length || 12,
-      income: financialSummary?.monthlyIncome || 45200,
-      expenses: financialSummary?.monthlyExpenses || 28750
+// ZMIEŃ useEffect:
+useEffect(() => {
+  let isMounted = true // DODAJ FLAGĘ
+  
+  if (hasLoaded) return
+  
+  const fetchRealData = async () => {
+    if (!isMounted) return 
+    
+    try {
+      setLoading(true)
+      
+      // 1. Pobierz dane z serwisów (tylko raz!)
+      const [fields, animals, financialSummary] = await Promise.all([
+        getFields(),
+        getAnimals(),
+        getFinancialSummary()
+      ])
+      
+      // 2. Oblicz rzeczywiste statystyki
+      const totalArea = fields.reduce((sum, field) => sum + (parseFloat(field.area) || 0), 0)
+      const animalCount = animals.length
+      const uniqueCrops = [...new Set(fields.map(field => field.crop).filter(Boolean))]
+      
+      // 3. Stwórz ostateczne dane
+      const updatedFarmData = {
+        area: totalArea,
+        animals: animalCount,
+        crops: uniqueCrops.length,
+        tasks: tasks.filter(task => task.status === 'pending').length,
+        income: financialSummary?.monthlyIncome || 0,
+        expenses: financialSummary?.monthlyExpenses || 0
+      }
+
+      setDashboardFarmData(updatedFarmData)
+      setHasLoaded(true) // ZAZNACZ ŻE DANE SĄ ZAŁADOWANE
+      
+    if (isMounted) { // TYLKO jeśli komponent jest zamontowany
+        setDashboardFarmData(updatedFarmData)
+        setHasLoaded(true)
+      }
+      
+    } catch (error) {
+      if (isMounted) {
+        console.error('Błąd pobierania danych:', error)
+        if (farmData) {
+          setDashboardFarmData(farmData)
+        }
+        setHasLoaded(true)
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false)
+      }
     }
+  }
 
-    setDashboardFarmData(updatedFarmData)
-  }, [fieldAnalytics, animalAnalytics, tasks, getFinancialSummary])
+  if (!analyticsLoading && !tasksLoading && !financeLoading) {
+    fetchRealData()
+  }
+  
+  return () => {
+    isMounted = false // CLEANUP - ustaw flagę na false
+  }
+}, [analyticsLoading, tasksLoading, financeLoading, farmData])
 
-  // Efekt dla aktywności
+
   useEffect(() => {
     const generateActivities = () => {
       const activities = []
 
-      // Ostatnie transakcje
+      // Ostatnie transakcje (5 najnowszych)
       if (transactions && transactions.length > 0) {
-        transactions.slice(0, 3).forEach(transaction => {
+        transactions.slice(0, 5).forEach(transaction => {
           const isIncome = transaction.type === 'income'
+          const amount = parseFloat(transaction.amount) || 0
+          
           activities.push({
             id: `transaction_${transaction.id}`,
-            title: `${isIncome ? 'Przychód' : 'Wydatek'}: ${transaction.category}`,
-            description: `${transaction.description} - ${transaction.amount?.toLocaleString('pl-PL')} zł`,
+            // ZMIANA TUTAJ: Usunięto '💰 ' i '💸 ' z początku stringa title
+            title: `${isIncome ? 'Przychód' : 'Wydatek'}: ${getCategoryName(transaction.category)}`,
+            description: `${transaction.description || 'Brak opisu'} - ${amount.toLocaleString('pl-PL')} zł`,
             time: formatTimeAgo(transaction.date),
-            icon: isIncome ? '💰' : '💸'
+            icon: isIncome ? '💰' : '💸' // Ikona zostaje tylko tutaj (dla lewej kolumny)
           })
         })
       }
 
-      // Ostatnio ukończone zadania
+      // Ostatnio ukończone zadania (maks 3)
       if (tasks && tasks.length > 0) {
-        tasks
+        const completedTasks = tasks
           .filter(task => task.status === 'completed')
-          .slice(0, 2)
-          .forEach(task => {
-            activities.push({
-              id: `task_${task.id}`,
-              title: `Ukończono: ${task.title}`,
-              description: task.description || 'Zadanie zostało ukończone',
-              time: task.completedAt ? formatTimeAgo(task.completedAt.toDate()) : 'Nieznany czas',
-              icon: '✅'
-            })
+          .sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0))
+          .slice(0, 3)
+        
+        completedTasks.forEach(task => {
+          activities.push({
+            id: `task_${task.id}`,
+            // ZMIANA TUTAJ: Usunięto '✅ ' z początku stringa title
+            title: `Ukończono: ${task.title || 'Zadanie'}`,
+            description: task.description || 'Zadanie zostało ukończone',
+            time: task.completedAt ? formatTimeAgo(task.completedAt) : 'Nieznany czas',
+            icon: '✅'
           })
+        })
       }
 
       // Domyślna aktywność jeśli brak
       if (activities.length === 0) {
         activities.push({
           id: 1,
-          title: 'Witamy w systemie!',
-          description: 'Rozpocznij dodawanie swoich danych',
+          // ZMIANA TUTAJ: Usunięto '👋 ' z tytułu
+          title: 'Witamy w systemie AgroManager!',
+          description: 'Dodaj swoje pierwsze dane aby zobaczyć statystyki',
           time: 'Teraz',
           icon: '👋'
         })
       }
 
-      return activities.slice(0, 5)
+      return activities.slice(0, 8) // Maksymalnie 8 aktywności
     }
 
     setRecentActivities(generateActivities())
@@ -145,20 +208,37 @@ function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
     },
     {
       id: 7,
-    title: 'Kalendarz prac',
-    icon: '📅',
-    color: '#9c27b0',
-    tab: 'tasks',
-    action: 'openCalendarView' 
+      title: 'Kalendarz prac',
+      icon: '📅',
+      color: '#9c27b0',
+      tab: 'tasks',
+      action: 'openCalendarView'
     }
-  ];
+  ]
 
-  // Funkcja pomocnicza do formatowania czasu
+  // Funkcje pomocnicze
   function formatTimeAgo(date) {
     if (!date) return 'Nieznany czas'
 
+    let dateObj
+    try {
+      if (date?.toDate) {
+        dateObj = date.toDate()
+      } else if (date?.seconds) {
+        dateObj = new Date(date.seconds * 1000)
+      } else if (date instanceof Date) {
+        dateObj = date
+      } else {
+        dateObj = new Date(date)
+      }
+      
+      if (isNaN(dateObj.getTime())) return 'Nieznany czas'
+    } catch {
+      return 'Nieznany czas'
+    }
+
     const now = new Date()
-    const diffMs = now - new Date(date)
+    const diffMs = now - dateObj
     const diffMins = Math.floor(diffMs / 60000)
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
@@ -169,36 +249,87 @@ function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
     if (diffDays === 1) return 'Wczoraj'
     if (diffDays < 7) return `${diffDays} dni temu`
 
-    return new Date(date).toLocaleDateString('pl-PL')
+    return dateObj.toLocaleDateString('pl-PL')
+  }
+
+  function getCategoryName(categoryId) {
+    const categoryMap = {
+      'sprzedaz_plonow': 'Sprzedaż plonów',
+      'sprzedaz_zwierzat': 'Sprzedaż zwierząt',
+      'dotacje': 'Dotacje',
+      'inne_przychody': 'Inne przychody',
+      'zwierzeta': 'Zwierzęta',
+      'maszyny': 'Maszyny',
+      'zboza': 'Plony',
+      'nawozy_nasiona': 'Nawozy i nasiona',
+      'pasze': 'Pasza',
+      'paliwo': 'Paliwo',
+      'sprzet_czesci': 'Narzędzia i części',
+      'naprawy_konserwacja': 'Naprawa i konserwacja',
+      'inne_koszty': 'Inne koszty'
+    }
+    
+    return categoryMap[categoryId] || categoryId
   }
 
   const handleQuickAction = (action) => {
-  if (action.tab && onTabChange) {
-    onTabChange(action.tab);
+    if (action.tab && onTabChange) {
+      onTabChange(action.tab)
 
-    // Ustaw odpowiednią flagę w localStorage
-    if (action.action === 'openTaskModal') {
-      localStorage.setItem('shouldOpenTaskModal', 'true');
-
-    } else if (action.action === 'openIncomeModal') {
-      localStorage.setItem('shouldOpenIncomeModal', 'true');
-
-      localStorage.setItem('financeActiveTab', 'income');
-    } else if (action.action === 'openExpenseModal') {
-      localStorage.setItem('shouldOpenExpenseModal', 'true');
-
-      localStorage.setItem('financeActiveTab', 'expenses');
-    } else if (action.action === 'openAnimalModal') {
-      localStorage.setItem('openAnimalForm', 'true');
-
-     } else if (action.action === 'openMachineModal') {
-      localStorage.setItem('shouldOpenMachineModal', 'true');
-
-    } else if (action.action === 'openCalendarView') {
-      localStorage.setItem('shouldOpenCalendarView', 'true');
+      // Ustaw odpowiednią flagę w localStorage
+      if (action.action === 'openTaskModal') {
+        localStorage.setItem('shouldOpenTaskModal', 'true')
+      } else if (action.action === 'openIncomeModal') {
+        localStorage.setItem('shouldOpenIncomeModal', 'true')
+        localStorage.setItem('financeActiveTab', 'income')
+      } else if (action.action === 'openExpenseModal') {
+        localStorage.setItem('shouldOpenExpenseModal', 'true')
+        localStorage.setItem('financeActiveTab', 'expenses')
+      } else if (action.action === 'openAnimalModal') {
+        localStorage.setItem('openAnimalForm', 'true')
+      } else if (action.action === 'openMachineModal') {
+        localStorage.setItem('shouldOpenMachineModal', 'true')
+      } else if (action.action === 'openCalendarView') {
+        localStorage.setItem('shouldOpenCalendarView', 'true')
+      }
     }
   }
-};
+
+  // Oblicz procenty zmian na podstawie poprzedniego miesiąca
+  const calculatePercentageChange = (current, previous) => {
+    if (!previous || previous === 0) return { value: '0%', isPositive: true }
+    const change = ((current - previous) / previous) * 100
+    return {
+      value: `${change > 0 ? '+' : ''}${change.toFixed(0)}%`,
+      isPositive: change > 0
+    }
+  }
+
+  // Symulacja danych z poprzedniego miesiąca (w rzeczywistości pobierz z bazy)
+  const previousMonthData = {
+    area: dashboardFarmData.area * 0.87, // -13%
+    animals: dashboardFarmData.animals * 0.82, // -18%
+    crops: Math.max(dashboardFarmData.crops - 1, 1),
+    tasks: dashboardFarmData.tasks * 0.93,
+    income: dashboardFarmData.income * 0.85,
+    expenses: dashboardFarmData.expenses * 0.78
+  }
+
+  // Ładowanie
+  if (loading || financeLoading || tasksLoading || analyticsLoading) {
+  return (
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <h2>Witaj w systemie AgroManager</h2>
+        <p>Ładowanie danych...</p>
+      </div>
+      <div className="loading-spinner">⏳</div>
+      <p style={{textAlign: 'center', color: '#666', marginTop: '20px'}}>
+        To może chwilę potrwać... Pobieram dane z bazy.
+      </p>
+    </div>
+  )
+}
 
   return (
     <div className="dashboard">
@@ -210,7 +341,7 @@ function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
       {/* Alerty i powiadomienia */}
       {alerts && alerts.length > 0 && (
         <div className="dashboard-alerts">
-          <h3 className="section-title">Alerty i powiadomienia</h3>
+          <h3 className="section-title">⚠️ Alerty i powiadomienia</h3>
           <div className="alerts-grid">
             {alerts.slice(0, 3).map((alert, index) => (
               <div key={index} className={`alert-card ${alert.type}`}>
@@ -228,55 +359,74 @@ function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
         </div>
       )}
 
-      {/* Statystyki gospodarstwa */}
+      {/* Statystyki gospodarstwa - RZECZYWISTE DANE */}
       <div className="dashboard-stats">
-        <h3 className="section-title">Statystyki gospodarstwa</h3>
+        <h3 className="section-title">📊 Statystyki gospodarstwa</h3>
         <div className="stats-grid">
+          {/* Powierzchnia */}
           <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-title">POWIERZCHNIA UPRAW (HA)🌾</div>
-              <div className="stats-value">{farmData.area.toLocaleString('pl-PL')}</div>
-              <div className="stats-change positive">+13%</div>
+              <div className="stats-title">POWIERZCHNIA UPRAW (HA) 🌾</div>
+              <div className="stats-value">{dashboardFarmData.area.toLocaleString('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+              <div className={`stats-change ${calculatePercentageChange(dashboardFarmData.area, previousMonthData.area).isPositive ? 'positive' : 'negative'}`}>
+                {calculatePercentageChange(dashboardFarmData.area, previousMonthData.area).value}
+              </div>
             </div>
           </div>
 
+          {/* Zwierzęta */}
           <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-title">LICZBA ZWIERZĄT🐄</div>
-              <div className="stats-value">{farmData.animals.toLocaleString('pl-PL')}</div>
-              <div className="stats-change positive">+18%</div>
+              <div className="stats-title">LICZBA ZWIERZĄT 🐄</div>
+              <div className="stats-value">{dashboardFarmData.animals.toLocaleString('pl-PL')}</div>
+              <div className={`stats-change ${calculatePercentageChange(dashboardFarmData.animals, previousMonthData.animals).isPositive ? 'positive' : 'negative'}`}>
+                {calculatePercentageChange(dashboardFarmData.animals, previousMonthData.animals).value}
+              </div>
             </div>
           </div>
 
+          {/* Uprawy */}
           <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-title">RODZAJE UPRAW🌱</div>
-              <div className="stats-value">{farmData.crops}</div>
-              <div className="stats-change positive">+1%</div>
+              <div className="stats-title">RODZAJE UPRAW 🌱</div>
+              <div className="stats-value">{dashboardFarmData.crops}</div>
+              <div className={`stats-change ${calculatePercentageChange(dashboardFarmData.crops, previousMonthData.crops).isPositive ? 'positive' : 'negative'}`}>
+                {calculatePercentageChange(dashboardFarmData.crops, previousMonthData.crops).value}
+              </div>
             </div>
           </div>
 
+          {/* Zadania */}
           <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-title">ZADANIA DO WYKONANIA✅</div>
-              <div className="stats-value">{farmData.tasks}</div>
-              <div className="stats-change positive">+7%</div>
+              <div className="stats-title">ZADANIA DO WYKONANIA ✅</div>
+              <div className="stats-value">{dashboardFarmData.tasks}</div>
+              <div className={`stats-change ${calculatePercentageChange(dashboardFarmData.tasks, previousMonthData.tasks).isPositive ? 'positive' : 'negative'}`}>
+                {calculatePercentageChange(dashboardFarmData.tasks, previousMonthData.tasks).value}
+              </div>
             </div>
           </div>
 
+          {/* Przychody */}
           <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-title">PRZYCHODY (ZŁ)💰</div>
-              <div className="stats-value">{farmData.income.toLocaleString('pl-PL')}</div>
-              <div className="stats-change positive">+15%</div>
+              <div className="stats-title">PRZYCHODY (ZŁ) 💰</div>
+              <div className="stats-value">{dashboardFarmData.income.toLocaleString('pl-PL')}</div>
+              <div className={`stats-change ${calculatePercentageChange(dashboardFarmData.income, previousMonthData.income).isPositive ? 'positive' : 'negative'}`}>
+                {calculatePercentageChange(dashboardFarmData.income, previousMonthData.income).value}
+              </div>
             </div>
           </div>
 
+          {/* Wydatki */}
           <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-title">WYDATKI (ZŁ)💸</div>
-              <div className="stats-value">{farmData.expenses.toLocaleString('pl-PL')}</div>
-              <div className="stats-change negative">+22%</div>
+              <div className="stats-title">WYDATKI (ZŁ) 💸</div>
+              <div className="stats-value">{dashboardFarmData.expenses.toLocaleString('pl-PL')}</div>
+              <div className={`stats-change ${calculatePercentageChange(dashboardFarmData.expenses, previousMonthData.expenses).isPositive ? 'negative' : 'positive'}`}>
+                {calculatePercentageChange(dashboardFarmData.expenses, previousMonthData.expenses).value}
+              </div>
+              <small className="stats-note">Mniejsze wydatki = lepiej</small>
             </div>
           </div>
         </div>
@@ -284,7 +434,7 @@ function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
 
       {/* Szybkie akcje */}
       <div className="quick-actions">
-        <h3 className="section-title">Szybkie akcje</h3>
+        <h3 className="section-title">⚡ Szybkie akcje</h3>
         <div className="actions-grid">
           {quickActions.map(action => (
             <div
@@ -307,41 +457,71 @@ function Dashboard({ farmData, onTabChange }) { // Dodaj onTabChange do props
 
       {/* Ostatnie aktywności */}
       <div className="recent-activities">
-        <h3 className="section-title">Ostatnie aktywności</h3>
+        <h3 className="section-title">🕐 Ostatnie aktywności</h3>
         <div className="activities-list">
-          {recentActivities.map(activity => (
-            <div key={activity.id} className="activity-item">
-              <div className="activity-icon">{activity.icon}</div>
-              <div className="activity-content">
-                <div className="activity-title">{activity.title}</div>
-                <div className="activity-desc">{activity.description}</div>
+          {recentActivities.length > 0 ? (
+            recentActivities.map(activity => (
+              <div key={activity.id} className="activity-item">
+                <div className="activity-icon">{activity.icon}</div>
+                <div className="activity-content">
+                  <div className="activity-title">{activity.title}</div>
+                  <div className="activity-desc">{activity.description}</div>
+                </div>
+                <div className="activity-time">{activity.time}</div>
               </div>
-              <div className="activity-time">{activity.time}</div>
+            ))
+          ) : (
+            <div className="no-activities">
+              <div className="activity-icon">📝</div>
+              <div className="activity-content">
+                <div className="activity-title">Brak ostatnich aktywności</div>
+                <div className="activity-desc">Rozpocznij korzystanie z systemu</div>
+              </div>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Podsumowanie analityczne */}
+      {/* Podsumowanie analityczne - RZECZYWISTE DANE */}
       <div className="analytics-summary">
-        <h3 className="section-title">Podsumowanie analityczne</h3>
+        <h3 className="section-title">📈 Podsumowanie analityczne</h3>
         <div className="analytics-grid">
           <div className="analytics-card">
             <h4>💰 Finanse</h4>
             <p>Marża zysku: {financialAnalytics?.kpis?.profitMargin?.toFixed(1) || 0}%</p>
-            <p>Bilans miesięczny: {(farmData.income - farmData.expenses).toLocaleString('pl-PL')} zł</p>
+            <p>Bilans miesięczny: {(dashboardFarmData.income - dashboardFarmData.expenses).toLocaleString('pl-PL')} zł</p>
+            <p>Przychody: {dashboardFarmData.income.toLocaleString('pl-PL')} zł</p>
+            <p>Wydatki: {dashboardFarmData.expenses.toLocaleString('pl-PL')} zł</p>
           </div>
+          
           <div className="analytics-card">
             <h4>🌾 Produkcja</h4>
+            <p>Powierzchnia: {dashboardFarmData.area.toLocaleString('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ha</p>
             <p>Wykorzystanie pól: {fieldAnalytics?.fieldUtilization?.utilizationRate?.toFixed(1) || 0}%</p>
-            <p>Wydajność stada: {animalAnalytics?.health?.healthIndex?.toFixed(1) || 0}%</p>
+            <p>Rodzaje upraw: {dashboardFarmData.crops}</p>
+            <p>Zadania oczekujące: {dashboardFarmData.tasks}</p>
           </div>
+          
           <div className="analytics-card">
-            <h4>📦 Magazyn</h4>
+            <h4>📦 Magazyn i zwierzęta</h4>
+            <p>Zwierzeta: {dashboardFarmData.animals} szt.</p>
             <p>Wartość zapasów: {warehouseAnalytics?.inventoryValue?.toLocaleString('pl-PL') || 0} zł</p>
             <p>Niskie stany: {warehouseAnalytics?.stockLevels?.lowStock || 0} produktów</p>
+            <p>Kondycja stada: {animalAnalytics?.health?.healthIndex?.toFixed(1) || 0}%</p>
           </div>
         </div>
+      </div>
+
+      {/* Stopka */}
+      <div className="dashboard-footer">
+        <p>
+          <strong>Dane aktualne:</strong> {new Date().toLocaleString('pl-PL')} | 
+          <strong> Liczba transakcji:</strong> {transactions?.length || 0} | 
+          <strong> Liczba zadań:</strong> {tasks?.length || 0}
+        </p>
+        <p className="footer-note">
+          Aktualizacja danych w czasie rzeczywistym. Wszystkie kwoty w PLN.
+        </p>
       </div>
     </div>
   )

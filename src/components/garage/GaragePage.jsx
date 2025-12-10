@@ -597,17 +597,7 @@ const GaragePage = () => {
             <div className="filter-controls">
               <div className="actions-bar">
               </div>
-              <div className="action-buttons">
-                <button
-                  className="btn btn-primary"
-                  onClick={() => {
-                    resetForm();
-                    setShowForm(true);
-                  }}
-                >
-                  <i className="fas fa-plus"></i> Dodaj maszynę
-                </button>
-              </div>
+             
               <div className="search-box">
                 <i className="fas fa-search"></i>
                 <input
@@ -668,7 +658,17 @@ const GaragePage = () => {
                   </div>
                 )}
               </div>
-
+                 <div className="action-buttons">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    resetForm();
+                    setShowForm(true);
+                  }}
+                >
+                  <i className="fas fa-plus"></i> Dodaj maszynę
+                </button>
+              </div>
             </div>
           </div>
 
