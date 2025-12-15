@@ -2,7 +2,6 @@
 import React, { useState } from 'react'
 import { useAnalytics } from '../../hooks/useAnalytics'
 import AnalyticsDashboard from './AnalyticsDashboard'
-import FinancialReports from './FinancialReports'
 import ProductionReports from './ProductionReports'
 import CostAnalysis from './CostAnalysis'
 import ExportPanel from './ExportPanel'
@@ -59,7 +58,6 @@ const ReportsPage = () => {
   const tabs = [
     { id: 'dashboard', name: 'Pulpit', icon: '📊' },
     { id: 'financial-analysis', name: 'Analiza Finansowa', icon: '📈' },
-    { id: 'financial', name: 'Analiza Finansowa', icon: '💰' },
     { id: 'production', name: 'Wydajność', icon: '🌾' },
     { id: 'costs', name: 'Optymalizacja Kosztów', icon: '📉' },
     { id: 'export', name: 'Eksport', icon: '📤' }
@@ -191,21 +189,10 @@ const ReportsPage = () => {
           />
         )}
         
-        {/* DODAJ NOWĄ ZAKŁADKĘ */}
         {activeTab === 'financial-analysis' && (
           <FinancialAnalysis 
             transactions={data?.transactions || []}
             summary={financialAnalytics}
-          />
-        )}
-        
-        {activeTab === 'financial' && (
-          <FinancialReports 
-            data={financialAnalytics}
-            fieldAnalytics={fieldAnalytics}
-            formatCurrency={formatCurrency}
-            formatNumber={formatNumber}
-            formatPercentage={formatPercentage}
           />
         )}
         

@@ -184,10 +184,11 @@ const FinancialAnalysis = ({ transactions, summary }) => {
         </div>
       </div>
 
- {/* Wykres słupkowy */}
-      <div className="chart-container">
-        <h4>Rozkład według kategorii</h4>
-        <div className="bar-chart">
+ {/* Wykres słupkowy - ZMODYFIKOWANA SEKCJA */}
+      <div className="chart-container distribution-section">
+        <h4 className="section-title">Rozkład według kategorii</h4>
+        
+        <div className="distribution-chart">
           {reportData.length === 0 ? (
             <div className="no-data">
               Brak danych dla wybranych kryteriów
@@ -196,28 +197,33 @@ const FinancialAnalysis = ({ transactions, summary }) => {
             reportData.map((item, index) => {
               const percentage = totalAmount > 0 ? (item.amount / totalAmount) * 100 : 0
               const category = findCategory(item.category, reportType)
+              const isIncome = item.type === 'income'
 
               return (
-                <div key={item.category} className="bar-item">
-                  <div className="bar-label">
-                    <div className="category-info">
-                      <span className="category-icon">{category.icon}</span>
-                      <span className="category-name">{category.name}</span>
+                <div key={item.category} className="dist-row">
+                  {/* 1. Ikona i Nazwa */}
+                  <div className="dist-info">
+                    <div className={`dist-icon ${isIncome ? 'income' : 'expense'}`}>
+                      {category.icon}
                     </div>
-                    <span className="bar-amount">{formatCurrency(item.amount)}</span>
+                    <span className="dist-name">{category.name}</span>
                   </div>
-                  <div className="bar-track">
-                    <div
-                      className={`bar-fill ${item.type}`}
-                      style={{ width: `${Math.min(percentage, 100)}%` }}
-                    >
-                      {percentage >= 15 && (
-                        <span className="bar-percentage">{percentage.toFixed(1)}%</span>
-                      )}
+
+                  {/* 2. Pasek wizualny */}
+                  <div className="dist-bar-area">
+                    <div className="dist-track">
+                      <div
+                        className={`dist-fill ${isIncome ? 'income' : 'expense'}`}
+                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                        title={`${percentage.toFixed(1)}%`}
+                      ></div>
                     </div>
-                    {percentage < 15 && (
-                      <span className="bar-percentage-outside">{percentage.toFixed(1)}%</span>
-                    )}
+                    <span className="dist-percent">{percentage.toFixed(1)}%</span>
+                  </div>
+
+                  {/* 3. Kwota */}
+                  <div className="dist-amount">
+                    {formatCurrency(item.amount)}
                   </div>
                 </div>
               )

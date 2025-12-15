@@ -32,7 +32,7 @@ const FinancialReports = ({ data }) => {
   return (
     <div className="financial-reports">
       <div className="reports-header">
-        <h3>Analiza Finansowa</h3>
+        <h3>a</h3>
         <div className="report-controls">
           <CustomSelect
             options={reportTypeOptions}
