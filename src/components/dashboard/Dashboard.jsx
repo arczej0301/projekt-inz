@@ -3,8 +3,13 @@ import { useState, useEffect } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import { useTasks } from '../../hooks/useTasks'
 import { useAnalytics } from '../../hooks/useAnalytics'
-import { getAnimals } from '../../services/animalsService'
-import { getFields } from '../../services/fieldsService'
+// IMPORTUJEMY getAnimals z ODPOWIEDNIEGO SERWISU
+import { getAnimals } from '../../services/animalsService' 
+import { 
+  getFields, 
+  getAllFieldYields,
+  getAllFieldStatuses
+} from '../../services/fieldsService'
 import './Dashboard.css'
 
 function Dashboard({ farmData, onTabChange }) {
@@ -28,135 +33,220 @@ function Dashboard({ farmData, onTabChange }) {
     expenses: 0
   })
 
+  const [fieldHistoryActivities, setFieldHistoryActivities] = useState([])
   const [recentActivities, setRecentActivities] = useState([])
   const [loading, setLoading] = useState(true)
+  const [hasLoaded, setHasLoaded] = useState(false)
 
-const [hasLoaded, setHasLoaded] = useState(false) // DODAJ TE LINIE
-
-// ZMIEŃ useEffect:
-useEffect(() => {
-  let isMounted = true // DODAJ FLAGĘ
-  
-  if (hasLoaded) return
-  
-  const fetchRealData = async () => {
-    if (!isMounted) return 
+  // GŁÓWNY USE EFFECT - POBIERANIE DANYCH
+  useEffect(() => {
+    let isMounted = true
     
-    try {
-      setLoading(true)
+    if (hasLoaded) return
+    
+    const fetchRealData = async () => {
+      if (!isMounted) return 
       
-      // 1. Pobierz dane z serwisów (tylko raz!)
-      const [fields, animals, financialSummary] = await Promise.all([
-        getFields(),
-        getAnimals(),
-        getFinancialSummary()
-      ])
-      
-      // 2. Oblicz rzeczywiste statystyki
-      const totalArea = fields.reduce((sum, field) => sum + (parseFloat(field.area) || 0), 0)
-      const animalCount = animals.length
-      const uniqueCrops = [...new Set(fields.map(field => field.crop).filter(Boolean))]
-      
-      // 3. Stwórz ostateczne dane
-      const updatedFarmData = {
-        area: totalArea,
-        animals: animalCount,
-        crops: uniqueCrops.length,
-        tasks: tasks.filter(task => task.status === 'pending').length,
-        income: financialSummary?.monthlyIncome || 0,
-        expenses: financialSummary?.monthlyExpenses || 0
-      }
+      try {
+        setLoading(true)
+        
+        // 1. Pobierz dane z serwisów (PRZYWRÓCONO getAnimals)
+        const [fields, animals, financialSummary, yields, statusesObj] = await Promise.all([
+          getFields(),
+          getAnimals(),           // <--- PRZYWRÓCONE POBIERANIE ZWIERZĄT
+          getFinancialSummary(),
+          getAllFieldYields(),    
+          getAllFieldStatuses()   
+        ])
+        
+        // 2. Oblicz rzeczywiste statystyki
+        const totalArea = fields.reduce((sum, field) => sum + (parseFloat(field.area) || 0), 0)
+        
+        // OBLICZAMY LICZBĘ ZWIERZĄT NA PODSTAWIE POBRANEJ TABLICY
+        const animalCount = animals ? animals.length : 0
+        
+        const uniqueCrops = [...new Set(fields.map(field => field.crop).filter(Boolean))]
+        
+        // 3. PRZETWARZANIE AKTYWNOŚCI Z PÓL
+        if (isMounted) {
+          const newFieldActivities = []
+          const fieldNames = {}
+          fields.forEach(f => fieldNames[f.id] = f.name)
 
-      setDashboardFarmData(updatedFarmData)
-      setHasLoaded(true) // ZAZNACZ ŻE DANE SĄ ZAŁADOWANE
-      
-    if (isMounted) { // TYLKO jeśli komponent jest zamontowany
-        setDashboardFarmData(updatedFarmData)
-        setHasLoaded(true)
-      }
-      
-    } catch (error) {
-      if (isMounted) {
-        console.error('Błąd pobierania danych:', error)
-        if (farmData) {
-          setDashboardFarmData(farmData)
+          // A. Przetwarzanie zbiorów
+          if (yields && yields.length > 0) {
+            yields.forEach(item => {
+              newFieldActivities.push({
+                id: `yield_${item.id}`,
+                title: `Zbiór: ${item.crop}`,
+                description: `Pole: ${fieldNames[item.field_id] || 'Nieznane'} - Zebrano: ${item.amount}t`,
+                time: item.date_created, 
+                timestamp: new Date(item.date_created).getTime(),
+                icon: '🚜'
+              })
+            })
+          }
+
+          // B. Przetwarzanie statusów
+          const statusesList = statusesObj ? Object.values(statusesObj) : []
+          if (statusesList && statusesList.length > 0) {
+            statusesList.forEach(item => {
+              const date = item.date_created || item.date_updated
+              
+              let activityTitle = ''
+              let activityIcon = '🌾'
+              
+              // Budowanie opisu z plonem
+              let activityDesc = `Pole: ${fieldNames[item.field_id] || 'Nieznane'} ${item.crop ? `(${item.crop})` : ''}`
+
+              switch (item.status) {
+                case 'harvested':
+                  activityTitle = 'Zbiór upraw'
+                  activityIcon = '🌾'
+                  if (item.yield_amount) {
+                    activityDesc += ` - Plon: ${item.yield_amount}t`
+                  }
+                  if (item.yield_moisture && parseFloat(item.yield_moisture) > 0) {
+                    activityDesc += `, Wilgotność: ${item.yield_moisture}%`
+                  }
+                  break
+                case 'sown':
+                  activityTitle = 'Zasiano pole'
+                  activityIcon = '🌱'
+                  break
+                case 'ready_for_sowing':
+                  activityTitle = 'Pole gotowe do siewu'
+                  break
+                case 'fallow':
+                  activityTitle = 'Pole ugorowane'
+                  break
+                case 'pasture':
+                  activityTitle = 'Przekształcenie w pastwisko'
+                  activityIcon = '🐄'
+                  break
+                default:
+                  const label = item.status
+                  activityTitle = `Zmiana stanu: ${label}`
+              }
+
+              newFieldActivities.push({
+                id: `status_${item.id}`,
+                title: activityTitle,
+                description: activityDesc,
+                time: date,
+                timestamp: new Date(date).getTime(),
+                icon: activityIcon
+              })
+            })
+          }
+
+          setFieldHistoryActivities(newFieldActivities)
+
+          // Aktualizacja głównych danych dashboardu
+          const updatedFarmData = {
+            area: totalArea,
+            animals: animalCount, // TERAZ PRZYPISUJEMY FAKTYCZNĄ LICZBĘ
+            crops: uniqueCrops.length,
+            tasks: tasks.filter(task => task.status === 'pending').length,
+            income: financialSummary?.monthlyIncome || 0,
+            expenses: financialSummary?.monthlyExpenses || 0
+          }
+
+          setDashboardFarmData(updatedFarmData)
+          setHasLoaded(true)
         }
-        setHasLoaded(true)
-      }
-    } finally {
-      if (isMounted) {
-        setLoading(false)
+        
+      } catch (error) {
+        if (isMounted) {
+          console.error('Błąd pobierania danych:', error)
+          if (farmData) {
+            setDashboardFarmData(farmData)
+          }
+          setHasLoaded(true)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
-  }
 
-  if (!analyticsLoading && !tasksLoading && !financeLoading) {
-    fetchRealData()
-  }
-  
-  return () => {
-    isMounted = false // CLEANUP - ustaw flagę na false
-  }
-}, [analyticsLoading, tasksLoading, financeLoading, farmData])
+    if (!analyticsLoading && !tasksLoading && !financeLoading) {
+      fetchRealData()
+    }
+    
+    return () => {
+      isMounted = false
+    }
+  }, [analyticsLoading, tasksLoading, financeLoading, farmData])
 
-
+  // GENEROWANIE LISTY AKTYWNOŚCI
   useEffect(() => {
     const generateActivities = () => {
-      const activities = []
+      let activities = []
 
-      // Ostatnie transakcje (5 najnowszych)
+      // 1. Transakcje
       if (transactions && transactions.length > 0) {
-        transactions.slice(0, 5).forEach(transaction => {
+        transactions.forEach(transaction => {
           const isIncome = transaction.type === 'income'
           const amount = parseFloat(transaction.amount) || 0
+          const date = transaction.date?.toDate ? transaction.date.toDate() : new Date(transaction.date)
           
           activities.push({
             id: `transaction_${transaction.id}`,
-            // ZMIANA TUTAJ: Usunięto '💰 ' i '💸 ' z początku stringa title
             title: `${isIncome ? 'Przychód' : 'Wydatek'}: ${getCategoryName(transaction.category)}`,
             description: `${transaction.description || 'Brak opisu'} - ${amount.toLocaleString('pl-PL')} zł`,
-            time: formatTimeAgo(transaction.date),
-            icon: isIncome ? '💰' : '💸' // Ikona zostaje tylko tutaj (dla lewej kolumny)
+            time: formatTimeAgo(date),
+            timestamp: date.getTime(),
+            icon: isIncome ? '💰' : '💸'
           })
         })
       }
 
-      // Ostatnio ukończone zadania (maks 3)
+      // 2. Zadania
       if (tasks && tasks.length > 0) {
-        const completedTasks = tasks
-          .filter(task => task.status === 'completed')
-          .sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0))
-          .slice(0, 3)
+        const completedTasks = tasks.filter(task => task.status === 'completed')
         
         completedTasks.forEach(task => {
+          const date = task.completedAt ? new Date(task.completedAt) : new Date()
           activities.push({
             id: `task_${task.id}`,
-            // ZMIANA TUTAJ: Usunięto '✅ ' z początku stringa title
             title: `Ukończono: ${task.title || 'Zadanie'}`,
             description: task.description || 'Zadanie zostało ukończone',
-            time: task.completedAt ? formatTimeAgo(task.completedAt) : 'Nieznany czas',
+            time: formatTimeAgo(date),
+            timestamp: date.getTime(),
             icon: '✅'
           })
         })
       }
 
-      // Domyślna aktywność jeśli brak
+      // 3. Pola (Zbiory i Statusy)
+      if (fieldHistoryActivities.length > 0) {
+        const formattedFieldActivities = fieldHistoryActivities.map(activity => ({
+          ...activity,
+          time: formatTimeAgo(new Date(activity.time))
+        }))
+        activities = [...activities, ...formattedFieldActivities]
+      }
+
+      activities.sort((a, b) => b.timestamp - a.timestamp)
+
       if (activities.length === 0) {
         activities.push({
           id: 1,
-          // ZMIANA TUTAJ: Usunięto '👋 ' z tytułu
           title: 'Witamy w systemie AgroManager!',
           description: 'Dodaj swoje pierwsze dane aby zobaczyć statystyki',
           time: 'Teraz',
+          timestamp: Date.now(),
           icon: '👋'
         })
       }
 
-      return activities.slice(0, 8) // Maksymalnie 8 aktywności
+      return activities.slice(0, 8)
     }
 
     setRecentActivities(generateActivities())
-  }, [transactions, tasks])
+  }, [transactions, tasks, fieldHistoryActivities])
 
   const quickActions = [
     {
@@ -216,7 +306,7 @@ useEffect(() => {
     }
   ]
 
-  // Funkcje pomocnicze
+  // Helper functions
   function formatTimeAgo(date) {
     if (!date) return 'Nieznany czas'
 
@@ -268,34 +358,25 @@ useEffect(() => {
       'naprawy_konserwacja': 'Naprawa i konserwacja',
       'inne_koszty': 'Inne koszty'
     }
-    
     return categoryMap[categoryId] || categoryId
   }
 
   const handleQuickAction = (action) => {
     if (action.tab && onTabChange) {
       onTabChange(action.tab)
-
-      // Ustaw odpowiednią flagę w localStorage
-      if (action.action === 'openTaskModal') {
-        localStorage.setItem('shouldOpenTaskModal', 'true')
-      } else if (action.action === 'openIncomeModal') {
+      if (action.action === 'openTaskModal') localStorage.setItem('shouldOpenTaskModal', 'true')
+      else if (action.action === 'openIncomeModal') {
         localStorage.setItem('shouldOpenIncomeModal', 'true')
         localStorage.setItem('financeActiveTab', 'income')
       } else if (action.action === 'openExpenseModal') {
         localStorage.setItem('shouldOpenExpenseModal', 'true')
         localStorage.setItem('financeActiveTab', 'expenses')
-      } else if (action.action === 'openAnimalModal') {
-        localStorage.setItem('openAnimalForm', 'true')
-      } else if (action.action === 'openMachineModal') {
-        localStorage.setItem('shouldOpenMachineModal', 'true')
-      } else if (action.action === 'openCalendarView') {
-        localStorage.setItem('shouldOpenCalendarView', 'true')
-      }
+      } else if (action.action === 'openAnimalModal') localStorage.setItem('openAnimalForm', 'true')
+      else if (action.action === 'openMachineModal') localStorage.setItem('shouldOpenMachineModal', 'true')
+      else if (action.action === 'openCalendarView') localStorage.setItem('shouldOpenCalendarView', 'true')
     }
   }
 
-  // Oblicz procenty zmian na podstawie poprzedniego miesiąca
   const calculatePercentageChange = (current, previous) => {
     if (!previous || previous === 0) return { value: '0%', isPositive: true }
     const change = ((current - previous) / previous) * 100
@@ -305,31 +386,29 @@ useEffect(() => {
     }
   }
 
-  // Symulacja danych z poprzedniego miesiąca (w rzeczywistości pobierz z bazy)
   const previousMonthData = {
-    area: dashboardFarmData.area * 0.87, // -13%
-    animals: dashboardFarmData.animals * 0.82, // -18%
+    area: dashboardFarmData.area * 0.87,
+    animals: dashboardFarmData.animals * 0.82,
     crops: Math.max(dashboardFarmData.crops - 1, 1),
     tasks: dashboardFarmData.tasks * 0.93,
     income: dashboardFarmData.income * 0.85,
     expenses: dashboardFarmData.expenses * 0.78
   }
 
-  // Ładowanie
   if (loading || financeLoading || tasksLoading || analyticsLoading) {
-  return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <h2>Witaj w systemie AgroManager</h2>
-        <p>Ładowanie danych...</p>
+    return (
+      <div className="dashboard">
+        <div className="dashboard-header">
+          <h2>Witaj w systemie AgroManager</h2>
+          <p>Ładowanie danych...</p>
+        </div>
+        <div className="loading-spinner">⏳</div>
+        <p style={{textAlign: 'center', color: '#666', marginTop: '20px'}}>
+          To może chwilę potrwać... Pobieram dane z bazy.
+        </p>
       </div>
-      <div className="loading-spinner">⏳</div>
-      <p style={{textAlign: 'center', color: '#666', marginTop: '20px'}}>
-        To może chwilę potrwać... Pobieram dane z bazy.
-      </p>
-    </div>
-  )
-}
+    )
+  }
 
   return (
     <div className="dashboard">
@@ -338,7 +417,6 @@ useEffect(() => {
         <p>Przegląd Twojego gospodarstwa rolnego na dzień {new Date().toLocaleDateString('pl-PL')}</p>
       </div>
 
-      {/* Alerty i powiadomienia */}
       {alerts && alerts.length > 0 && (
         <div className="dashboard-alerts">
           <h3 className="section-title">⚠️ Alerty i powiadomienia</h3>
@@ -359,11 +437,9 @@ useEffect(() => {
         </div>
       )}
 
-      {/* Statystyki gospodarstwa - RZECZYWISTE DANE */}
       <div className="dashboard-stats">
         <h3 className="section-title">📊 Statystyki gospodarstwa</h3>
         <div className="stats-grid">
-          {/* Powierzchnia */}
           <div className="stats-card">
             <div className="stats-content">
               <div className="stats-title">POWIERZCHNIA UPRAW (HA) 🌾</div>
@@ -374,7 +450,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Zwierzęta */}
           <div className="stats-card">
             <div className="stats-content">
               <div className="stats-title">LICZBA ZWIERZĄT 🐄</div>
@@ -385,7 +460,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Uprawy */}
           <div className="stats-card">
             <div className="stats-content">
               <div className="stats-title">RODZAJE UPRAW 🌱</div>
@@ -396,7 +470,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Zadania */}
           <div className="stats-card">
             <div className="stats-content">
               <div className="stats-title">ZADANIA DO WYKONANIA ✅</div>
@@ -407,7 +480,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Przychody */}
           <div className="stats-card">
             <div className="stats-content">
               <div className="stats-title">PRZYCHODY (ZŁ) 💰</div>
@@ -418,7 +490,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Wydatki */}
           <div className="stats-card">
             <div className="stats-content">
               <div className="stats-title">WYDATKI (ZŁ) 💸</div>
@@ -432,7 +503,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Szybkie akcje */}
       <div className="quick-actions">
         <h3 className="section-title">⚡ Szybkie akcje</h3>
         <div className="actions-grid">
@@ -455,7 +525,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Ostatnie aktywności */}
       <div className="recent-activities">
         <h3 className="section-title">🕐 Ostatnie aktywności</h3>
         <div className="activities-list">
@@ -482,7 +551,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Podsumowanie analityczne - RZECZYWISTE DANE */}
       <div className="analytics-summary">
         <h3 className="section-title">📈 Podsumowanie analityczne</h3>
         <div className="analytics-grid">
@@ -512,7 +580,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Stopka */}
       <div className="dashboard-footer">
         <p>
           <strong>Dane aktualne:</strong> {new Date().toLocaleString('pl-PL')} | 

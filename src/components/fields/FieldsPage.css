@@ -23,7 +23,8 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  overflow: hidden;
+  /* ZMIANA TUTAJ: */
+  overflow-x: auto; /* Pozwala na przewijanie poziome */
   width: 100%;
   height: auto;
 }
@@ -120,6 +121,7 @@
 .fields-page .action-buttons {
   display: flex;
   gap: 5px;
+  justify-content: flex-end;
 }
 
 .fields-page .action-btn {
@@ -517,3 +519,4 @@
     font-size: 14px;
   }
 }
+

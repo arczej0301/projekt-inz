@@ -43,6 +43,11 @@ const FieldsPage = () => {
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
+  const capitalizeFirstLetter = (string) => {
+    if (!string) return '';
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
+
   // Sortowanie
   const [sortConfig, setSortConfig] = useState({
     key: 'name',
@@ -452,14 +457,16 @@ const handleSaveHarvest = async (yieldData) => {
   try {
     setSaveLoading(true);
 
-    // 1. Dodaj zbiór do kolekcji field_yields
+    // 1. Dodaj zbiór do kolekcji field_yields (tabela zbiorów)
     await addFieldYield(yieldData);
 
-    // 2. Utwórz nowy status 'harvested'
+    // 2. Utwórz nowy status 'harvested' z DODATKOWYMI DANYMI
     const newStatus = {
       field_id: currentField.id,
       status: 'harvested',
-      crop: yieldData.crop, // Zapisujemy co było zebrane
+      crop: yieldData.crop,
+      yield_amount: yieldData.amount,
+      yield_moisture: yieldData.moisture,
       notes: `Zbiór automatyczny: ${yieldData.amount}t`,
       date_created: new Date().toISOString()
     };
@@ -467,8 +474,7 @@ const handleSaveHarvest = async (yieldData) => {
     // 3. Zapisz status w historii
     await addFieldStatus(newStatus);
 
-    // 4. AKTUALIZACJA GŁÓWNEGO POLA (Baza Danych)
-    // Aktualizujemy też dokument w kolekcji 'fields', żeby zgadzała się uprawa
+    // 4. AKTUALIZACJA GŁÓWNEGO POLA
     await updateField(currentField.id, {
       crop: yieldData.crop 
     });
@@ -836,8 +842,8 @@ const saveFieldStatus = async () => {
                         )}
                       </td>
                       <td>{field.area}</td>
-                      <td>{field.soil}</td>
-                      <td>{field.crop || 'Brak'}</td>
+                      <td>{capitalizeFirstLetter(field.soil)}</td>
+                      <td>{field.crop ? capitalizeFirstLetter(field.crop) : 'Brak'}</td>
                       <td>
                         <span
                           className="status-badge"
@@ -851,6 +857,7 @@ const saveFieldStatus = async () => {
                         </span>
                       </td>
                       <td className="action-buttons">
+                        
                         {/* PRZYCISK DODAJ ZBIÓR - TYLKO GDY ZASIANE */}
                         {isSown && (
                           <button 
