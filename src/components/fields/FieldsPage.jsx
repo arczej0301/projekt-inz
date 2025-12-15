@@ -8,7 +8,11 @@ import {
   subscribeToFields,
   getFieldStatus,
   updateFieldStatus,
-  addFieldStatus
+  addFieldStatus,
+  getFieldYields,
+  addFieldYield,
+  getFieldCosts,
+  getFieldStatusHistory
 } from '../../services/fieldsService';
 import './FieldsPage.css';
 
@@ -16,26 +20,36 @@ const FieldsPage = () => {
   const [fields, setFields] = useState([]);
   const [fieldStatuses, setFieldStatuses] = useState({});
   const [loading, setLoading] = useState(true);
+  
+  // Modale
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isHarvestModalOpen, setIsHarvestModalOpen] = useState(false); // NOWY MODAL
+  
   const [currentField, setCurrentField] = useState(null);
   const [currentStatus, setCurrentStatus] = useState(null);
+  const [fieldHistory, setFieldHistory] = useState({ yields: [], costs: [], statuses: [] });
+  
+  // Rysowanie
   const [isDrawing, setIsDrawing] = useState(false);
   const [tempPolygon, setTempPolygon] = useState([]);
+  
+  // UI
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [hoveredField, setHoveredField] = useState(null);
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // NOWY STAN DLA POTWIERDZENIA USUNIĘCIA
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  // STANY DLA SORTOWANIA
+  // Sortowanie
   const [sortConfig, setSortConfig] = useState({
     key: 'name',
     direction: 'asc'
   });
 
-  // Lokalizacja gospodarstwa: 53°12'46.9"N 22°09'42.6"E
+  // Mapa
   const [mapCenter] = useState({ lat: 53.29684935063282, lng: 21.431474045415577 });
   const [mapZoom] = useState(17);
 
@@ -48,7 +62,6 @@ const FieldsPage = () => {
     height: '900px'
   };
 
-  // ZAKTUALIZOWANE OPCJE MAPY
   const mapOptions = {
     mapTypeId: 'hybrid',
     streetViewControl: false,
@@ -62,18 +75,13 @@ const FieldsPage = () => {
     gestureHandling: isCtrlPressed ? 'cooperative' : 'greedy'
   };
 
-  // NOWY useEffect DO OBSŁUGI KLAWISZA CTRL
+  // Obsługa CTRL
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Control' || e.key === 'Ctrl') {
-        setIsCtrlPressed(true);
-      }
+      if (e.key === 'Control' || e.key === 'Ctrl') setIsCtrlPressed(true);
     };
-
     const handleKeyUp = (e) => {
-      if (e.key === 'Control' || e.key === 'Ctrl') {
-        setIsCtrlPressed(false);
-      }
+      if (e.key === 'Control' || e.key === 'Ctrl') setIsCtrlPressed(false);
     };
 
     document.addEventListener('keydown', handleKeyDown);
@@ -85,7 +93,6 @@ const FieldsPage = () => {
     };
   }, []);
 
-  // NOWA FUNKCJA DO OBSŁUGI SCROLLA NAD MAPĄ
   const handleMapWheel = (e) => {
     if (isCtrlPressed) {
       e.stopPropagation();
@@ -93,15 +100,12 @@ const FieldsPage = () => {
     }
   };
 
-  // DODANY useEffect DO RESETOWANIA SCROLLA
   useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.scrollTop = 0;
-    }
-
+    if (contentRef.current) contentRef.current.scrollTop = 0;
     window.scrollTo(0, 0);
   }, []);
 
+  // Opcje rysowania
   const polygonOptions = {
     fillColor: '#27ae60',
     fillOpacity: 0.35,
@@ -138,18 +142,7 @@ const FieldsPage = () => {
     zIndex: 2
   };
 
-  const markerOptions = {
-    icon: {
-      path: window.google?.maps.SymbolPath.CIRCLE,
-      scale: 8,
-      fillColor: '#e74c3c',
-      fillOpacity: 1,
-      strokeColor: '#ffffff',
-      strokeWeight: 2,
-    }
-  };
-
-  // Funkcja do sortowania pól
+  // Sortowanie
   const sortFields = (fieldsToSort) => {
     if (!sortConfig.key) return fieldsToSort;
 
@@ -182,18 +175,14 @@ const FieldsPage = () => {
     });
   };
 
-  // Funkcja do zmiany sortowania
   const handleSort = (key) => {
     let direction = 'asc';
-
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
-
     setSortConfig({ key, direction });
   };
 
-  // POPRAWIONA FUNKCJA: Renderowanie strzałek sortowania
   const renderSortArrow = (key) => {
     if (sortConfig.key !== key) {
       return <span style={{ marginLeft: '8px', color: '#95a5a6', fontSize: '12px' }}>▲▼</span>;
@@ -205,7 +194,7 @@ const FieldsPage = () => {
     );
   };
 
-  // Pobierz pola i ich statuses z Firebase
+  // Ładowanie danych
   useEffect(() => {
     const loadFieldsAndStatuses = async () => {
       try {
@@ -237,27 +226,20 @@ const FieldsPage = () => {
 
     const unsubscribe = subscribeToFields(async (fieldsData) => {
       setFields(fieldsData);
-
       const statuses = {};
       for (const field of fieldsData) {
         try {
           const status = await getFieldStatus(field.id);
-          if (status) {
-            statuses[field.id] = status;
-          }
-        } catch (statusError) {
-          console.error(`Error loading status for field ${field.id}:`, statusError);
-        }
+          if (status) statuses[field.id] = status;
+        } catch (e) { console.error(e); }
       }
       setFieldStatuses(statuses);
-
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Aktualizuj kursor mapy gdy zmienia się tryb rysowania
   useEffect(() => {
     if (mapRef.current) {
       mapRef.current.setOptions({
@@ -266,107 +248,77 @@ const FieldsPage = () => {
     }
   }, [isDrawing]);
 
-  // Funkcja do obliczania centroidu polygonu
+  // Funkcje geograficzne
   const calculateCentroid = (coordinates) => {
     if (!coordinates || coordinates.length === 0) return null;
-
     const points = coordinates[0].lat === coordinates[coordinates.length - 1].lat &&
       coordinates[0].lng === coordinates[coordinates.length - 1].lng
       ? coordinates.slice(0, -1)
       : coordinates;
-
     if (points.length === 0) return null;
 
-    let signedArea = 0;
-    let centroidX = 0;
-    let centroidY = 0;
-
+    let signedArea = 0, centroidX = 0, centroidY = 0;
     for (let i = 0; i < points.length; i++) {
       const current = points[i];
       const next = points[(i + 1) % points.length];
-
       const area = (current.lat * next.lng) - (next.lat * current.lng);
       signedArea += area;
       centroidX += (current.lat + next.lat) * area;
       centroidY += (current.lng + next.lng) * area;
     }
-
     signedArea *= 0.5;
     centroidX /= (6 * signedArea);
     centroidY /= (6 * signedArea);
-
     return { lat: centroidX, lng: centroidY };
   };
 
-  // Oblicz odległość między punktami w metrach
   const calculateDistance = (point1, point2) => {
     if (!googleRef.current || !googleRef.current.maps) return Infinity;
-
     try {
       const latLng1 = new googleRef.current.maps.LatLng(point1.lat, point1.lng);
       const latLng2 = new googleRef.current.maps.LatLng(point2.lat, point2.lng);
-
       return googleRef.current.maps.geometry.spherical.computeDistanceBetween(latLng1, latLng2);
-    } catch (error) {
-      console.error('Error calculating distance:', error);
-      return Infinity;
-    }
+    } catch (error) { return Infinity; }
   };
 
-  // Dokładna funkcja do obliczania powierzchni
   const calculateAreaAccurate = (coordinates) => {
     if (coordinates.length < 3) return 0;
-
     let total = 0;
     const n = coordinates.length;
-
     for (let i = 0; i < n - 1; i++) {
       const lat1 = coordinates[i].lat * Math.PI / 180;
       const lng1 = coordinates[i].lng * Math.PI / 180;
       const lat2 = coordinates[i + 1].lat * Math.PI / 180;
       const lng2 = coordinates[i + 1].lng * Math.PI / 180;
-
       total += (lng2 - lng1) * (2 + Math.sin(lat1) + Math.sin(lat2));
     }
-
     total = Math.abs(total);
     const earthRadius = 6371000;
     const areaM2 = total * earthRadius * earthRadius / 2;
-
     return (areaM2 / 10000).toFixed(2);
   };
 
-  // Kliknięcie na mapę podczas rysowania
+  // Obsługa rysowania
   const onMapClick = (event) => {
     if (!isDrawing) return;
-
-    const newPoint = {
-      lat: event.latLng.lat(),
-      lng: event.latLng.lng()
-    };
-
+    const newPoint = { lat: event.latLng.lat(), lng: event.latLng.lng() };
     if (tempPolygon.length >= 3) {
       const firstPoint = tempPolygon[0];
       const distance = calculateDistance(firstPoint, newPoint);
-
       if (distance < 20) {
         finishDrawing();
         return;
       }
     }
-
     setTempPolygon(prev => [...prev, newPoint]);
   };
 
-  // Zakończ rysowanie i oblicz powierzchnię
   const finishDrawing = () => {
     if (tempPolygon.length < 3) {
       alert('Potrzebujesz co najmniej 3 punkty do utworzenia polygonu!');
       return;
     }
-
     const closedPolygon = [...tempPolygon, tempPolygon[0]];
-
     let areaHa = 0;
     if (googleRef.current && googleRef.current.maps) {
       try {
@@ -375,7 +327,6 @@ const FieldsPage = () => {
         );
         areaHa = (areaM2 / 10000).toFixed(2);
       } catch (error) {
-        console.error('Error calculating area with Google API:', error);
         areaHa = calculateAreaAccurate(closedPolygon);
       }
     } else {
@@ -390,51 +341,37 @@ const FieldsPage = () => {
       notes: '',
       coordinates: closedPolygon
     });
-
     setIsDrawing(false);
     setTempPolygon([]);
     setIsModalOpen(true);
   };
 
-  // Anuluj rysowanie
   const cancelDrawing = () => {
     setIsDrawing(false);
     setTempPolygon([]);
   };
 
-  // Rozpocznij rysowanie
   const startDrawing = () => {
     setIsDrawing(true);
     setTempPolygon([]);
     setSelectedField(null);
   };
 
-  // Otwieranie modala
+  // --- OBSŁUGA MODALI ---
+
   const openFieldModal = (field = null) => {
-    if (field) {
-      setCurrentField(field);
-    } else {
-      setCurrentField({
-        name: '',
-        area: '',
-        soil: '',
-        crop: '',
-        notes: '',
-        coordinates: []
-      });
-    }
+    if (field) setCurrentField(field);
+    else setCurrentField({ name: '', area: '', soil: '', crop: '', notes: '', coordinates: [] });
     setIsModalOpen(true);
     cancelDrawing();
   };
 
-  // Zamykanie modala
   const closeFieldModal = () => {
     setIsModalOpen(false);
     setCurrentField(null);
     setSaveLoading(false);
   };
 
-  // NOWA FUNKCJA: Otwórz modal statusu
   const openStatusModal = (field = null) => {
     if (field) {
       setCurrentField(field);
@@ -448,18 +385,11 @@ const FieldsPage = () => {
       });
     } else {
       setCurrentField(null);
-      setCurrentStatus({
-        field_id: '',
-        status: '',
-        crop: '',
-        notes: '',
-        date_created: new Date().toISOString()
-      });
+      setCurrentStatus({ field_id: '', status: '', crop: '', notes: '', date_created: new Date().toISOString() });
     }
     setIsStatusModalOpen(true);
   };
 
-  // NOWA FUNKCJA: Zamknij modal statusu
   const closeStatusModal = () => {
     setIsStatusModalOpen(false);
     setCurrentField(null);
@@ -467,108 +397,216 @@ const FieldsPage = () => {
     setSaveLoading(false);
   };
 
-  // Zapis pola do Firebase
-  const saveField = async () => {
-    if (!currentField?.name || !currentField?.area || !currentField?.soil) {
-      alert('Proszę wypełnić wszystkie wymagane pola!');
-      return;
-    }
+  // --- HISTORIA ---
 
+  const fetchHistoryData = async (fieldId) => {
     try {
-      setSaveLoading(true);
-
-      const fieldData = {
-        name: currentField.name.trim(),
-        area: parseFloat(currentField.area),
-        soil: currentField.soil,
-        crop: currentField.crop || '',
-        notes: currentField.notes || '',
-        coordinates: currentField.coordinates
-      };
-
-      if (currentField.id) {
-        await updateField(currentField.id, fieldData);
-      } else {
-        await addField(fieldData);
+      const yields = await getFieldYields(fieldId);
+      const costs = await getFieldCosts(fieldId);
+      let statuses = [];
+      if (typeof getFieldStatusHistory === 'function') {
+        statuses = await getFieldStatusHistory(fieldId);
       }
-
-      closeFieldModal();
+      setFieldHistory({
+        yields: yields || [],
+        costs: costs || [],
+        statuses: statuses || []
+      });
     } catch (error) {
-      console.error('Error saving field:', error);
-      alert('Błąd podczas zapisywania pola: ' + error.message);
-      setSaveLoading(false);
+      console.error('Błąd odświeżania historii:', error);
     }
   };
 
-  // NOWA FUNKCJA: Zapisz status pola
-  const saveFieldStatus = async () => {
-    if (!currentStatus?.status) {
-      alert('Proszę wybrać stan pola!');
-      return;
-    }
+  const openHistoryModal = async (field) => {
+    setSelectedField(field); 
+    setIsHistoryModalOpen(true);
+    setFieldHistory({ yields: [], costs: [], statuses: [] });
+    setLoading(true);
+    await fetchHistoryData(field.id);
+    setLoading(false);
+  };
 
-    try {
-      setSaveLoading(true);
+  const closeHistoryModal = () => {
+    setIsHistoryModalOpen(false);
+  };
 
-      if (currentStatus.id) {
-        await updateFieldStatus(currentStatus.id, currentStatus);
-      } else {
-        await addFieldStatus(currentStatus);
-      }
-
-      setFieldStatuses(prev => ({
-        ...prev,
-        [currentStatus.field_id]: currentStatus
-      }));
-
-      closeStatusModal();
-    } catch (error) {
-      console.error('Error saving field status:', error);
-      alert('Błąd podczas zapisywania stanu pola: ' + error.message);
-      setSaveLoading(false);
+  const handleHistoryRefresh = async () => {
+    if (selectedField) {
+      await fetchHistoryData(selectedField.id);
     }
   };
 
-  // Edycja pola
-  const editField = (id) => {
-    const field = fields.find(f => f.id === id);
-    if (field) {
-      openFieldModal(field);
-    }
+  // --- NOWE: FUNKCJE DLA ZBIORÓW (HARVEST) ---
+
+  const openHarvestModal = (field) => {
+    setCurrentField(field);
+    setIsHarvestModalOpen(true);
   };
 
-  // USUNIĘCIE POPRZEDNIEJ FUNKCJI I ZASTĄPIENIE NOWĄ
+  const closeHarvestModal = () => {
+    setIsHarvestModalOpen(false);
+    setCurrentField(null);
+  };
+
+const handleSaveHarvest = async (yieldData) => {
+  try {
+    setSaveLoading(true);
+
+    // 1. Dodaj zbiór do kolekcji field_yields
+    await addFieldYield(yieldData);
+
+    // 2. Utwórz nowy status 'harvested'
+    const newStatus = {
+      field_id: currentField.id,
+      status: 'harvested',
+      crop: yieldData.crop, // Zapisujemy co było zebrane
+      notes: `Zbiór automatyczny: ${yieldData.amount}t`,
+      date_created: new Date().toISOString()
+    };
+    
+    // 3. Zapisz status w historii
+    await addFieldStatus(newStatus);
+
+    // 4. AKTUALIZACJA GŁÓWNEGO POLA (Baza Danych)
+    // Aktualizujemy też dokument w kolekcji 'fields', żeby zgadzała się uprawa
+    await updateField(currentField.id, {
+      crop: yieldData.crop 
+    });
+
+    // 5. Aktualizacja stanów lokalnych (UI)
+    const updatedStatusWithId = { ...newStatus, id: 'temp_id_' + Date.now() };
+    
+    setFieldStatuses(prev => ({
+      ...prev,
+      [currentField.id]: updatedStatusWithId
+    }));
+
+    setFields(prevFields => prevFields.map(f => 
+      f.id === currentField.id 
+        ? { ...f, crop: yieldData.crop }
+        : f
+    ));
+
+    closeHarvestModal();
+  } catch (error) {
+    console.error('Błąd zapisu zbioru:', error);
+    alert('Wystąpił błąd podczas zapisywania zbioru: ' + error.message);
+  } finally {
+    setSaveLoading(false);
+  }
+};
+
+  // --- OPERACJE NA POLACH ---
+
+// Podmień funkcję saveField na tę wersję:
+const saveField = async () => {
+  if (!currentField?.name || !currentField?.area || !currentField?.soil) {
+    alert('Proszę wypełnić wszystkie wymagane pola!');
+    return;
+  }
+
+  try {
+    setSaveLoading(true);
+
+    // TWORZYMY OBIEKT BEZ POLA 'CROP'
+    // Uprawa jest teraz zarządzana WYŁĄCZNIE przez status
+    const fieldData = {
+      name: currentField.name.trim(),
+      area: parseFloat(currentField.area),
+      soil: currentField.soil,
+      notes: currentField.notes || '',
+      coordinates: currentField.coordinates
+      // Usunięto: crop: currentField.crop || '' 
+    };
+
+    if (currentField.id) {
+      await updateField(currentField.id, fieldData);
+    } else {
+      // Przy nowym polu dodajemy pustą uprawę, bo jeszcze nie ma statusu
+      await addField({ ...fieldData, crop: '' });
+    }
+
+    closeFieldModal();
+  } catch (error) {
+    console.error('Error saving field:', error);
+    alert('Błąd podczas zapisywania pola: ' + error.message);
+    setSaveLoading(false);
+  }
+};
+
+  // Podmień funkcję saveFieldStatus na tę wersję:
+const saveFieldStatus = async () => {
+  if (!currentStatus?.status) {
+    alert('Proszę wybrać stan pola!');
+    return;
+  }
+
+  try {
+    setSaveLoading(true);
+
+    // 1. Zapisz/Aktualizuj wpis w kolekcji historii statusów (field_status)
+    if (currentStatus.id) {
+      await updateFieldStatus(currentStatus.id, currentStatus);
+    } else {
+      await addFieldStatus(currentStatus);
+    }
+
+    // 2. KLUCZOWA ZMIANA: Aktualizuj uprawę w głównym dokumencie pola (fields)
+    // To sprawia, że w tabeli i na mapie widzimy aktualną uprawę
+    if (currentStatus.field_id) {
+      await updateField(currentStatus.field_id, {
+        crop: currentStatus.crop || '' 
+      });
+      
+      // Aktualizuj lokalny stan listy pól, żeby tabela odświeżyła się natychmiast
+      setFields(prevFields => prevFields.map(f => 
+        f.id === currentStatus.field_id 
+          ? { ...f, crop: currentStatus.crop || '' }
+          : f
+      ));
+    }
+
+    // 3. Aktualizuj lokalny stan statusów
+    setFieldStatuses(prev => ({
+      ...prev,
+      [currentStatus.field_id]: currentStatus
+    }));
+
+    closeStatusModal();
+  } catch (error) {
+    console.error('Error saving field status:', error);
+    alert('Błąd podczas zapisywania stanu pola: ' + error.message);
+    setSaveLoading(false);
+  }
+};
+
   const handleDeleteField = async (id) => {
     try {
       await deleteField(id);
       setDeleteConfirm(null);
-      if (selectedField?.id === id) {
-        setSelectedField(null);
-      }
+      if (selectedField?.id === id) setSelectedField(null);
     } catch (error) {
-      console.error('Error deleting field:', error);
       alert('Błąd podczas usuwania pola: ' + error.message);
       setDeleteConfirm(null);
     }
   };
 
-  // Kliknięcie na pole na mapie
   const onFieldClick = (field) => {
-    if (!isDrawing) {
-      setSelectedField(field);
-    }
+    if (!isDrawing) setSelectedField(field);
   };
 
-  // Wybierz pole z listy
+  const editField = (id) => {
+    const field = fields.find(f => f.id === id);
+    if (field) openFieldModal(field);
+  };
+
   const selectFieldFromList = (field) => {
     setSelectedField(field);
-
     if (field.coordinates && field.coordinates.length > 0) {
       const bounds = new window.google.maps.LatLngBounds();
       field.coordinates.forEach(coord => {
         bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
       });
-
       if (mapRef.current) {
         mapRef.current.fitBounds(bounds);
         mapRef.current.panToBounds(bounds, 50);
@@ -576,21 +614,12 @@ const FieldsPage = () => {
     }
   };
 
-  // Najedź na pole w liście
-  const hoverFieldFromList = (field) => {
-    setHoveredField(field);
-  };
+  const hoverFieldFromList = (field) => setHoveredField(field);
+  const leaveFieldFromList = () => setHoveredField(null);
 
-  // Zdejmij hover z pola
-  const leaveFieldFromList = () => {
-    setHoveredField(null);
-  };
-
-  // Funkcja pomocnicza do wyświetlania statusu
   const getStatusDisplay = (fieldId) => {
     const status = fieldStatuses[fieldId];
     if (!status || !status.status) return 'Brak danych';
-
     const statusLabels = {
       'sown': 'Zasiane',
       'harvested': 'Zebrane',
@@ -598,15 +627,12 @@ const FieldsPage = () => {
       'fallow': 'Ugór',
       'pasture': 'Pastwisko/Łąka'
     };
-
     return statusLabels[status.status] || status.status;
   };
 
-  // Funkcja pomocnicza do kolorowania statusu
   const getStatusColor = (fieldId) => {
     const status = fieldStatuses[fieldId];
     if (!status || !status.status) return '#95a5a6';
-
     const statusColors = {
       'sown': '#27ae60',
       'harvested': '#e74c3c',
@@ -614,25 +640,20 @@ const FieldsPage = () => {
       'fallow': '#f39c12',
       'pasture': '#2ecc71'
     };
-
     return statusColors[status.status] || '#95a5a6';
   };
 
-  // Filtrowanie i sortowanie pól
   const filteredFields = fields.filter(field =>
     field.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     field.soil.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (field.crop && field.crop.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
   const sortedAndFilteredFields = sortFields(filteredFields);
-
 
   return (
     <div className="fields-page" ref={contentRef}>
       <div className="fields-header">
         <h2>Zarządzanie polami</h2>
-
         <div className="actions-bar">
           <div className="action-buttons">
             <button
@@ -643,50 +664,34 @@ const FieldsPage = () => {
               {isDrawing ? 'Anuluj rysowanie' : 'Narysuj pole'}
             </button>
             {isDrawing && tempPolygon.length >= 3 && (
-              <button
-                className="btn btn-success"
-                onClick={finishDrawing}
-              >
+              <button className="btn btn-success" onClick={finishDrawing}>
                 <i className="fas fa-check"></i> Zakończ rysowanie
               </button>
             )}
           </div>
-
         </div>
       </div>
 
       <div className="fields-content">
-        {/* Mapa */}
         <div className={`map-container ${isDrawing ? 'drawing-active' : ''}`}>
-
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
             center={mapCenter}
             zoom={mapZoom}
             options={mapOptions}
-            onLoad={(map) => {
-              mapRef.current = map;
-            }}
+            onLoad={(map) => { mapRef.current = map; }}
             onClick={onMapClick}
             onWheel={handleMapWheel}
           >
-            {/* Tymczasowy polygon podczas rysowania */}
             {isDrawing && tempPolygon.length > 0 && (
               <>
-                <Polygon
-                  paths={tempPolygon}
-                  options={tempPolygonOptions}
-                />
-                {/* Znaczniki punktów */}
+                <Polygon paths={tempPolygon} options={tempPolygonOptions} />
                 {tempPolygon.map((point, index) => (
                   <Marker
                     key={index}
                     position={point}
                     label={{
-                      text: (index + 1).toString(),
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: 'bold'
+                      text: (index + 1).toString(), color: 'white', fontSize: '12px', fontWeight: 'bold'
                     }}
                     icon={{
                       path: window.google?.maps.SymbolPath.CIRCLE,
@@ -701,7 +706,6 @@ const FieldsPage = () => {
               </>
             )}
 
-            {/* Wyświetlanie istniejących pól */}
             {fields.map(field => (
               <Polygon
                 key={field.id}
@@ -720,61 +724,34 @@ const FieldsPage = () => {
               />
             ))}
 
-            {/* InfoWindow dla wybranego pola */}
             {selectedField && (
               <InfoWindow
-                position={calculateCentroid(selectedField.coordinates) ||
-                  (selectedField.coordinates && selectedField.coordinates[0]) ||
-                  mapCenter}
+                position={calculateCentroid(selectedField.coordinates) || (selectedField.coordinates && selectedField.coordinates[0]) || mapCenter}
                 onCloseClick={() => setSelectedField(null)}
-                options={{
-                  pixelOffset: new window.google.maps.Size(0, -40),
-                  maxWidth: 300
-                }}
+                options={{ pixelOffset: new window.google.maps.Size(0, -40), maxWidth: 300 }}
               >
                 <div className="field-info-window">
                   <h3>{selectedField.name}</h3>
                   <div className="field-info-details">
-                    <p>
-                      <i className="fas fa-ruler-combined"></i>
-                      <strong>Powierzchnia:</strong> {selectedField.area} ha
-                    </p>
-                    <p>
-                      <i className="fas fa-mountain"></i>
-                      <strong>Gleba:</strong> {selectedField.soil}
-                    </p>
-                    <p>
-                      <i className="fas fa-seedling"></i>
-                      <strong>Uprawa: </strong> {selectedField.crop || 'Brak'}
-                    </p>
-                    <p>
-                      <i className="fas fa-chart-line"></i>
-                      <strong>Stan: </strong> {getStatusDisplay(selectedField.id)}
-                    </p>
+                    <p><i className="fas fa-ruler-combined"></i><strong>Powierzchnia:</strong> {selectedField.area} ha</p>
+                    <p><i className="fas fa-mountain"></i><strong>Gleba:</strong> {selectedField.soil}</p>
+                    <p><i className="fas fa-seedling"></i><strong>Uprawa: </strong> {selectedField.crop || 'Brak'}</p>
+                    <p><i className="fas fa-chart-line"></i><strong>Stan: </strong> {getStatusDisplay(selectedField.id)}</p>
                     {selectedField.notes && (
-                      <p>
-                        <i className="fas fa-sticky-note"></i>
-                        <strong>Notatki: </strong> {selectedField.notes}
-                      </p>
+                      <p><i className="fas fa-sticky-note"></i><strong>Notatki: </strong> {selectedField.notes}</p>
                     )}
                   </div>
                   <div className="field-info-actions">
-                    <button
-                      className="action-btn btn-primary"
-                      onClick={() => editField(selectedField.id)}
-                    >
+                    <button className="action-btn btn-primary" onClick={() => editField(selectedField.id)}>
                       <i className="fas fa-edit"></i> Edytuj
                     </button>
-                    <button
-                      className="action-btn btn-info"
-                      onClick={() => openStatusModal(selectedField)}
-                    >
+                    <button className="action-btn btn-info" onClick={() => openStatusModal(selectedField)}>
                       <i className="fas fa-seedling"></i> Stan
                     </button>
-                    <button
-                      className="action-btn btn-danger"
-                      onClick={() => setDeleteConfirm(selectedField)}
-                    >
+                    <button className="action-btn btn-secondary" onClick={() => openHistoryModal(selectedField)}>
+                      <i className="fas fa-history"></i> Historia
+                    </button>
+                    <button className="action-btn btn-danger" onClick={() => setDeleteConfirm(selectedField)}>
                       <i className="fas fa-trash"></i> Usuń
                     </button>
                   </div>
@@ -783,7 +760,6 @@ const FieldsPage = () => {
             )}
           </GoogleMap>
 
-          {/* Instrukcja rysowania */}
           {isDrawing && (
             <div className="drawing-instruction">
               <div className="instruction-content">
@@ -793,172 +769,122 @@ const FieldsPage = () => {
                   <div>Kliknij na mapę, aby dodać punkty polygonu</div>
                   <div>Minimalnie 3 punkty - aktualnie: {tempPolygon.length}</div>
                   {tempPolygon.length >= 3 && (
-                    <div style={{ color: '#27ae60', fontWeight: 'bold' }}>
-                      Kliknij w pobliżu pierwszego punktu, aby zamknąć polygon
-                    </div>
+                    <div style={{ color: '#27ae60', fontWeight: 'bold' }}>Kliknij w pobliżu pierwszego punktu, aby zamknąć polygon</div>
                   )}
                 </div>
               </div>
             </div>
           )}
-
-          {/* Instrukcja zoomu */}
           <div className="zoom-instruction">
-            <i className="fas fa-info-circle"></i>
-            <strong>Zoom:</strong> Przytrzymaj Ctrl + scroll
+            <i className="fas fa-info-circle"></i> <strong>Zoom:</strong> Przytrzymaj Ctrl + scroll
           </div>
         </div>
 
-        {/* Lista pól */}
         <div className="fields-list">
           <div className="fields-list-header">
             <h3>Lista pól ({sortedAndFilteredFields.length})</h3>
             <div className="search-box">
               <i className="fas fa-search"></i>
-              <input
-                type="text"
-                placeholder="Szukaj pola..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <input type="text" placeholder="Szukaj pola..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
           {sortedAndFilteredFields.length === 0 ? (
-            <div className="no-fields">
-              <p>Brak pól do wyświetlenia</p>
-            </div>
+            <div className="no-fields"><p>Brak pól do wyświetlenia</p></div>
           ) : (
             <table className="fields-table">
               <thead>
                 <tr>
-                  <th
-                    className="sortable"
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="th-content">
-                      Nazwa
-                      {renderSortArrow('name')}
-                    </div>
+                  <th className="sortable" onClick={() => handleSort('name')}>
+                    <div className="th-content">Nazwa {renderSortArrow('name')}</div>
                   </th>
-                  <th
-                    className="sortable"
-                    onClick={() => handleSort('area')}
-                  >
-                    <div className="th-content">
-                      Powierzchnia (ha)
-                      {renderSortArrow('area')}
-                    </div>
+                  <th className="sortable" onClick={() => handleSort('area')}>
+                    <div className="th-content">Powierzchnia (ha) {renderSortArrow('area')}</div>
                   </th>
-                  <th
-                    className="sortable"
-                    onClick={() => handleSort('soil')}
-                  >
-                    <div className="th-content">
-                      Typ gleby
-                      {renderSortArrow('soil')}
-                    </div>
+                  <th className="sortable" onClick={() => handleSort('soil')}>
+                    <div className="th-content">Typ gleby {renderSortArrow('soil')}</div>
                   </th>
-                  <th
-                    className="sortable"
-                    onClick={() => handleSort('crop')}
-                  >
-                    <div className="th-content">
-                      Uprawa
-                      {renderSortArrow('crop')}
-                    </div>
+                  <th className="sortable" onClick={() => handleSort('crop')}>
+                    <div className="th-content">Uprawa {renderSortArrow('crop')}</div>
                   </th>
-                  <th
-                    className="sortable"
-                    onClick={() => handleSort('status')}
-                  >
-                    <div className="th-content">
-                      Stan
-                      {renderSortArrow('status')}
-                    </div>
+                  <th className="sortable" onClick={() => handleSort('status')}>
+                    <div className="th-content">Stan {renderSortArrow('status')}</div>
                   </th>
                   <th>Akcje</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedAndFilteredFields.map(field => (
-                  <tr
-                    key={field.id}
-                    className={`field-row ${selectedField?.id === field.id ? 'selected' : ''
-                      } ${hoveredField?.id === field.id ? 'hovered' : ''
-                      }`}
-                    onClick={() => selectFieldFromList(field)}
-                    onMouseEnter={() => hoverFieldFromList(field)}
-                    onMouseLeave={leaveFieldFromList}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td>
-                      <strong>{field.name}</strong>
-                      {selectedField?.id === field.id && (
-                        <span style={{ color: '#e74c3c', marginLeft: '8px' }}>
-                          <i className="fas fa-map-marker-alt"></i> Zaznaczone
+                {sortedAndFilteredFields.map(field => {
+                  // Sprawdzenie statusu dla każdego wiersza
+                  const currentStatus = fieldStatuses[field.id];
+                  const isSown = currentStatus && currentStatus.status === 'sown';
+                  
+                  return (
+                    <tr
+                      key={field.id}
+                      className={`field-row ${selectedField?.id === field.id ? 'selected' : ''} ${hoveredField?.id === field.id ? 'hovered' : ''}`}
+                      onClick={() => selectFieldFromList(field)}
+                      onMouseEnter={() => hoverFieldFromList(field)}
+                      onMouseLeave={leaveFieldFromList}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td>
+                        <strong>{field.name}</strong>
+                        {selectedField?.id === field.id && (
+                          <span style={{ color: '#e74c3c', marginLeft: '8px' }}>
+                            <i className="fas fa-map-marker-alt"></i> Zaznaczone
+                          </span>
+                        )}
+                      </td>
+                      <td>{field.area}</td>
+                      <td>{field.soil}</td>
+                      <td>{field.crop || 'Brak'}</td>
+                      <td>
+                        <span
+                          className="status-badge"
+                          style={{
+                            backgroundColor: getStatusColor(field.id),
+                            color: 'white', padding: '4px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '600'
+                          }}
+                          onClick={(e) => { e.stopPropagation(); openStatusModal(field); }}
+                        >
+                          {getStatusDisplay(field.id)}
                         </span>
-                      )}
-                    </td>
-                    <td>{field.area}</td>
-                    <td>{field.soil}</td>
-                    <td>{field.crop || 'Brak'}</td>
-                    <td>
-                      <span
-                        className="status-badge"
-                        style={{
-                          backgroundColor: getStatusColor(field.id),
-                          color: 'white',
-                          padding: '4px 8px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: '600'
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openStatusModal(field);
-                        }}
-                      >
-                        {getStatusDisplay(field.id)}
-                      </span>
-                    </td>
-                    <td className="action-buttons">
-                      <button
-                        className="action-btn btn-primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          editField(field.id);
-                        }}
-                      >
-                        <i className="fas fa-edit"></i> Edytuj
-                      </button>
-                      <button
-                        className="action-btn btn-info"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openStatusModal(field);
-                        }}
-                      >
-                        <i className="fas fa-seedling"></i> Stan
-                      </button>
-                      <button
-                        className="action-btn btn-danger"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteConfirm(field);
-                        }}
-                      >
-                        <i className="fas fa-trash"></i> Usuń
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="action-buttons">
+                        {/* PRZYCISK DODAJ ZBIÓR - TYLKO GDY ZASIANE */}
+                        {isSown && (
+                          <button 
+                            className="action-btn" 
+                            style={{ backgroundColor: '#2ecc71', color: 'white' }} 
+                            onClick={(e) => { e.stopPropagation(); openHarvestModal(field); }}
+                            title="Dodaj zbiór (zmieni status na Zebrane)"
+                          >
+                            <i className="fas fa-tractor"></i> Dodaj zbiór
+                          </button>
+                        )}
+
+                        <button className="action-btn btn-primary" onClick={(e) => { e.stopPropagation(); editField(field.id); }}>
+                          <i className="fas fa-edit"></i> Edytuj
+                        </button>
+                        <button className="action-btn btn-info" onClick={(e) => { e.stopPropagation(); openStatusModal(field); }}>
+                          <i className="fas fa-seedling"></i> Stan
+                        </button>
+                        <button className="action-btn btn-secondary" onClick={(e) => { e.stopPropagation(); openHistoryModal(field); }}>
+                          <i className="fas fa-history"></i> Historia
+                        </button>
+                        <button className="action-btn btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteConfirm(field); }}>
+                          <i className="fas fa-trash"></i> Usuń
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
         </div>
       </div>
 
-      {/* Modal dodawania/edycji pola */}
       {isModalOpen && currentField && (
         <FieldModal
           field={currentField}
@@ -969,7 +895,6 @@ const FieldsPage = () => {
         />
       )}
 
-      {/* Modal statusu pola */}
       {isStatusModalOpen && currentStatus && (
         <FieldStatusModal
           field={currentField}
@@ -981,7 +906,27 @@ const FieldsPage = () => {
         />
       )}
 
-      {/* NOWY: Modal potwierdzenia usunięcia pola */}
+      {/* MODAL HISTORII (bez dodawania) */}
+      {isHistoryModalOpen && selectedField && (
+        <FieldHistoryModal
+          field={selectedField}
+          historyData={fieldHistory}
+          onClose={closeHistoryModal}
+          onRefresh={handleHistoryRefresh}
+        />
+      )}
+
+      {/* NOWY MODAL ZBIORU */}
+      {isHarvestModalOpen && currentField && (
+        <HarvestModal
+          field={currentField}
+          currentStatus={fieldStatuses[currentField.id]} // Przekazujemy status, aby znać uprawę
+          onSave={handleSaveHarvest}
+          onClose={closeHarvestModal}
+          saveLoading={saveLoading}
+        />
+      )}
+
       {deleteConfirm && (
         <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="modal-content delete-confirm-modal" onClick={e => e.stopPropagation()}>
@@ -992,21 +937,12 @@ const FieldsPage = () => {
             <div className="modal-body">
               <p>Czy na pewno chcesz usunąć pole <strong>"{deleteConfirm.name}"</strong>?</p>
               <div className="delete-confirm-warning">
-                <i className="fas fa-exclamation-triangle"></i>
-                <span>Tej operacji nie można cofnąć.</span>
+                <i className="fas fa-exclamation-triangle"></i><span>Tej operacji nie można cofnąć.</span>
               </div>
             </div>
             <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setDeleteConfirm(null)}
-              >
-                Anuluj
-              </button>
-              <button
-                className="btn btn-danger"
-                onClick={() => handleDeleteField(deleteConfirm.id)}
-              >
+              <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>Anuluj</button>
+              <button className="btn btn-danger" onClick={() => handleDeleteField(deleteConfirm.id)}>
                 <i className="fas fa-trash"></i> Tak, usuń
               </button>
             </div>
@@ -1017,43 +953,23 @@ const FieldsPage = () => {
   );
 };
 
-// Komponent modala
+// --- KOMPONENTY MODALI ---
+
 const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
-  const [isCropOpen, setIsCropOpen] = useState(false);
+  // Usunąłem isCropOpen, zostaje tylko soil
   const [isSoilOpen, setIsSoilOpen] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (typeof onFieldChange === 'function') {
-      onFieldChange(prev => ({
-        ...prev,
-        [name]: name === 'area' ? (value === '' ? '' : parseFloat(value)) : value
-      }));
-    }
+    onFieldChange(prev => ({ ...prev, [name]: name === 'area' ? (value === '' ? '' : parseFloat(value)) : value }));
   };
 
   const handleCustomSelect = (name, value) => {
-    if (typeof onFieldChange === 'function') {
-      onFieldChange(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-    setIsCropOpen(false);
+    onFieldChange(prev => ({ ...prev, [name]: value }));
     setIsSoilOpen(false);
   };
 
-  const cropOptions = [
-    { value: '', label: 'Brak uprawy' },
-    { value: 'pszenica', label: 'Pszenica' },
-    { value: 'kukurydza', label: 'Kukurydza' },
-    { value: 'rzepak', label: 'Rzepak' },
-    { value: 'ziemniaki', label: 'Ziemniaki' },
-    { value: 'buraki', label: 'Buraki cukrowe' },
-    { value: 'owies', label: 'Owies' },
-    { value: 'jęczmień', label: 'Jęczmień' },
-    { value: 'żyto', label: 'Żyto' }
-  ];
+  // cropOptions usunięte - nie są potrzebne w tym modalu
 
   const soilOptions = [
     { value: '', label: 'Wybierz typ gleby' },
@@ -1064,15 +980,9 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
     { value: 'mada', label: 'Mada rzeczna' }
   ];
 
-  const getCurrentCropLabel = () => {
-    const option = cropOptions.find(opt => opt.value === (field?.crop || ''));
-    return option ? option.label : 'Brak uprawy';
-  };
-
-  const getCurrentSoilLabel = () => {
-    const option = soilOptions.find(opt => opt.value === (field?.soil || ''));
-    return option ? option.label : 'Wybierz typ gleby';
-  };
+  // getCurrentCropLabel usunięte
+  
+  const getCurrentSoilLabel = () => soilOptions.find(opt => opt.value === (field?.soil || ''))?.label || 'Wybierz typ gleby';
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -1085,47 +995,23 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
           <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
             <div className="form-group">
               <label htmlFor="fieldName">Nazwa pola *</label>
-              <input
-                type="text"
-                id="fieldName"
-                name="name"
-                value={field?.name || ''}
-                onChange={handleInputChange}
-                required
-              />
+              <input type="text" id="fieldName" name="name" value={field?.name || ''} onChange={handleInputChange} required />
             </div>
             <div className="form-group">
               <label htmlFor="fieldArea">Powierzchnia (ha) *</label>
-              <input
-                type="number"
-                id="fieldArea"
-                name="area"
-                value={field?.area || ''}
-                onChange={handleInputChange}
-                step="0.01"
-                required
-              />
+              <input type="number" id="fieldArea" name="area" value={field?.area || ''} onChange={handleInputChange} step="0.01" required />
             </div>
-
-            {/* CUSTOM SELECT dla gleby */}
+            
             <div className="form-group">
               <label htmlFor="fieldSoil">Typ gleby *</label>
               <div className="custom-select">
-                <div
-                  className={`select-header ${isSoilOpen ? 'open' : ''}`}
-                  onClick={() => setIsSoilOpen(!isSoilOpen)}
-                >
-                  {getCurrentSoilLabel()}
-                  <span className="arrow">▼</span>
+                <div className={`select-header ${isSoilOpen ? 'open' : ''}`} onClick={() => setIsSoilOpen(!isSoilOpen)}>
+                  {getCurrentSoilLabel()} <span className="arrow">▼</span>
                 </div>
                 {isSoilOpen && (
                   <div className="select-options">
                     {soilOptions.map(option => (
-                      <div
-                        key={option.value}
-                        className={`select-option ${field?.soil === option.value ? 'selected' : ''}`}
-                        onClick={() => handleCustomSelect('soil', option.value)}
-                      >
+                      <div key={option.value} className={`select-option ${field?.soil === option.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('soil', option.value)}>
                         {option.label}
                       </div>
                     ))}
@@ -1134,44 +1020,13 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
               </div>
             </div>
 
-            {/* CUSTOM SELECT dla uprawy */}
-            <div className="form-group">
-              <label htmlFor="fieldCrop">Aktualna uprawa</label>
-              <div className="custom-select">
-                <div
-                  className={`select-header ${isCropOpen ? 'open' : ''}`}
-                  onClick={() => setIsCropOpen(!isCropOpen)}
-                >
-                  {getCurrentCropLabel()}
-                  <span className="arrow">▼</span>
-                </div>
-                {isCropOpen && (
-                  <div className="select-options">
-                    {cropOptions.map(option => (
-                      <div
-                        key={option.value}
-                        className={`select-option ${field?.crop === option.value ? 'selected' : ''}`}
-                        onClick={() => handleCustomSelect('crop', option.value)}
-                      >
-                        {option.label}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* SEKJA "AKTUALNA UPRAWA" ZOSTAŁA USUNIĘTA ZGODNIE Z PROŚBĄ */}
 
             <div className="form-group">
               <label htmlFor="fieldNotes">Notatki</label>
-              <textarea
-                id="fieldNotes"
-                name="notes"
-                value={field?.notes || ''}
-                onChange={handleInputChange}
-                rows="3"
-                placeholder="Dodatkowe informacje o polu..."
-              />
+              <textarea id="fieldNotes" name="notes" value={field?.notes || ''} onChange={handleInputChange} rows="3" placeholder="Dodatkowe informacje o polu..." />
             </div>
+            
             {field?.coordinates && field.coordinates.length > 0 && (
               <div className="form-group">
                 <label>Informacje o narysowanym polu:</label>
@@ -1184,44 +1039,25 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
           </form>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            Anuluj
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={onSave}
-            disabled={saveLoading}
-          >
-            {saveLoading ? 'Zapisywanie...' : 'Zapisz pole'}
-          </button>
+          <button className="btn btn-secondary" onClick={onClose}>Anuluj</button>
+          <button className="btn btn-primary" onClick={onSave} disabled={saveLoading}>{saveLoading ? 'Zapisywanie...' : 'Zapisz pole'}</button>
         </div>
       </div>
     </div>
   );
 };
 
-// Komponent: Modal statusu pola
 const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, saveLoading }) => {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isCropOpen, setIsCropOpen] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (typeof onStatusChange === 'function') {
-      onStatusChange(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    onStatusChange(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCustomSelect = (name, value) => {
-    if (typeof onStatusChange === 'function') {
-      onStatusChange(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    onStatusChange(prev => ({ ...prev, [name]: value }));
     if (name === 'status') setIsStatusOpen(false);
     if (name === 'crop') setIsCropOpen(false);
   };
@@ -1246,23 +1082,14 @@ const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, save
     { value: 'żyto', label: 'Żyto' }
   ];
 
-  const getCurrentStatusLabel = () => {
-    const option = statusOptions.find(opt => opt.value === (status?.status || ''));
-    return option ? option.label : 'Wybierz stan pola';
-  };
-
-  const getCurrentCropLabel = () => {
-    const option = cropOptions.find(opt => opt.value === (status?.crop || ''));
-    return option ? option.label : 'Brak uprawy';
-  };
+  const getCurrentStatusLabel = () => statusOptions.find(opt => opt.value === (status?.status || ''))?.label || 'Wybierz stan pola';
+  const getCurrentCropLabel = () => cropOptions.find(opt => opt.value === (status?.crop || ''))?.label || 'Brak uprawy';
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>
-            {field ? `Stan pola: ${field.name}` : 'Zarządzaj stanem pola'}
-          </h3>
+          <h3>{field ? `Stan pola: ${field.name}` : 'Zarządzaj stanem pola'}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
@@ -1270,34 +1097,19 @@ const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, save
             {field && (
               <div className="form-group">
                 <label>Pole</label>
-                <input
-                  type="text"
-                  value={field.name}
-                  disabled
-                  style={{ backgroundColor: '#f8f9fa', color: '#495057' }}
-                />
+                <input type="text" value={field.name} disabled style={{ backgroundColor: '#f8f9fa', color: '#495057' }} />
               </div>
             )}
-
-            {/* SELECT dla stanu pola */}
             <div className="form-group">
               <label>Stan pola *</label>
               <div className="custom-select">
-                <div
-                  className={`select-header ${isStatusOpen ? 'open' : ''}`}
-                  onClick={() => setIsStatusOpen(!isStatusOpen)}
-                >
-                  {getCurrentStatusLabel()}
-                  <span className="arrow">▼</span>
+                <div className={`select-header ${isStatusOpen ? 'open' : ''}`} onClick={() => setIsStatusOpen(!isStatusOpen)}>
+                  {getCurrentStatusLabel()} <span className="arrow">▼</span>
                 </div>
                 {isStatusOpen && (
                   <div className="select-options">
                     {statusOptions.map(option => (
-                      <div
-                        key={option.value}
-                        className={`select-option ${status?.status === option.value ? 'selected' : ''}`}
-                        onClick={() => handleCustomSelect('status', option.value)}
-                      >
+                      <div key={option.value} className={`select-option ${status?.status === option.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('status', option.value)}>
                         {option.label}
                       </div>
                     ))}
@@ -1305,26 +1117,16 @@ const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, save
                 )}
               </div>
             </div>
-
-            {/* SELECT dla uprawy */}
             <div className="form-group">
               <label>Aktualna uprawa</label>
               <div className="custom-select">
-                <div
-                  className={`select-header ${isCropOpen ? 'open' : ''}`}
-                  onClick={() => setIsCropOpen(!isCropOpen)}
-                >
-                  {getCurrentCropLabel()}
-                  <span className="arrow">▼</span>
+                <div className={`select-header ${isCropOpen ? 'open' : ''}`} onClick={() => setIsCropOpen(!isCropOpen)}>
+                  {getCurrentCropLabel()} <span className="arrow">▼</span>
                 </div>
                 {isCropOpen && (
                   <div className="select-options">
                     {cropOptions.map(option => (
-                      <div
-                        key={option.value}
-                        className={`select-option ${status?.crop === option.value ? 'selected' : ''}`}
-                        onClick={() => handleCustomSelect('crop', option.value)}
-                      >
+                      <div key={option.value} className={`select-option ${status?.crop === option.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('crop', option.value)}>
                         {option.label}
                       </div>
                     ))}
@@ -1332,31 +1134,235 @@ const FieldStatusModal = ({ field, status, onStatusChange, onSave, onClose, save
                 )}
               </div>
             </div>
-
             <div className="form-group">
               <label htmlFor="statusNotes">Notatki</label>
-              <textarea
-                id="statusNotes"
-                name="notes"
-                value={status?.notes || ''}
-                onChange={handleInputChange}
-                rows="3"
-                placeholder="Dodatkowe informacje o stanie pola..."
-              />
+              <textarea id="statusNotes" name="notes" value={status?.notes || ''} onChange={handleInputChange} rows="3" placeholder="Dodatkowe informacje o stanie pola..." />
             </div>
           </form>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            Anuluj
+          <button className="btn btn-secondary" onClick={onClose}>Anuluj</button>
+          <button className="btn btn-primary" onClick={onSave} disabled={saveLoading}>{saveLoading ? 'Zapisywanie...' : 'Zapisz stan'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// === NOWY MODAL: HarvestModal (Formularz dodawania zbioru) ===
+const HarvestModal = ({ field, currentStatus, onSave, onClose, saveLoading }) => {
+  const [harvestData, setHarvestData] = useState({
+    crop: currentStatus?.crop || field.crop || '', // Domyślnie bierzemy uprawę ze statusu
+    amount: '',
+    moisture: '',
+    date_created: new Date().toISOString().split('T')[0]
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!harvestData.amount || !harvestData.crop) {
+      alert('Wprowadź ilość i rodzaj uprawy.');
+      return;
+    }
+
+    const yieldPayload = {
+      field_id: field.id,
+      crop: harvestData.crop,
+      amount: parseFloat(harvestData.amount),
+      moisture: parseFloat(harvestData.moisture) || 0,
+      yield_per_ha: (parseFloat(harvestData.amount) / parseFloat(field.area)).toFixed(2),
+      date_created: new Date(harvestData.date_created).toISOString()
+    };
+
+    onSave(yieldPayload);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{maxWidth: '500px'}} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3><i className="fas fa-tractor" style={{color: '#27ae60'}}></i> Dodaj zbiór: {field.name}</h3>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          <div className="info-box" style={{background: '#e9f7ef', padding: '10px', borderRadius: '5px', marginBottom: '15px', border: '1px solid #c3e6cb', color: '#155724'}}>
+            <i className="fas fa-info-circle"></i> Zapisanie zbioru automatycznie zmieni status pola na <strong>Zebrane</strong>.
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Data zbioru</label>
+              <input 
+                type="date" 
+                value={harvestData.date_created} 
+                onChange={e => setHarvestData({...harvestData, date_created: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Uprawa (zbierana roślina)</label>
+              <input 
+                type="text" 
+                value={harvestData.crop} 
+                onChange={e => setHarvestData({...harvestData, crop: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Ilość łącznie (tony) *</label>
+              <input 
+                type="number" 
+                step="0.01"
+                value={harvestData.amount} 
+                onChange={e => setHarvestData({...harvestData, amount: e.target.value})}
+                placeholder="np. 45.5"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Wilgotność (%)</label>
+              <input 
+                type="number" 
+                step="0.1"
+                value={harvestData.moisture} 
+                onChange={e => setHarvestData({...harvestData, moisture: e.target.value})}
+                placeholder="np. 14.5"
+              />
+            </div>
+            
+            <div className="modal-footer" style={{padding: '15px 0 0 0'}}>
+              <button type="button" className="btn btn-secondary" onClick={onClose}>Anuluj</button>
+              <button type="submit" className="btn btn-success" disabled={saveLoading}>
+                {saveLoading ? 'Zapisywanie...' : 'Zapisz zbiór i zmień status'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// === ZMODYFIKOWANY MODAL HISTORII (Bez dodawania) ===
+const FieldHistoryModal = ({ field, historyData, onClose, onRefresh }) => {
+  const [activeTab, setActiveTab] = useState('timeline');
+  
+  // Funkcja łącząca dane do osi czasu (Timeline)
+  const getTimelineEvents = () => {
+    const events = [];
+    
+    // Zbiory
+    historyData.yields.forEach(y => {
+      events.push({ type: 'yield', date: y.date_created, data: y });
+    });
+
+    // Koszty
+    historyData.costs.forEach(c => {
+      events.push({ type: 'cost', date: c.date_created, data: c });
+    });
+
+    // Statusy
+    historyData.statuses.forEach(s => {
+      events.push({ type: 'status', date: s.date_created || s.date_updated, data: s });
+    });
+
+    // Sortuj malejąco po dacie
+    return events.sort((a, b) => new Date(b.date) - new Date(a.date));
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content history-modal" onClick={e => e.stopPropagation()} style={{maxWidth: '700px'}}>
+        <div className="modal-header">
+          <h3>Historia pola: {field.name}</h3>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+
+        <div className="tabs-header">
+          <button className={activeTab === 'timeline' ? 'active' : ''} onClick={() => setActiveTab('timeline')}>
+            <i className="fas fa-stream"></i> Oś czasu
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={onSave}
-            disabled={saveLoading}
-          >
-            {saveLoading ? 'Zapisywanie...' : 'Zapisz stan'}
+          <button className={activeTab === 'yields' ? 'active' : ''} onClick={() => setActiveTab('yields')}>
+            <i className="fas fa-tractor"></i> Rejestr zbiorów
           </button>
+        </div>
+
+        <div className="modal-body scrollable">
+          {activeTab === 'timeline' && (
+            <div className="timeline-container">
+              {getTimelineEvents().length === 0 && (
+                <div className="empty-state">
+                  <i className="fas fa-history"></i>
+                  <p>Brak historii dla tego pola</p>
+                </div>
+              )}
+              {getTimelineEvents().map((event, idx) => (
+                <div key={idx} className={`timeline-item ${event.type}`}>
+                  <div className="timeline-date">
+                    {new Date(event.date).toLocaleDateString()} {new Date(event.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </div>
+                  <div className="timeline-content">
+                    {event.type === 'yield' && (
+                      <>
+                        <strong><i className="fas fa-tractor"></i> Zbiór: {event.data.crop}</strong>
+                        <p>Ilość: {event.data.amount} t ({event.data.yield_per_ha} t/ha)</p>
+                        {event.data.moisture > 0 && <p>Wilgotność: {event.data.moisture}%</p>}
+                      </>
+                    )}
+                    {event.type === 'cost' && (
+                      <>
+                        <strong><i className="fas fa-coins"></i> Wydatek: {event.data.category}</strong>
+                        <p>{event.data.amount} PLN - {event.data.description}</p>
+                      </>
+                    )}
+                    {event.type === 'status' && (
+                      <>
+                        <strong><i className="fas fa-exchange-alt"></i> Zmiana statusu</strong>
+                        <p>Status: {
+                            event.data.status === 'sown' ? 'Zasiane' :
+                            event.data.status === 'harvested' ? 'Zebrane' :
+                            event.data.status === 'ready_for_sowing' ? 'Do siewu' :
+                            event.data.status
+                        }</p>
+                        {event.data.crop && <p>Uprawa: {event.data.crop}</p>}
+                        {event.data.notes && <p><em>"{event.data.notes}"</em></p>}
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'yields' && (
+            <div>
+              {/* USUNIĘTO PRZYCISK DODAWANIA ZBIORU Z TEGO MIEJSCA */}
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Uprawa</th>
+                    <th>Plon (t)</th>
+                    <th>Plon (t/ha)</th>
+                    <th>Wilgotność</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyData.yields.length === 0 && (
+                    <tr><td colSpan="5" style={{textAlign:'center'}}>Brak zarejestrowanych zbiorów</td></tr>
+                  )}
+                  {historyData.yields.map(y => (
+                    <tr key={y.id}>
+                      <td>{new Date(y.date_created).toLocaleDateString()}</td>
+                      <td>{y.crop}</td>
+                      <td>{y.amount}</td>
+                      <td>{y.yield_per_ha}</td>
+                      <td>{y.moisture ? y.moisture + '%' : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1597,3 +1597,158 @@
   border: 1px solid #dce4ec; 
   display: inline-block;     
 }
+
+/* --- SEKCJA UPRAW (CROP PERFORMANCE) --- */
+
+.crop-performance-section {
+  margin-bottom: 30px;
+}
+
+.crop-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsywny grid */
+  gap: 20px;
+}
+
+.crop-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #f0f2f5;
+  transition: transform 0.2s;
+}
+
+.crop-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.crop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #f0f2f5;
+  padding-bottom: 10px;
+}
+
+.crop-name {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  text-transform: capitalize;
+}
+
+.crop-area {
+  background: #e8f6f3;
+  color: #16a085;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.crop-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.crop-stats .stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.crop-stats .label {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  margin-bottom: 4px;
+}
+
+.crop-stats .value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #34495e;
+}
+
+.crop-stats .value.highlight {
+  color: #27ae60; /* Zielony dla plonu/ha */
+}
+
+/* Pasek udziału w areale */
+.area-share-bar {
+  height: 6px;
+  background: #ecf0f1;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.share-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3498db, #2980b9);
+  border-radius: 3px;
+}
+
+/* Tabela Pól - Ulepszenia */
+.fields-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  overflow: hidden;
+  padding: 0;
+}
+
+.fields-table-container .section-title {
+  padding: 20px 25px;
+  margin: 0;
+  background: white;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.fields-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fields-table thead th {
+  background: #f8f9fa;
+  color: #7f8c8d;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  padding: 15px 25px;
+  border: none;
+}
+
+.fields-table tbody td {
+  padding: 15px 25px;
+  border-bottom: 1px solid #f0f2f5;
+  color: #2c3e50;
+}
+
+.fields-table tbody tr:hover {
+  background-color: #fbfbfb;
+}
+
+.yield-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.yield-value {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.yield-unit {
+  font-size: 0.8rem;
+  color: #95a5a6;
+}
+
+.fw-bold {
+  font-weight: 600;
+}

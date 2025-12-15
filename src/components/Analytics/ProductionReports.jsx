@@ -90,12 +90,17 @@ const ProductionReports = ({ fieldAnalytics, animalAnalytics }) => {
 }
 
 const FieldProduction = ({ fieldAnalytics, cropFilter }) => {
+  // Filtrowanie pól
   const filteredFields = cropFilter === 'all' 
     ? fieldAnalytics.productivity
     : fieldAnalytics.productivity.filter(field => field.crop === cropFilter)
 
+  // Pobieramy dane o wydajności upraw z analytics
+  const cropPerformance = fieldAnalytics.cropPerformance || []
+
   return (
     <div className="field-production">
+      {/* 1. GŁÓWNE KPI */}
       <div className="production-summary">
         <div className="summary-card">
           <div className="summary-value">{fieldAnalytics.totalFields}</div>
@@ -107,54 +112,103 @@ const FieldProduction = ({ fieldAnalytics, cropFilter }) => {
         </div>
         <div className="summary-card">
           <div className="summary-value">
-            {calculateAverageEfficiency(fieldAnalytics.productivity)}%
+            {fieldAnalytics.fieldUtilization?.utilizationRate.toFixed(1)}%
           </div>
-          <div className="summary-label">Średnia wydajność</div>
+          <div className="summary-label">Wykorzystanie gruntów</div>
         </div>
       </div>
 
-      <div className="fields-table">
-        <h4>Wydajność poszczególnych pól</h4>
-        <table>
-          <thead>
-            <tr>
-              <th>Nazwa pola</th>
-              <th>Uprawa</th>
-              <th>Powierzchnia (ha)</th>
-              <th>Typ gleby</th>
-              <th>Wydajność</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredFields.map((field, index) => (
-              <tr key={index}>
-                <td>{field.name}</td>
-                <td>
-                  <span className="crop-badge">{field.crop}</span>
-                </td>
-                <td>{field.area}</td>
-                <td>{field.soil}</td>
-                <td>
-                  <div className="efficiency-bar">
-                    <div 
-                      className={`efficiency-fill ${getEfficiencyClass(field.efficiency)}`}
-                      style={{ width: `${field.efficiency}%` }}
-                    ></div>
-                    <span className="efficiency-text">{field.efficiency.toFixed(1)}%</span>
+      {/* 2. NOWOŚĆ: KARTY WYDAJNOŚCI UPRAW */}
+      {cropFilter === 'all' && (
+        <div className="crop-performance-section">
+          <h4 className="section-title">Wydajność poszczególnych upraw</h4>
+          <div className="crop-cards-grid">
+            {cropPerformance.map((crop, index) => (
+              <div key={index} className="crop-card">
+                <div className="crop-header">
+                  <span className="crop-name">{crop.crop}</span>
+                  <span className="crop-area">{crop.totalArea.toFixed(1)} ha</span>
+                </div>
+                <div className="crop-stats">
+                  <div className="stat">
+                    <span className="label">Plon całk.</span>
+                    <span className="value">{crop.totalYield.toFixed(1)} t</span>
                   </div>
-                </td>
-                <td>
-                  <span className={`status-badge ${getEfficiencyClass(field.efficiency)}`}>
-                    {getEfficiencyStatus(field.efficiency)}
-                  </span>
-                </td>
-              </tr>
+                  <div className="stat">
+                    <span className="label">Śr. plon/ha</span>
+                    <span className="value highlight">{crop.yieldPerHectare.toFixed(1)} t/ha</span>
+                  </div>
+                </div>
+                {/* Pasek wizualny udziału w areale */}
+                <div className="area-share-bar">
+                  <div 
+                    className="share-fill" 
+                    style={{width: `${(crop.totalArea / fieldAnalytics.totalArea) * 100}%`}}
+                  ></div>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+             {cropPerformance.length === 0 && <div className="no-data">Brak danych o zbiorach</div>}
+          </div>
+        </div>
+      )}
+
+      {/* 3. TABELA PÓL (Zaktualizowana) */}
+      <div className="fields-table-container">
+        <h4 className="section-title">Szczegóły pól</h4>
+        <div className="fields-table-wrapper">
+          <table className="fields-table">
+            <thead>
+              <tr>
+                <th>Nazwa pola</th>
+                <th>Uprawa</th>
+                <th>Obszar</th>
+                <th>Gleba</th>
+                <th>Plon (t/ha)</th> {/* Zmiana z % na konkret */}
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredFields.map((field, index) => (
+                <tr key={index}>
+                  <td className="fw-bold">{field.name}</td>
+                  <td>
+                    <span className="crop-badge">{field.crop}</span>
+                  </td>
+                  <td>{field.area} ha</td>
+                  <td>{field.soil}</td>
+                  <td>
+                    <div className="yield-cell">
+                      <span className="yield-value">{field.yieldPerHectare ? field.yieldPerHectare.toFixed(1) : '-'}</span>
+                      <span className="yield-unit">t/ha</span>
+                    </div>
+                  </td>
+                  <td>
+                    {/* Logika statusu oparta na wydajności */}
+                    <StatusBadge efficiency={field.efficiency || 0} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+  )
+}
+
+// Pomocniczy komponent do statusu
+const StatusBadge = ({ efficiency }) => {
+  let statusClass = 'low'
+  let text = 'Niska'
+  
+  if (efficiency >= 80) { statusClass = 'high'; text = 'Wysoka' }
+  else if (efficiency >= 50) { statusClass = 'medium'; text = 'Średnia' }
+
+  return (
+    <span className={`status-badge ${statusClass}`}>
+      {text}
+    </span>
   )
 }
 

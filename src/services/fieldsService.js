@@ -414,3 +414,24 @@ export const subscribeToFieldCosts = (callback) => {
   );
 };
 
+// Dodaj to do fieldsService.js (wymagane dla osi czasu)
+export const getFieldStatusHistory = async (fieldId) => {
+  try {
+    const q = query(
+      collection(db, FIELD_STATUS_COLLECTION),
+      where("field_id", "==", fieldId),
+      orderBy("date_created", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const statuses = [];
+    querySnapshot.forEach((doc) => {
+      statuses.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return statuses;
+  } catch (error) {
+    console.error('Error getting field status history:', error);
+    return [];
+  }
+};
