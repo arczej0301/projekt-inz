@@ -233,6 +233,17 @@
   margin-bottom: 30px;
 }
 
+.crop-performance-section h4 {
+  background: white;
+  padding: 20px 25px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  color: #2c3e50;     
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
 /* Header sekcji z sortowaniem */
 .section-header-row {
   display: flex;
@@ -352,6 +363,17 @@
   margin-bottom: 30px;
 }
 
+.fields-table-container h4 {
+  padding: 20px 25px;        /* Taki sam padding jak w komórkach tabeli, żeby tekst był w jednej linii */
+  margin: 0;                 /* Resetujemy domyślne marginesy przeglądarki */
+  border-bottom: 1px solid #f0f2f5; /* Delikatna linia oddzielająca nagłówek od samej tabeli */
+  color: #2c3e50;            /* Ciemny granat - główny kolor tekstów w Twoim projekcie */
+  font-size: 1.2rem;         /* Wielkość tekstu */
+  font-weight: 700;          /* Pogrubienie */
+  background: white;         /* Zapewnia czyste tło */
+  border-radius: 12px 12px 0 0; /* Zaokrąglenie tylko górnych rogów (pasuje do kontenera) */
+}
+
 .fields-table-container .section-title {
   padding: 20px 25px;
   margin: 0;
@@ -365,8 +387,8 @@
 }
 
 .fields-table thead th {
-  background: #f8f9fa;
-  color: #7f8c8d;
+  background: #388e3c;       /* Twój główny niebieski kolor */
+  color: #ffffff;            /* Biały tekst */
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.75rem;
@@ -374,6 +396,7 @@
   padding: 15px 25px;
   border: none;
   text-align: left;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /
 }
 
 .fields-table tbody td {
@@ -784,6 +807,7 @@
 /* Cell z glebą */
 .soil-cell {
   text-transform: capitalize;
+  
 }
 
 /* Data zbioru */
@@ -811,3 +835,312 @@
   color: #e74c3c;
   border-color: #e74c3c;
 }
+
+/* Styl dla wierszy z i bez zbiorów */
+.fields-table tr.has-yield {
+  background-color: #f8fff8;
+}
+
+.fields-table tr.no-yield {
+  background-color: #fff8f8;
+}
+
+.fields-table tr.has-yield:hover {
+  background-color: #e8f5e8;
+}
+
+.fields-table tr.no-yield:hover {
+  background-color: #ffebee;
+}
+
+/* Komórki z brakiem danych */
+.no-data-cell {
+  color: #95a5a6;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* Wartość wydajności */
+.yield-value {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.yield-value.high {
+  color: #27ae60;
+}
+
+.yield-value.medium {
+  color: #f39c12;
+}
+
+.yield-value.low {
+  color: #e74c3c;
+}
+
+/* Status badge - większy i czytelniejszy */
+.status-badge {
+  color: white;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+  min-width: 140px;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.status-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Kolory dla różnych statusów */
+.status-badge.sown, 
+.status-badge.zasiane {
+  background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+}
+
+.status-badge.harvested,
+.status-badge.zebrane {
+  background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+}
+
+.status-badge.ready_for_sowing,
+.status-badge.przygotowane-do-siewu {
+  background: linear-gradient(135deg, #3498db, #2980b9) !important;
+}
+
+.status-badge.fallow,
+.status-badge.ugór {
+  background: linear-gradient(135deg, #f39c12, #d35400) !important;
+}
+
+.status-badge.pasture,
+.status-badge.pastwisko-łąka {
+  background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+}
+
+.status-badge.brak-danych {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d) !important;
+}
+
+/* Crop badge */
+.crop-badge {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  color: #1565c0;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+  border: 1px solid #90caf9;
+}
+
+/* Nagłówki tabeli */
+.fields-table th {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-bottom: 2px solid #dee2e6;
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 700;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.fields-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+}
+
+/* Podświetlenie wiersza */
+.fields-table tr:hover td {
+  background-color: rgba(52, 152, 219, 0.05);
+}
+
+/* Podsumowanie kart */
+.summary-card {
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.summary-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+.summary-label {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Kartki z uprawami */
+.crop-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  border-left: 4px solid #3498db;
+}
+
+.crop-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+}
+
+.crop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f1f3f4;
+}
+
+.crop-name {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 17px;
+}
+
+.crop-area {
+  color: #6c757d;
+  font-size: 14px;
+  background: #f8f9fa;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.crop-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.crop-stats .stat {
+  display: flex;
+  flex-direction: column;
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.crop-stats .stat .label {
+  font-size: 12px;
+  color: #6c757d;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.crop-stats .stat .value {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 15px;
+}
+
+.crop-stats .stat .value.highlight {
+  color: #27ae60;
+  font-size: 16px;
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+  .fields-table {
+    font-size: 13px;
+  }
+  
+  .fields-table th,
+  .fields-table td {
+    padding: 10px 12px;
+  }
+  
+  .status-badge {
+    min-width: 110px;
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+  
+  .crop-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- ZMIANA: NOWY NAGŁÓWEK TABELI (Flexbox) --- */
+
+/* --- AnalyticsComponents.css --- */
+
+/* 1. Kontener nagłówka (bez zmian - zapewnia układ lewo-prawo) */
+.table-header-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  border-bottom: 1px solid #f0f2f5;
+  border-radius: 12px 12px 0 0;
+  padding-right: 25px; /* Odstęp kontrolek od prawej krawędzi */
+}
+
+/* 2. Kontener kontrolek (wzorowany na .sort-filter-section) */
+.sort-controls {
+  display: flex;
+  gap: 10px;           /* Zgodnie z Twoim wzorem */
+  align-items: center; /* Wyrównanie w pionie */
+  /* margin-right: 15px; -> Usunąłem, bo wrapper ma już padding-right */
+}
+
+/* 3. Styl etykiety "Sortuj wg:" */
+.sort-label {
+  font-size: 0.85rem;  /* Dopasowane do .filter-info z Twojego wzoru */
+  color: #7f8c8d;
+  font-weight: 500;
+  /* font-style: italic; -> Opcjonalnie, jeśli chcesz styl z .filter-info */
+}
+
+/* 4. Styl pola wyboru (wzorowany na .control-select) */
+.sort-select {
+  padding: 8px 12px;           /* Zgodnie z Twoim wzorem */
+  border: 1px solid #bdc3c7;   /* Zgodnie z Twoim wzorem */
+  border-radius: 5px;          /* Zgodnie z Twoim wzorem */
+  background: white;
+  font-size: 0.9rem;
+  color: #2c3e50;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;            /* Dodane, żeby select nie był zbyt wąski */
+}
+
+/* Stan Hover (najazd myszką) */
+.sort-select:hover {
+  border-color: #95a5a6;       /* Zgodnie z Twoim wzorem */
+}
+
+/* Stan Focus (kliknięcie) - ZMIANA KOLORU NA ZIELONY (spójny z tabelą) */
+.sort-select:focus {
+  outline: none;
+  border-color: #388e3c;       /* Twój kolor --primary zamiast niebieskiego */
+  box-shadow: 0 0 0 2px rgba(56, 142, 60, 0.2); /* Zielona poświata */
+}
+
