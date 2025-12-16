@@ -5,9 +5,15 @@ import {
   query, 
   where, 
   getDocs,
+<<<<<<< HEAD
   orderBy,
   Timestamp,
   limit
+=======
+  orderBy, // DODAJ TEN IMPORT
+  Timestamp,
+  limit // Dodaj też limit jeśli potrzebujesz
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 
@@ -18,8 +24,18 @@ const COLLECTIONS = {
   WAREHOUSE: 'warehouse',
   GARAGE: 'garage',
   FIELD_YIELDS: 'field_yields',
+<<<<<<< HEAD
   FIELD_COSTS: 'field_costs',
   FIELD_STATUS: 'field_status' // 1. DODANO KOLEKCJĘ STATUSÓW
+=======
+  FIELD_COSTS: 'field_costs'
+}
+
+const ALERT_THRESHOLDS = {
+  PROFIT_MARGIN_LOW: 15,
+  FIELD_UTILIZATION_LOW: 80,
+  LOW_STOCK_ALERT: 3
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
 }
 
 export const useAnalytics = () => {
@@ -48,14 +64,22 @@ export const useAnalytics = () => {
         const results = await Promise.allSettled(dataPromises)
 
         const collectedData = {}
+<<<<<<< HEAD
+=======
+        const collectionKeys = Object.keys(COLLECTIONS) // Klucze do mapowania wyników
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
 
         results.forEach((result, index) => {
           // Mapowanie nazw kolekcji na klucze
           let key = Object.keys(COLLECTIONS).find(k => COLLECTIONS[k] === collections[index]).toLowerCase()
+<<<<<<< HEAD
           
           // Specyficzne mapowania kluczy dla wygody
           if (key === 'finance_transactions') key = 'transactions'
           if (key === 'field_status') key = 'field_status' // Upewniamy się, że klucz jest poprawny
+=======
+          if (key === 'transactions') key = 'transactions' // dla pewności
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
 
           if (result.status === 'fulfilled') {
             collectedData[key] = result.value
@@ -65,7 +89,11 @@ export const useAnalytics = () => {
           }
         })
 
+<<<<<<< HEAD
         // Fallbacki dla kluczy
+=======
+        // Mapowanie specyficznych kluczy jeśli automatyczne nie zadziałało idealnie
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
         collectedData.transactions = collectedData.finance_transactions || collectedData.transactions || []
 
         setData(collectedData)
@@ -82,10 +110,80 @@ export const useAnalytics = () => {
     fetchAllData()
   }, [])
 
+<<<<<<< HEAD
+=======
+  // hooks/useAnalytics.js - POPRAWIONA FUNKCJA fetchCollectionData
+const fetchCollectionData = async (collectionName, conditions = [], order = null, limitCount = null) => {
+  try {
+    let q = query(collection(db, collectionName))
+    
+    // Dodaj warunki jeśli istnieją
+    if (conditions && conditions.length > 0) {
+      conditions.forEach(condition => {
+        if (condition && condition.field && condition.operator && condition.value !== undefined) {
+          q = query(q, where(condition.field, condition.operator, condition.value))
+        }
+      })
+    }
+    
+    // Dodaj sortowanie jeśli określone
+    if (order && order.field) {
+      q = query(q, orderBy(order.field, order.direction || 'asc'))
+    }
+    
+    // Dodaj limit jeśli określony
+    if (limitCount) {
+      q = query(q, limit(limitCount))
+    }
+    
+    const snapshot = await getDocs(q)
+    
+    // BEZPIECZNE SPRAWDZENIE DANYCH
+    if (!snapshot || !snapshot.docs || !Array.isArray(snapshot.docs)) {
+      console.warn(`Kolekcja ${collectionName} nie zwróciła dokumentów`)
+      return []
+    }
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data()
+      
+      // Formatuj daty
+      let formattedDate = new Date()
+      try {
+        if (data.date instanceof Timestamp) {
+          formattedDate = data.date.toDate()
+        } else if (data.date?.toDate && typeof data.date.toDate === 'function') {
+          formattedDate = data.date.toDate()
+        } else if (data.date instanceof Date) {
+          formattedDate = data.date
+        } else if (data.date) {
+          formattedDate = new Date(data.date)
+        }
+      } catch (error) {
+        console.error('Błąd parsowania daty dla dokumentu:', doc.id, error)
+      }
+
+      return {
+        id: doc.id,
+        ...data,
+        date: formattedDate
+      }
+    })
+  } catch (error) {
+    console.error(`Błąd pobierania kolekcji ${collectionName}:`, error)
+    return [] // Zawsze zwracaj pustą tablicę zamiast undefined
+  }
+}
+
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
   // --- MEMOIZED ANALYTICS ---
 
   const financialAnalytics = useMemo(() => {
     const transactions = data.transactions || []
+<<<<<<< HEAD
+=======
+
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
     const totalRevenue = calculateTotalAmount(transactions, 'income')
     const totalExpenses = calculateTotalAmount(transactions, 'expense')
     const netProfit = totalRevenue - totalExpenses
@@ -97,6 +195,10 @@ export const useAnalytics = () => {
         totalExpenses,
         netProfit,
         profitMargin: parseFloat(profitMargin.toFixed(1)),
+<<<<<<< HEAD
+=======
+        // Miesięczne szacunki (średnia)
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
         monthlyExpenses: totalExpenses / 12 || 0
       },
       trends: generateRevenueTrends(transactions),
@@ -108,6 +210,7 @@ export const useAnalytics = () => {
   const fieldAnalytics = useMemo(() => {
     const fields = data.fields || []
     const fieldYields = data.field_yields || []
+<<<<<<< HEAD
     const fieldCosts = data.field_costs || []
     const fieldStatuses = data.field_status || [] // 2. Pobieramy statusy
 
@@ -154,6 +257,8 @@ export const useAnalytics = () => {
         costPerTon: c.totalYield > 0 ? c.totalCost / c.totalYield : 0
       }))
       .sort((a, b) => b.totalArea - a.totalArea)
+=======
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
 
     return {
       totalFields: fields.length,
@@ -168,6 +273,10 @@ export const useAnalytics = () => {
   const animalAnalytics = useMemo(() => {
     const animals = data.animals || []
     const transactions = data.transactions || []
+<<<<<<< HEAD
+=======
+
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
     return {
       totalAnimals: animals.length,
       health: { healthIndex: 95 }, 
@@ -276,10 +385,23 @@ const calculateTotalAmount = (transactions, type) => {
 
 const generateRevenueTrends = (transactions) => {
   const trendsMap = {}
+<<<<<<< HEAD
   transactions.forEach(t => {
     if (!t.date) return
     const monthKey = t.date.toISOString().slice(0, 7)
     if (!trendsMap[monthKey]) trendsMap[monthKey] = { month: monthKey, revenue: 0, expenses: 0 }
+=======
+
+  // Grupuj transakcje z ostatnich 6-12 miesięcy
+  transactions.forEach(t => {
+    if (!t.date) return
+    const monthKey = t.date.toISOString().slice(0, 7) // "2023-11"
+
+    if (!trendsMap[monthKey]) {
+      trendsMap[monthKey] = { month: monthKey, revenue: 0, expenses: 0 }
+    }
+
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
     if (t.type === 'income') trendsMap[monthKey].revenue += t.amount
     if (t.type === 'expense') trendsMap[monthKey].expenses += t.amount
   })
@@ -325,5 +447,26 @@ const analyzeAnimalCosts = (transactions, animals) => {
   const feedCosts = transactions
     .filter(t => t.type === 'expense' && (t.category === 'pasze' || t.category === 'supplies'))
     .reduce((sum, t) => sum + t.amount, 0)
+<<<<<<< HEAD
   return { feedCosts, totalCosts: feedCosts, costPerAnimal: animals.length ? feedCosts / animals.length : 0 }
+=======
+
+  return {
+    feedCosts,
+    totalCosts: feedCosts, // Tu można dodać weterynarza itp.
+    costPerAnimal: animals.length ? feedCosts / animals.length : 0
+  }
+}
+
+// Helper do ładnych nazw kategorii (możesz go rozbudować)
+const formatCategoryName = (key) => {
+  const names = {
+    'sprzedaz_plonow': 'Sprzedaż plonów',
+    'paliwo': 'Paliwo',
+    'nawozy_nasiona': 'Nawozy i nasiona',
+    'zwierzeta': 'Zwierzęta',
+    'maszyny': 'Maszyny'
+  }
+  return names[key] || key
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
 }

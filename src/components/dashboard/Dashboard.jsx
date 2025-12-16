@@ -3,7 +3,11 @@ import { useState, useEffect } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import { useTasks } from '../../hooks/useTasks'
 import { useAnalytics } from '../../hooks/useAnalytics'
+<<<<<<< HEAD
 import { useFields } from '../../hooks/useFields';
+=======
+// Importujemy funkcje z odpowiednich serwisów
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
 import { getAnimals } from '../../services/animalsService' 
 import { 
   getFields, 

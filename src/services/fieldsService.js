@@ -456,6 +456,7 @@ export const getFieldStatusLogs = async (limitCount = 20) => {
     console.error('Error getting field status logs:', error);
     return [];
   }
+<<<<<<< HEAD
 };
 
 // fieldsService.js - DODAJ NA KONIEC PLIKU
@@ -594,4 +595,6 @@ export const getField = async (fieldId) => {
     console.error('Error getting field:', error);
     throw error;
   }
+=======
+>>>>>>> d7b6df3 (poprawki,  usuwannie bledow)
 };
