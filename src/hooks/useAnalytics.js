@@ -1,10 +1,13 @@
 // src/hooks/useAnalytics.js
 import { useState, useEffect, useMemo } from 'react'
-import { 
+import {
   collection, 
   query, 
-  orderBy, 
-  getDocs 
+  where, 
+  getDocs,
+  orderBy, // DODAJ TEN IMPORT
+  Timestamp,
+  limit // Dodaj też limit jeśli potrzebujesz
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 
@@ -15,8 +18,8 @@ const COLLECTIONS = {
   ANIMALS: 'animals',
   WAREHOUSE: 'warehouse',
   GARAGE: 'garage',
-  FIELD_YIELDS: 'field_yields',  
-  FIELD_COSTS: 'field_costs'     
+  FIELD_YIELDS: 'field_yields',
+  FIELD_COSTS: 'field_costs'
 }
 
 const ALERT_THRESHOLDS = {
@@ -35,30 +38,30 @@ export const useAnalytics = () => {
   useEffect(() => {
     const now = Date.now()
     if (now - lastFetch < 30000 && lastFetch !== 0) {
-      return 
+      return
     }
 
     const fetchAllData = async () => {
       try {
         setLoading(true)
         setError(null)
-        
+
         const collections = Object.values(COLLECTIONS)
-        const dataPromises = collections.map(collectionName => 
+        const dataPromises = collections.map(collectionName =>
           fetchCollectionData(collectionName)
         )
 
         const results = await Promise.allSettled(dataPromises)
-        
+
         const collectedData = {}
         const collectionKeys = Object.keys(COLLECTIONS) // Klucze do mapowania wyników
-        
+
         results.forEach((result, index) => {
           // Mapujemy nazwę kolekcji z Firebase na klucz w stanie data
           // np. 'finance_transactions' -> 'transactions'
           let key = Object.keys(COLLECTIONS).find(k => COLLECTIONS[k] === collections[index]).toLowerCase()
-          if(key === 'transactions') key = 'transactions' // dla pewności
-          
+          if (key === 'transactions') key = 'transactions' // dla pewności
+
           if (result.status === 'fulfilled') {
             collectedData[key] = result.value
           } else {
@@ -66,7 +69,7 @@ export const useAnalytics = () => {
             collectedData[key] = []
           }
         })
-        
+
         // Mapowanie specyficznych kluczy jeśli automatyczne nie zadziałało idealnie
         collectedData.transactions = collectedData.finance_transactions || collectedData.transactions || []
 
@@ -84,52 +87,74 @@ export const useAnalytics = () => {
     fetchAllData()
   }, [])
 
-  const fetchCollectionData = async (collectionName) => {
-    try {
-      let collectionQuery
-      // Sortowanie tylko dla transakcji, reszta domyślnie
-      if (collectionName === COLLECTIONS.TRANSACTIONS) {
-        collectionQuery = query(collection(db, collectionName), orderBy('date', 'desc'))
-      } else {
-        collectionQuery = query(collection(db, collectionName))
-      }
-
-      const snapshot = await getDocs(collectionQuery)
-      return snapshot.docs.map(doc => {
-        const docData = doc.data()
-        
-        // Bezpieczne parsowanie dat
-        let dateFormatted = null
-        try {
-          if (docData.date?.toDate) {
-            dateFormatted = docData.date.toDate()
-          } else if (docData.date instanceof Timestamp) { // Import Timestamp z firebase/firestore
-             dateFormatted = docData.date.toDate()
-          } else if (docData.date) {
-            dateFormatted = new Date(docData.date)
-          }
-        } catch (e) {
-          console.warn('Date parsing warning:', e)
-        }
-
-        return {
-          id: doc.id,
-          ...docData,
-          date: dateFormatted,
-          amount: parseFloat(docData.amount) || 0 // Upewniamy się, że kwota to liczba
+  // hooks/useAnalytics.js - POPRAWIONA FUNKCJA fetchCollectionData
+const fetchCollectionData = async (collectionName, conditions = [], order = null, limitCount = null) => {
+  try {
+    let q = query(collection(db, collectionName))
+    
+    // Dodaj warunki jeśli istnieją
+    if (conditions && conditions.length > 0) {
+      conditions.forEach(condition => {
+        if (condition && condition.field && condition.operator && condition.value !== undefined) {
+          q = query(q, where(condition.field, condition.operator, condition.value))
         }
       })
-    } catch (error) {
-      console.error(`Error fetching ${collectionName}:`, error)
+    }
+    
+    // Dodaj sortowanie jeśli określone
+    if (order && order.field) {
+      q = query(q, orderBy(order.field, order.direction || 'asc'))
+    }
+    
+    // Dodaj limit jeśli określony
+    if (limitCount) {
+      q = query(q, limit(limitCount))
+    }
+    
+    const snapshot = await getDocs(q)
+    
+    // BEZPIECZNE SPRAWDZENIE DANYCH
+    if (!snapshot || !snapshot.docs || !Array.isArray(snapshot.docs)) {
+      console.warn(`Kolekcja ${collectionName} nie zwróciła dokumentów`)
       return []
     }
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data()
+      
+      // Formatuj daty
+      let formattedDate = new Date()
+      try {
+        if (data.date instanceof Timestamp) {
+          formattedDate = data.date.toDate()
+        } else if (data.date?.toDate && typeof data.date.toDate === 'function') {
+          formattedDate = data.date.toDate()
+        } else if (data.date instanceof Date) {
+          formattedDate = data.date
+        } else if (data.date) {
+          formattedDate = new Date(data.date)
+        }
+      } catch (error) {
+        console.error('Błąd parsowania daty dla dokumentu:', doc.id, error)
+      }
+
+      return {
+        id: doc.id,
+        ...data,
+        date: formattedDate
+      }
+    })
+  } catch (error) {
+    console.error(`Błąd pobierania kolekcji ${collectionName}:`, error)
+    return [] // Zawsze zwracaj pustą tablicę zamiast undefined
   }
+}
 
   // --- MEMOIZED ANALYTICS ---
 
   const financialAnalytics = useMemo(() => {
     const transactions = data.transactions || []
-    
+
     const totalRevenue = calculateTotalAmount(transactions, 'income')
     const totalExpenses = calculateTotalAmount(transactions, 'expense')
     const netProfit = totalRevenue - totalExpenses
@@ -142,7 +167,7 @@ export const useAnalytics = () => {
         netProfit,
         profitMargin: parseFloat(profitMargin.toFixed(1)),
         // Miesięczne szacunki (średnia)
-        monthlyExpenses: totalExpenses / 12 || 0 
+        monthlyExpenses: totalExpenses / 12 || 0
       },
       // TUTAJ BYŁY PUSTE TABLICE - TERAZ SĄ WYPEŁNIONE:
       trends: generateRevenueTrends(transactions),
@@ -153,8 +178,8 @@ export const useAnalytics = () => {
 
   const fieldAnalytics = useMemo(() => {
     const fields = data.fields || []
-    const fieldYields = data.field_yields || [] 
-    
+    const fieldYields = data.field_yields || []
+
     return {
       totalFields: fields.length,
       totalArea: fields.reduce((sum, f) => sum + (parseFloat(f.area) || 0), 0),
@@ -166,7 +191,7 @@ export const useAnalytics = () => {
   const animalAnalytics = useMemo(() => {
     const animals = data.animals || []
     const transactions = data.transactions || []
-    
+
     return {
       totalAnimals: animals.length,
       health: { healthIndex: 95 }, // Placeholder - do rozbudowy jeśli masz statusy zdrowia
@@ -207,16 +232,16 @@ const calculateTotalAmount = (transactions, type) => {
 // 1. Generowanie trendów (Wykres liniowy)
 const generateRevenueTrends = (transactions) => {
   const trendsMap = {}
-  
+
   // Grupuj transakcje z ostatnich 6-12 miesięcy
   transactions.forEach(t => {
     if (!t.date) return
     const monthKey = t.date.toISOString().slice(0, 7) // "2023-11"
-    
+
     if (!trendsMap[monthKey]) {
       trendsMap[monthKey] = { month: monthKey, revenue: 0, expenses: 0 }
     }
-    
+
     if (t.type === 'income') trendsMap[monthKey].revenue += t.amount
     if (t.type === 'expense') trendsMap[monthKey].expenses += t.amount
   })
@@ -283,7 +308,7 @@ const analyzeSoilEfficiency = (fields) => {
   const groups = {}
   fields.forEach(f => {
     const s = f.soil || 'Nieznana'
-    if(!groups[s]) groups[s] = { count: 0, area: 0 }
+    if (!groups[s]) groups[s] = { count: 0, area: 0 }
     groups[s].count++
     groups[s].area += (parseFloat(f.area) || 0)
   })
@@ -298,7 +323,7 @@ const analyzeAnimalCosts = (transactions, animals) => {
   const feedCosts = transactions
     .filter(t => t.type === 'expense' && (t.category === 'pasze' || t.category === 'supplies'))
     .reduce((sum, t) => sum + t.amount, 0)
-    
+
   return {
     feedCosts,
     totalCosts: feedCosts, // Tu można dodać weterynarza itp.

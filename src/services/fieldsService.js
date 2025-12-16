@@ -435,3 +435,25 @@ export const getFieldStatusHistory = async (fieldId) => {
     return [];
   }
 };
+
+// Nowa funkcja do pobierania surowej historii statusów (dla Dashboardu)
+export const getFieldStatusLogs = async (limitCount = 20) => {
+  try {
+    const q = query(
+      collection(db, FIELD_STATUS_COLLECTION),
+      orderBy("date_created", "desc"), // Sortowanie od najnowszych
+      limit(limitCount)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const logs = [];
+    querySnapshot.forEach((doc) => {
+      logs.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return logs;
+  } catch (error) {
+    console.error('Error getting field status logs:', error);
+    return [];
+  }
+};

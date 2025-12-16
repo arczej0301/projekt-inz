@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import { useTasks } from '../../hooks/useTasks'
 import { useAnalytics } from '../../hooks/useAnalytics'
-// IMPORTUJEMY getAnimals z ODPOWIEDNIEGO SERWISU
+// Importujemy funkcje z odpowiednich serwisów
 import { getAnimals } from '../../services/animalsService' 
 import { 
   getFields, 
   getAllFieldYields,
-  getAllFieldStatuses
+  getFieldStatusLogs // <--- TO JEST KLUCZOWE DLA HISTORII Z BAZY
 } from '../../services/fieldsService'
 import './Dashboard.css'
 
@@ -50,59 +50,58 @@ function Dashboard({ farmData, onTabChange }) {
       try {
         setLoading(true)
         
-        // 1. Pobierz dane z serwisów (PRZYWRÓCONO getAnimals)
-        const [fields, animals, financialSummary, yields, statusesObj] = await Promise.all([
+        // 1. POBIERANIE DANYCH Z BAZY
+        // Używamy getFieldStatusLogs(20) aby pobrać 20 ostatnich zdarzeń historycznych
+        const [fields, animals, financialSummary, yields, statusHistoryLog] = await Promise.all([
           getFields(),
-          getAnimals(),           // <--- PRZYWRÓCONE POBIERANIE ZWIERZĄT
+          getAnimals(),           
           getFinancialSummary(),
           getAllFieldYields(),    
-          getAllFieldStatuses()   
+          getFieldStatusLogs(20) // <--- Pobieramy surową historię z bazy
         ])
         
-        // 2. Oblicz rzeczywiste statystyki
+        // 2. Oblicz statystyki
         const totalArea = fields.reduce((sum, field) => sum + (parseFloat(field.area) || 0), 0)
-        
-        // OBLICZAMY LICZBĘ ZWIERZĄT NA PODSTAWIE POBRANEJ TABLICY
         const animalCount = animals ? animals.length : 0
-        
         const uniqueCrops = [...new Set(fields.map(field => field.crop).filter(Boolean))]
         
-        // 3. PRZETWARZANIE AKTYWNOŚCI Z PÓL
+        // 3. PRZETWARZANIE HISTORII
         if (isMounted) {
           const newFieldActivities = []
           const fieldNames = {}
           fields.forEach(f => fieldNames[f.id] = f.name)
 
-          // A. Przetwarzanie zbiorów
+          // A. Przetwarzanie zbiorów (zawsze z bazy)
           if (yields && yields.length > 0) {
-            yields.forEach(item => {
-              newFieldActivities.push({
-                id: `yield_${item.id}`,
-                title: `Zbiór: ${item.crop}`,
-                description: `Pole: ${fieldNames[item.field_id] || 'Nieznane'} - Zebrano: ${item.amount}t`,
-                time: item.date_created, 
-                timestamp: new Date(item.date_created).getTime(),
-                icon: '🚜'
-              })
-            })
-          }
+  yields.forEach(item => {
+    newFieldActivities.push({
+      id: `yield_${item.id}`,
+      title: `Zbiór: ${item.crop}`,
+      description: `Pole: ${fieldNames[item.field_id] || 'Nieznane'} - Zebrano: ${item.amount}t`,
+      time: item.date_created, 
+      timestamp: new Date(item.date_created).getTime(),
+      icon: '🚜'
+    });
+  });
+}
 
-          // B. Przetwarzanie statusów
-          const statusesList = statusesObj ? Object.values(statusesObj) : []
-          if (statusesList && statusesList.length > 0) {
-            statusesList.forEach(item => {
+          // B. Przetwarzanie historii statusów (zawsze z bazy)
+          if (statusHistoryLog && statusHistoryLog.length > 0) {
+            statusHistoryLog.forEach(item => {
               const date = item.date_created || item.date_updated
               
               let activityTitle = ''
               let activityIcon = '🌾'
               
-              // Budowanie opisu z plonem
+              // Budowanie opisu
               let activityDesc = `Pole: ${fieldNames[item.field_id] || 'Nieznane'} ${item.crop ? `(${item.crop})` : ''}`
 
+              // Logika wyświetlania tytułów
               switch (item.status) {
                 case 'harvested':
                   activityTitle = 'Zbiór upraw'
-                  activityIcon = '🌾'
+                  activityIcon = '🚜'
+                  // Jeśli w historii zapisano dane o plonie, wyświetl je
                   if (item.yield_amount) {
                     activityDesc += ` - Plon: ${item.yield_amount}t`
                   }
@@ -125,7 +124,8 @@ function Dashboard({ farmData, onTabChange }) {
                   activityIcon = '🐄'
                   break
                 default:
-                  const label = item.status
+                  // Jeśli status jest inny, sformatuj go ładnie (pierwsza litera duża)
+                  const label = item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/_/g, ' ')
                   activityTitle = `Zmiana stanu: ${label}`
               }
 
@@ -140,12 +140,13 @@ function Dashboard({ farmData, onTabChange }) {
             })
           }
 
+          // Zapisz historię do stanu
           setFieldHistoryActivities(newFieldActivities)
 
-          // Aktualizacja głównych danych dashboardu
+          // Zaktualizuj liczby na dashboardzie
           const updatedFarmData = {
             area: totalArea,
-            animals: animalCount, // TERAZ PRZYPISUJEMY FAKTYCZNĄ LICZBĘ
+            animals: animalCount,
             crops: uniqueCrops.length,
             tasks: tasks.filter(task => task.status === 'pending').length,
             income: financialSummary?.monthlyIncome || 0,
@@ -180,7 +181,7 @@ function Dashboard({ farmData, onTabChange }) {
     }
   }, [analyticsLoading, tasksLoading, financeLoading, farmData])
 
-  // GENEROWANIE LISTY AKTYWNOŚCI
+  // GENEROWANIE LISTY AKTYWNOŚCI (MERGE)
   useEffect(() => {
     const generateActivities = () => {
       let activities = []
@@ -220,16 +221,21 @@ function Dashboard({ farmData, onTabChange }) {
         })
       }
 
-      // 3. Pola (Zbiory i Statusy)
+      // 3. Pola (Historia z bazy danych)
       if (fieldHistoryActivities.length > 0) {
         const formattedFieldActivities = fieldHistoryActivities.map(activity => ({
           ...activity,
+          // Przeliczamy czas "temu" dynamicznie przy renderowaniu
           time: formatTimeAgo(new Date(activity.time))
         }))
         activities = [...activities, ...formattedFieldActivities]
       }
 
+      // 4. Sortowanie wszystkiego po dacie (od najnowszych)
       activities.sort((a, b) => b.timestamp - a.timestamp)
+
+      // 5. Unikanie duplikatów (opcjonalne, na wypadek gdyby zbiór był i w yields i w statusach)
+      // W tym przypadku zostawiamy oba, bo niosą nieco inną informację, ale można tu dodać filtr.
 
       if (activities.length === 0) {
         activities.push({
@@ -247,6 +253,8 @@ function Dashboard({ farmData, onTabChange }) {
 
     setRecentActivities(generateActivities())
   }, [transactions, tasks, fieldHistoryActivities])
+
+  // --- HELPERY I SZABLON (bez zmian) ---
 
   const quickActions = [
     {
@@ -306,7 +314,6 @@ function Dashboard({ farmData, onTabChange }) {
     }
   ]
 
-  // Helper functions
   function formatTimeAgo(date) {
     if (!date) return 'Nieznany czas'
 

@@ -9,17 +9,17 @@ const ProductionReports = ({ fieldAnalytics, animalAnalytics }) => {
 
   const tabOptions = [
     { value: 'fields', label: 'Pola uprawne' },
-    { value: 'animals', label: 'Zwierzęta'},
-    { value: 'efficiency', label: 'Wydajność'}
+    { value: 'animals', label: 'Zwierzęta' },
+    { value: 'efficiency', label: 'Wydajność' }
   ]
 
   const cropOptions = [
-    { value: 'all', label: 'Wszystkie uprawy'},
+    { value: 'all', label: 'Wszystkie uprawy' },
     { value: 'pszenica', label: 'Pszenica' },
-    { value: 'kukurydza', label: 'Kukurydza'},
+    { value: 'kukurydza', label: 'Kukurydza' },
     { value: 'rzepak', label: 'Rzepak' },
-    { value: 'buraki', label: 'Buraki'},
-    { value: 'pszenica', label: 'Pszenica'  },
+    { value: 'buraki', label: 'Buraki' },
+    { value: 'pszenica', label: 'Pszenica' },
     { value: 'kukurydza', label: 'Kukurydza' },
     { value: 'rzepak', label: 'Rzepak' },
     { value: 'ziemniaki', label: 'Ziemniaki' },
@@ -28,27 +28,27 @@ const ProductionReports = ({ fieldAnalytics, animalAnalytics }) => {
     { value: 'jęczmień', label: 'Jęczmień' },
     { value: 'żyto', label: 'Żyto' }
   ]
-  
-//  const cropOptions = [
-//     { value: '', label: 'Brak uprawy' },
-//     { value: 'pszenica', label: 'Pszenica' },
-//     { value: 'kukurydza', label: 'Kukurydza' },
-//     { value: 'rzepak', label: 'Rzepak' },
-//     { value: 'ziemniaki', label: 'Ziemniaki' },
-//     { value: 'buraki', label: 'Buraki cukrowe' },
-//     { value: 'owies', label: 'Owies' },
-//     { value: 'jęczmień', label: 'Jęczmień' },
-//     { value: 'żyto', label: 'Żyto' }
-//   ];
 
-//   const soilOptions = [
-//     { value: '', label: 'Wybierz typ gleby' },
-//     { value: 'gliniasta', label: 'Gliniasta' },
-//     { value: 'piaszczysta', label: 'Piaszczysta' },
-//     { value: 'ilasta', label: 'Ilasta' },
-//     { value: 'torfowa', label: 'Torfowa' },
-//     { value: 'mada', label: 'Mada rzeczna' }
-//   ];
+  //  const cropOptions = [
+  //     { value: '', label: 'Brak uprawy' },
+  //     { value: 'pszenica', label: 'Pszenica' },
+  //     { value: 'kukurydza', label: 'Kukurydza' },
+  //     { value: 'rzepak', label: 'Rzepak' },
+  //     { value: 'ziemniaki', label: 'Ziemniaki' },
+  //     { value: 'buraki', label: 'Buraki cukrowe' },
+  //     { value: 'owies', label: 'Owies' },
+  //     { value: 'jęczmień', label: 'Jęczmień' },
+  //     { value: 'żyto', label: 'Żyto' }
+  //   ];
+
+  //   const soilOptions = [
+  //     { value: '', label: 'Wybierz typ gleby' },
+  //     { value: 'gliniasta', label: 'Gliniasta' },
+  //     { value: 'piaszczysta', label: 'Piaszczysta' },
+  //     { value: 'ilasta', label: 'Ilasta' },
+  //     { value: 'torfowa', label: 'Torfowa' },
+  //     { value: 'mada', label: 'Mada rzeczna' }
+  //   ];
 
 
 
@@ -91,7 +91,7 @@ const ProductionReports = ({ fieldAnalytics, animalAnalytics }) => {
 
 const FieldProduction = ({ fieldAnalytics, cropFilter }) => {
   // Filtrowanie pól
-  const filteredFields = cropFilter === 'all' 
+  const filteredFields = cropFilter === 'all'
     ? fieldAnalytics.productivity
     : fieldAnalytics.productivity.filter(field => field.crop === cropFilter)
 
@@ -141,14 +141,14 @@ const FieldProduction = ({ fieldAnalytics, cropFilter }) => {
                 </div>
                 {/* Pasek wizualny udziału w areale */}
                 <div className="area-share-bar">
-                  <div 
-                    className="share-fill" 
-                    style={{width: `${(crop.totalArea / fieldAnalytics.totalArea) * 100}%`}}
+                  <div
+                    className="share-fill"
+                    style={{ width: `${(crop.totalArea / fieldAnalytics.totalArea) * 100}%` }}
                   ></div>
                 </div>
               </div>
             ))}
-             {cropPerformance.length === 0 && <div className="no-data">Brak danych o zbiorach</div>}
+            {cropPerformance.length === 0 && <div className="no-data">Brak danych o zbiorach</div>}
           </div>
         </div>
       )}
@@ -164,7 +164,7 @@ const FieldProduction = ({ fieldAnalytics, cropFilter }) => {
                 <th>Uprawa</th>
                 <th>Obszar</th>
                 <th>Gleba</th>
-                <th>Plon (t/ha)</th> {/* Zmiana z % na konkret */}
+                <th>Plon (t/ha)</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -172,9 +172,7 @@ const FieldProduction = ({ fieldAnalytics, cropFilter }) => {
               {filteredFields.map((field, index) => (
                 <tr key={index}>
                   <td className="fw-bold">{field.name}</td>
-                  <td>
-                    <span className="crop-badge">{field.crop}</span>
-                  </td>
+                  <td><span className="crop-badge">{field.crop}</span></td>
                   <td>{field.area} ha</td>
                   <td>{field.soil}</td>
                   <td>
@@ -183,10 +181,7 @@ const FieldProduction = ({ fieldAnalytics, cropFilter }) => {
                       <span className="yield-unit">t/ha</span>
                     </div>
                   </td>
-                  <td>
-                    {/* Logika statusu oparta na wydajności */}
-                    <StatusBadge efficiency={field.efficiency || 0} />
-                  </td>
+                  <td><StatusBadge efficiency={field.efficiency || 0} /></td>
                 </tr>
               ))}
             </tbody>
@@ -201,7 +196,7 @@ const FieldProduction = ({ fieldAnalytics, cropFilter }) => {
 const StatusBadge = ({ efficiency }) => {
   let statusClass = 'low'
   let text = 'Niska'
-  
+
   if (efficiency >= 80) { statusClass = 'high'; text = 'Wysoka' }
   else if (efficiency >= 50) { statusClass = 'medium'; text = 'Średnia' }
 

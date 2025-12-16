@@ -457,34 +457,33 @@ const handleSaveHarvest = async (yieldData) => {
   try {
     setSaveLoading(true);
 
-    // 1. Dodaj zbiór do kolekcji field_yields (tabela zbiorów)
+    // 1. Dodaj zbiór do tabeli plonów
     await addFieldYield(yieldData);
 
-    // 2. Utwórz nowy status 'harvested' z DODATKOWYMI DANYMI
+    // 2. Utwórz nowy status 'harvested' (Zebrane)
+    // To też musi być NOWY wpis, żeby nie nadpisać poprzedniego stanu (np. "Dojrzewanie")
     const newStatus = {
       field_id: currentField.id,
       status: 'harvested',
       crop: yieldData.crop,
-      yield_amount: yieldData.amount,
-      yield_moisture: yieldData.moisture,
+      yield_amount: yieldData.amount,       // Zapisujemy plon w historii
+      yield_moisture: yieldData.moisture,   // Zapisujemy wilgotność w historii
       notes: `Zbiór automatyczny: ${yieldData.amount}t`,
       date_created: new Date().toISOString()
     };
     
-    // 3. Zapisz status w historii
-    await addFieldStatus(newStatus);
+    // 3. Dodaj do historii (ADD, nie UPDATE)
+    const newDocId = await addFieldStatus(newStatus);
 
-    // 4. AKTUALIZACJA GŁÓWNEGO POLA
+    // 4. Aktualizacja głównego pola (żeby w tabeli była dobra uprawa)
     await updateField(currentField.id, {
       crop: yieldData.crop 
     });
 
-    // 5. Aktualizacja stanów lokalnych (UI)
-    const updatedStatusWithId = { ...newStatus, id: 'temp_id_' + Date.now() };
-    
+    // 5. Aktualizacja UI
     setFieldStatuses(prev => ({
       ...prev,
-      [currentField.id]: updatedStatusWithId
+      [currentField.id]: { ...newStatus, id: newDocId }
     }));
 
     setFields(prevFields => prevFields.map(f => 
@@ -501,7 +500,6 @@ const handleSaveHarvest = async (yieldData) => {
     setSaveLoading(false);
   }
 };
-
   // --- OPERACJE NA POLACH ---
 
 // Podmień funkcję saveField na tę wersję:
@@ -550,21 +548,27 @@ const saveFieldStatus = async () => {
   try {
     setSaveLoading(true);
 
-    // 1. Zapisz/Aktualizuj wpis w kolekcji historii statusów (field_status)
-    if (currentStatus.id) {
-      await updateFieldStatus(currentStatus.id, currentStatus);
-    } else {
-      await addFieldStatus(currentStatus);
-    }
+    // TWORZYMY NOWY OBIEKT STATUSU (bez ID)
+    // Dzięki temu Firebase potraktuje to jako NOWY wpis, a nie edycję starego
+    const statusPayload = {
+      field_id: currentStatus.field_id,
+      status: currentStatus.status,
+      crop: currentStatus.crop || '',
+      notes: currentStatus.notes || '',
+      date_created: new Date().toISOString() // Zawsze nowa data
+      // Ważne: Nie przesyłamy tutaj 'id', żeby wymusić utworzenie nowego dokumentu
+    };
 
-    // 2. KLUCZOWA ZMIANA: Aktualizuj uprawę w głównym dokumencie pola (fields)
-    // To sprawia, że w tabeli i na mapie widzimy aktualną uprawę
+    // 1. Zawsze używamy addFieldStatus (DODAJ), nigdy update
+    const newDocId = await addFieldStatus(statusPayload);
+
+    // 2. Aktualizuj uprawę w głównym dokumencie pola (dla mapy i tabeli)
     if (currentStatus.field_id) {
       await updateField(currentStatus.field_id, {
         crop: currentStatus.crop || '' 
       });
       
-      // Aktualizuj lokalny stan listy pól, żeby tabela odświeżyła się natychmiast
+      // Aktualizacja tabeli na żywo
       setFields(prevFields => prevFields.map(f => 
         f.id === currentStatus.field_id 
           ? { ...f, crop: currentStatus.crop || '' }
@@ -572,10 +576,10 @@ const saveFieldStatus = async () => {
       ));
     }
 
-    // 3. Aktualizuj lokalny stan statusów
+    // 3. Aktualizuj lokalny stan statusów (dla kolorów w tabeli)
     setFieldStatuses(prev => ({
       ...prev,
-      [currentStatus.field_id]: currentStatus
+      [currentStatus.field_id]: { ...statusPayload, id: newDocId }
     }));
 
     closeStatusModal();
@@ -857,7 +861,7 @@ const saveFieldStatus = async () => {
                         </span>
                       </td>
                       <td className="action-buttons">
-                        
+
                         {/* PRZYCISK DODAJ ZBIÓR - TYLKO GDY ZASIANE */}
                         {isSown && (
                           <button 

@@ -21,6 +21,8 @@ import './App.css'
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyDwQY25si9n-D7toIcLHKh32Ejq8l2KcFA";
 
+const MAPS_LIBRARIES = ['geometry'];
+
 function App() {
   const { user, loading } = useAuth()
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -110,7 +112,8 @@ function App() {
   return (
     <LoadScript
       googleMapsApiKey={GOOGLE_MAPS_API_KEY}
-      libraries={['geometry']}
+      //libraries={['geometry']}
+      libraries={MAPS_LIBRARIES}
       onLoad={() => setMapsLoaded(true)}
       onError={() => setMapsLoaded(false)}
     >
