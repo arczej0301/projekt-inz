@@ -1,6 +1,6 @@
-/* ReportsPage.css - TYLKO STYLE SPECYFICZNE DLA RAPORTÓW */
+/* ReportsPage.css - TYLKO STYLE SPECYFICZNE DLA STRONY RAPORTÓW */
 .reports-page {
-  padding: 0px;
+  padding: 0;
   width: 100%;
   margin: 0; 
   box-sizing: border-box;
@@ -229,48 +229,6 @@
   margin-bottom: 15px;
 }
 
-.reports-page .floating-alerts {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 1000;
-}
-
-.reports-page .floating-alert {
-  background: #e74c3c;
-  color: white;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  max-width: 300px;
-}
-
-.reports-page .floating-alert.critical {
-  background: #e74c3c;
-}
-
-.reports-page .alert-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.reports-page .alert-messages {
-  margin-bottom: 10px;
-}
-
-.reports-page .alert-message {
-  font-size: 12px;
-  margin-bottom: 4px;
-  opacity: 0.9;
-}
-
-.reports-page .btn-small {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
 /* Responsywność */
 @media (max-width: 768px) {
   .reports-page {
@@ -299,22 +257,6 @@
     grid-template-columns: 1fr;
     gap: 10px;
   }
-  
-  .reports-page .overview-item {
-    padding: 12px;
-  }
-  
-  .reports-page .overview-value {
-    font-size: 1.1rem;
-  }
-  
-  .reports-page .floating-alerts {
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-  }
-  
-  .reports-page .floating-alert {
-    max-width: none;
-  }
 }
+
+

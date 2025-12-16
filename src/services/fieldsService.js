@@ -457,3 +457,141 @@ export const getFieldStatusLogs = async (limitCount = 20) => {
     return [];
   }
 };
+
+// fieldsService.js - DODAJ NA KONIEC PLIKU
+
+// Funkcja do analizy wydajności upraw
+export const getCropPerformance = async () => {
+  try {
+    // 1. Pobierz wszystkie zbiory
+    const yields = await getAllFieldYields();
+    
+    // 2. Pobierz wszystkie pola (dla powierzchni)
+    const fields = await getFields();
+    
+    // 3. Grupuj dane według uprawy
+    const cropMap = {};
+    
+    // Inicjalizacja dla każdej uprawy
+    yields.forEach(yieldData => {
+      const crop = yieldData.crop;
+      if (!cropMap[crop]) {
+        cropMap[crop] = {
+          crop,
+          totalArea: 0,
+          totalYield: 0,
+          yieldCount: 0,
+          averageYieldPerHectare: 0,
+          fields: [],
+          yields: []
+        };
+      }
+      
+      cropMap[crop].totalYield += parseFloat(yieldData.amount) || 0;
+      cropMap[crop].yields.push(yieldData);
+    });
+    
+    // 4. Oblicz powierzchnię dla każdej uprawy
+    fields.forEach(field => {
+      const crop = field.crop;
+      if (crop && cropMap[crop]) {
+        cropMap[crop].totalArea += parseFloat(field.area) || 0;
+        cropMap[crop].fields.push(field.id);
+      }
+    });
+    
+    // 5. Oblicz średnią wydajność
+    Object.keys(cropMap).forEach(crop => {
+      const cropData = cropMap[crop];
+      if (cropData.totalArea > 0) {
+        cropData.averageYieldPerHectare = cropData.totalYield / cropData.totalArea;
+      }
+      cropData.yieldCount = cropData.yields.length;
+    });
+    
+    // 6. Przekształć na tablicę i posortuj
+    const cropPerformance = Object.values(cropMap)
+      .filter(crop => crop.totalArea > 0) // Tylko uprawy z przypisanymi polami
+      .sort((a, b) => b.totalYield - a.totalYield); // Sortuj malejąco według plonu
+    
+    return cropPerformance;
+    
+  } catch (error) {
+    console.error('Error calculating crop performance:', error);
+    return [];
+  }
+};
+
+// Funkcja do szczegółowej analizy pola
+export const getFieldDetailedAnalytics = async (fieldId) => {
+  try {
+    // Pobierz dane z różnych źródeł
+    const [fieldData, yields, costs, statusHistory] = await Promise.all([
+      getField(fieldId), // Musisz dodać tę funkcję lub użyć getFields + find
+      getFieldYields(fieldId),
+      getFieldCosts(fieldId),
+      getFieldStatusHistory(fieldId)
+    ]);
+    
+    const field = fieldData || {};
+    
+    // Oblicz kluczowe wskaźniki
+    const totalYield = yields.reduce((sum, y) => sum + (parseFloat(y.amount) || 0), 0);
+    const totalCost = costs.reduce((sum, c) => sum + (parseFloat(c.total_cost) || 0), 0);
+    const totalArea = parseFloat(field.area) || 1; // unikaj dzielenia przez 0
+    
+    // Znajdź ostatni zbiór
+    const lastYield = yields.length > 0 
+      ? yields.sort((a, b) => new Date(b.date_created) - new Date(a.date_created))[0]
+      : null;
+    
+    return {
+      fieldInfo: {
+        id: field.id,
+        name: field.name,
+        area: field.area,
+        crop: field.crop,
+        soil: field.soil
+      },
+      metrics: {
+        totalYield,
+        totalCost,
+        averageYieldPerHectare: totalArea > 0 ? totalYield / totalArea : 0,
+        costPerHectare: totalArea > 0 ? totalCost / totalArea : 0,
+        profitPerHectare: totalArea > 0 ? (totalYield - totalCost) / totalArea : 0
+      },
+      lastYield: lastYield ? {
+        date: lastYield.date_created,
+        amount: lastYield.amount,
+        crop: lastYield.crop,
+        yieldPerHectare: totalArea > 0 ? lastYield.amount / totalArea : 0
+      } : null,
+      history: {
+        yieldCount: yields.length,
+        yieldHistory: yields.slice(0, 5), // Ostatnie 5 zbiorów
+        statusChanges: statusHistory.length,
+        latestStatus: statusHistory[0] || null
+      },
+      rawData: {
+        yields,
+        costs: costs.slice(0, 10), // Ostatnie 10 kosztów
+        statusHistory: statusHistory.slice(0, 10) // Ostatnie 10 zmian statusu
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error getting field analytics:', error);
+    throw error;
+  }
+};
+
+// Funkcja pomocnicza do pobierania pojedynczego pola
+export const getField = async (fieldId) => {
+  try {
+    const fields = await getFields();
+    return fields.find(f => f.id === fieldId) || null;
+  } catch (error) {
+    console.error('Error getting field:', error);
+    throw error;
+  }
+};

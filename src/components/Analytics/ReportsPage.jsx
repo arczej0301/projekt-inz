@@ -21,6 +21,7 @@ const ReportsPage = () => {
     data 
   } = useAnalytics()
   
+  
   const [activeTab, setActiveTab] = useState('dashboard')
 
   // Funkcje do formatowania
