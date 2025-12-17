@@ -3,9 +3,8 @@ import React, { useState } from 'react'
 import { useAnalytics } from '../../hooks/useAnalytics'
 import AnalyticsDashboard from './AnalyticsDashboard'
 import ProductionReports from './ProductionReports'
-import CostAnalysis from './CostAnalysis'
-import ExportPanel from './ExportPanel'
 import FinancialAnalysis from './FinancialAnalysis'
+import ExportPanel from './ExportPanel'
 import './ReportsPage.css'
 
 const ReportsPage = () => {
@@ -60,7 +59,6 @@ const ReportsPage = () => {
     { id: 'dashboard', name: 'Pulpit', icon: '📊' },
     { id: 'financial-analysis', name: 'Analiza Finansowa', icon: '📈' },
     { id: 'production', name: 'Wydajność', icon: '🌾' },
-    { id: 'costs', name: 'Optymalizacja Kosztów', icon: '📉' },
     { id: 'export', name: 'Eksport', icon: '📤' }
   ]
 
@@ -199,18 +197,6 @@ const ReportsPage = () => {
         
         {activeTab === 'production' && (
           <ProductionReports 
-            fieldAnalytics={fieldAnalytics}
-            animalAnalytics={animalAnalytics}
-            equipmentAnalytics={equipmentAnalytics}
-            formatCurrency={formatCurrency}
-            formatNumber={formatNumber}
-            formatPercentage={formatPercentage}
-          />
-        )}
-        
-        {activeTab === 'costs' && (
-          <CostAnalysis 
-            financialAnalytics={financialAnalytics}
             fieldAnalytics={fieldAnalytics}
             animalAnalytics={animalAnalytics}
             equipmentAnalytics={equipmentAnalytics}

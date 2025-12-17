@@ -8,6 +8,7 @@ const ProductionReports = ({
   formatNumber,
   formatPercentage
 }) => {
+  
   // Stan globalny widoku
   const [activeTab, setActiveTab] = useState('fields');
   const [cropFilter, setCropFilter] = useState('all');
@@ -85,11 +86,6 @@ const ProductionReports = ({
       <div className="reports-header">
         <h3>Analiza Wydajności Produkcyjnej</h3>
         <div className="report-controls">
-          <CustomSelect
-            options={tabOptions}
-            value={activeTab}
-            onChange={setActiveTab}
-          />
           {activeTab === 'fields' && (
             <CustomSelect
               options={cropOptions}
@@ -97,6 +93,12 @@ const ProductionReports = ({
               onChange={setCropFilter}
             />
           )}
+          <CustomSelect
+            options={tabOptions}
+            value={activeTab}
+            onChange={setActiveTab}
+          />
+
         </div>
       </div>
 
@@ -244,22 +246,23 @@ const StatusReport = ({ statusReport, formatNumber }) => {
   );
 };
 
-// --- KOMPONENT 2: GŁÓWNA TABELA PRODUKCJI (Z SORTOWANIEM) ---
-// --- KOMPONENT 2: GŁÓWNA TABELA PRODUKCJI + KARTY UPRAW ---
+// --- KOMPONENT 2: GŁÓWNA TABELA PRODUKCJI + KARTY UPRAW + ANALIZA WYDAJNOŚCI ---
 const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatCurrency, formatNumber }) => {
   // 1. Stan sortowania tabeli (domyślnie A-Z)
   const [sortBy, setSortBy] = useState('name_asc');
   // 2. Stan sortowania kart upraw (domyślnie A-Z)
   const [cropSortBy, setCropSortBy] = useState('name_asc');
+  // 3. Stan sortowania rankingu wydajności (domyślnie najwydajniejsze)
+  const [efficiencySortBy, setEfficiencySortBy] = useState('yield_desc');
 
   if (!performanceData) return <div className="no-data">Brak danych o wydajności pól</div>;
 
   // --- LOGIKA TABELI ---
   const filteredData = cropFilter === 'all'
     ? performanceData.performanceData
-    : performanceData.performanceData.filter(field => 
-        field.crop && field.crop.toLowerCase().includes(cropFilter.toLowerCase())
-      );
+    : performanceData.performanceData.filter(field =>
+      field.crop && field.crop.toLowerCase().includes(cropFilter.toLowerCase())
+    );
 
   const getSortedFields = () => {
     const data = [...filteredData];
@@ -268,31 +271,31 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
         // Nazwa Pola
         case 'name_asc': return (a.fieldName || '').localeCompare(b.fieldName || '');
         case 'name_desc': return (b.fieldName || '').localeCompare(a.fieldName || '');
-        
+
         // Powierzchnia
         case 'area_desc': return (b.area || 0) - (a.area || 0);
         case 'area_asc': return (a.area || 0) - (b.area || 0);
-        
+
         // Typ gleby
         case 'soil_asc': return (a.soilType || '').localeCompare(b.soilType || '');
         case 'soil_desc': return (b.soilType || '').localeCompare(a.soilType || '');
-        
+
         // Uprawa
         case 'crop_asc': return (a.crop || '').localeCompare(b.crop || '');
         case 'crop_desc': return (b.crop || '').localeCompare(a.crop || '');
-        
+
         // Wydajność
         case 'yield_desc': return (b.yieldPerHectare || 0) - (a.yieldPerHectare || 0);
         case 'yield_asc': return (a.yieldPerHectare || 0) - (b.yieldPerHectare || 0);
-        
+
         // Status
         case 'status_asc': return (a.currentStatusLabel || a.currentStatus || '').localeCompare(b.currentStatusLabel || b.currentStatus || '');
         case 'status_desc': return (b.currentStatusLabel || b.currentStatus || '').localeCompare(a.currentStatusLabel || a.currentStatus || '');
-        
+
         // Data
         case 'date_desc': return new Date(b.lastHarvestDate || 0) - new Date(a.lastHarvestDate || 0);
         case 'date_asc': return new Date(a.lastHarvestDate || 0) - new Date(b.lastHarvestDate || 0);
-        
+
         default: return 0;
       }
     });
@@ -307,24 +310,43 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
         // Nazwa uprawy
         case 'name_asc': return (a.crop || '').localeCompare(b.crop || '');
         case 'name_desc': return (b.crop || '').localeCompare(a.crop || '');
-        
+
         // Plon całkowity
         case 'total_yield_desc': return (b.totalYield || 0) - (a.totalYield || 0);
         case 'total_yield_asc': return (a.totalYield || 0) - (b.totalYield || 0);
-        
+
         // Średni plon
         case 'avg_yield_desc': return (b.averageYieldPerHectare || 0) - (a.averageYieldPerHectare || 0);
         case 'avg_yield_asc': return (a.averageYieldPerHectare || 0) - (b.averageYieldPerHectare || 0);
-        
+
         // Powierzchnia
         case 'area_desc': return (b.totalArea || 0) - (a.totalArea || 0);
         case 'area_asc': return (a.totalArea || 0) - (b.totalArea || 0);
-        
+
         default: return 0;
       }
     });
   };
   const sortedCrops = getSortedCrops();
+
+  // --- LOGIKA ANALIZY WYDAJNOŚCI ---
+  const fieldsWithYield = performanceData.performanceData.filter(field => field.hasYields);
+  
+  const getSortedEfficiency = () => {
+    const data = [...fieldsWithYield];
+    return data.sort((a, b) => {
+      switch (efficiencySortBy) {
+        case 'yield_desc': return (b.yieldPerHectare || 0) - (a.yieldPerHectare || 0);
+        case 'yield_asc': return (a.yieldPerHectare || 0) - (b.yieldPerHectare || 0);
+        case 'name_asc': return (a.fieldName || '').localeCompare(b.fieldName || '');
+        case 'name_desc': return (b.fieldName || '').localeCompare(a.fieldName || '');
+        case 'area_desc': return (b.area || 0) - (a.area || 0);
+        case 'area_asc': return (a.area || 0) - (b.area || 0);
+        default: return 0;
+      }
+    }).slice(0, 10); // Top 10
+  };
+  const rankedFields = getSortedEfficiency();
 
   // Helpery
   const getStatusColor = (status) => {
@@ -341,7 +363,7 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Brak danych';
-    try { return new Date(dateString).toLocaleDateString('pl-PL'); } 
+    try { return new Date(dateString).toLocaleDateString('pl-PL'); }
     catch { return 'Brak danych'; }
   };
 
@@ -370,17 +392,13 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
       {/* --- SEKCJA UPRAW --- */}
       {cropFilter === 'all' && cropPerformance.length > 0 && (
         <div className="crop-performance-section">
-          
           <div className="section-header-flex">
-            
             <h4>Analiza upraw</h4>
             <div className="sort-controls">
-              
               <span className="sort-label">Sortuj wg:</span>
-              
-              <select 
-                className="sort-select" 
-                value={cropSortBy} 
+              <select
+                className="sort-select unified-select"
+                value={cropSortBy}
                 onChange={(e) => setCropSortBy(e.target.value)}
               >
                 <option value="name_asc">Nazwa (A-Z)</option>
@@ -399,7 +417,9 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
             {sortedCrops.map((crop, index) => (
               <div key={index} className="crop-card">
                 <div className="crop-header">
-                  <span className="crop-name">{crop.crop}</span>
+                  <span className="crop-name">
+                    {crop.crop && crop.crop.charAt(0).toUpperCase() + crop.crop.slice(1)}
+                  </span>
                   <span className="crop-area">{formatNumber(crop.totalArea)} ha</span>
                 </div>
                 <div className="crop-stats">
@@ -418,15 +438,15 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
         </div>
       )}
 
-      {/* --- TABELA PÓL --- */}
+      {/* --- TABELA PÓL (TERAZ WYŻEJ) --- */}
       <div className="fields-table-container">
         <div className="table-header-wrapper">
           <h4>Szczegóły wszystkich pól</h4>
           <div className="sort-controls">
             <span className="sort-label">Sortuj wg:</span>
-            <select 
-              className="sort-select" 
-              value={sortBy} 
+            <select
+              className="sort-select unified-select"
+              value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
               <option value="name_asc">Nazwa Pola (A-Z)</option>
@@ -466,7 +486,11 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
                   <tr key={index} className={field.hasYields ? 'has-yield' : 'no-yield'}>
                     <td className="fw-bold">{field.fieldName}</td>
                     <td>{formatNumber(field.area)}</td>
-                    <td>{field.soilType}</td>
+                    <td className="soil-cell">
+                      {field.soilType ? 
+                        field.soilType.charAt(0).toUpperCase() + field.soilType.slice(1).toLowerCase() 
+                        : 'Brak danych'}
+                    </td>
                     <td><span className="crop-badge">{field.crop}</span></td>
                     <td>
                       {field.hasYields ? (
@@ -476,9 +500,9 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
                       ) : <span className="no-data-cell">-</span>}
                     </td>
                     <td>
-                      <span 
+                      <span
                         className="status-badge"
-                        style={{ 
+                        style={{
                           backgroundColor: getStatusColor(field.currentStatusLabel || field.currentStatus),
                           color: 'white',
                           borderColor: getStatusColor(field.currentStatusLabel || field.currentStatus)
@@ -508,90 +532,75 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
           </table>
         </div>
       </div>
-    </div>
-  );
-};
 
-// --- KOMPONENT 3: ANALIZA WYDAJNOŚCI ---
-const EfficiencyAnalysis = ({ performanceData, formatNumber }) => {
-  if (!performanceData) return <div className="no-data">Brak danych do analizy wydajności</div>;
+      {/* --- ANALIZA WYDAJNOŚCI (TOP 10) - TERAZ NIŻEJ --- */}
+            {/* --- ANALIZA WYDAJNOŚCI (TOP 10) - TERAZ NIŻEJ --- */}
+      <div className="efficiency-analysis">
+        <div className="section-header-flex">
+          <h4>Top 10 najwydajniejszych pól (ze zbiorem)</h4>
+          <div className="sort-controls">
+            <span className="sort-label">Sortuj wg:</span>
+            <select
+              className="sort-select unified-select"
+              value={efficiencySortBy}
+              onChange={(e) => setEfficiencySortBy(e.target.value)}
+            >
+              <option value="yield_desc">Wydajność (Największa)</option>
+              <option value="yield_asc">Wydajność (Najmniejsza)</option>
+              <option value="name_asc">Nazwa pola (A-Z)</option>
+              <option value="name_desc">Nazwa pola (Z-A)</option>
+              <option value="area_desc">Powierzchnia (Największa)</option>
+              <option value="area_asc">Powierzchnia (Najmniejsza)</option>
+            </select>
+          </div>
+        </div>
 
-  // Definicja helpera kolorów (niezbędna tutaj, aby uniknąć błędu)
-  const getStatusColor = (status) => {
-    const statusColors = {
-      'sown': '#27ae60', 'Zasiane': '#27ae60',
-      'harvested': '#e74c3c', 'Zebrane': '#e74c3c',
-      'ready_for_sowing': '#3498db', 'Przygotowane do siewu': '#3498db',
-      'fallow': '#f39c12', 'Ugór': '#f39c12',
-      'pasture': '#2ecc71', 'Pastwisko/Łąka': '#2ecc71',
-      'Brak danych': '#95a5a6', 'undefined': '#95a5a6'
-    };
-    return statusColors[status] || '#95a5a6';
-  };
-
-  const fieldsWithYield = performanceData.performanceData.filter(field => field.hasYields);
-  const rankedFields = [...fieldsWithYield]
-    .sort((a, b) => b.yieldPerHectare - a.yieldPerHectare)
-    .slice(0, 10);
-
-  return (
-    <div className="efficiency-analysis">
-      <h4>Top 10 najwydajniejszych pól (ze zbiorem)</h4>
-      <div className="ranking-table-container">
-        <table className="ranking-table fields-table"> {/* Dodano klasę fields-table dla spójności */}
-          <thead>
-            <tr>
-              <th>Pozycja</th>
-              <th>Nazwa pola</th>
-              <th>Uprawa</th>
-              <th>Powierzchnia (ha)</th>
-              <th>Wydajność (t/ha)</th>
-              <th>Stan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rankedFields.length > 0 ? (
-              rankedFields.map((field, index) => (
-                <tr key={index}>
-                  <td className="rank">#{index + 1}</td>
-                  <td className="field-name fw-bold">{field.fieldName}</td>
-                  <td><span className="crop-badge">{field.crop}</span></td>
-                  <td>{formatNumber(field.area)}</td>
-                  <td className={`yield-value ${field.yieldPerHectare > 5 ? 'high' : field.yieldPerHectare > 3 ? 'medium' : 'low'}`}>
-                    {formatNumber(field.yieldPerHectare)}
-                  </td>
-                  <td>
-                    <span
-                      className="status-badge"
-                      style={{
-                        backgroundColor: getStatusColor(field.currentStatusLabel || field.currentStatus),
-                        color: 'white'
-                      }}
-                    >
-                      {field.currentStatusLabel || field.currentStatus}
-                    </span>
+        <div className="ranking-table-container">
+          <table className="ranking-table fields-table">
+            <thead>
+              <tr>
+                <th>Pozycja</th>
+                <th>Nazwa pola</th>
+                <th>Uprawa</th>
+                <th>Powierzchnia (ha)</th>
+                <th>Wydajność (t/ha)</th>
+                {/* Usunięto <th>Stan</th> */}
+              </tr>
+            </thead>
+            <tbody>
+              {rankedFields.length > 0 ? (
+                rankedFields.map((field, index) => (
+                  <tr key={index}>
+                    <td className="rank">#{index + 1}</td>
+                    <td className="field-name fw-bold">{field.fieldName}</td>
+                    <td><span className="crop-badge">{field.crop}</span></td>
+                    <td>{formatNumber(field.area)}</td>
+                    <td className={`yield-value ${field.yieldPerHectare > 5 ? 'high' : field.yieldPerHectare > 3 ? 'medium' : 'low'}`}>
+                      {formatNumber(field.yieldPerHectare)}
+                    </td>
+                    {/* Usunięto kolumnę ze statusem */}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="no-data"> {/* Zmieniono colSpan z 6 na 5 */}
+                    Brak pól ze zbiorem do rankingu
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="6" className="no-data">
-                  Brak pól ze zbiorem do rankingu
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Statystyki */}
-      <div className="efficiency-stats">
-        <div className="stat-card">
-          <h5>Podsumowanie</h5>
-          <p>Pola ze zbiorem: {fieldsWithYield.length} / {performanceData.performanceData.length}</p>
-          <p>Średnia wydajność: {performanceData.summary.averageYieldPerHectare > 0 ?
-            formatNumber(performanceData.summary.averageYieldPerHectare) + ' t/ha' : 'Brak danych'}</p>
-          <p>Łączny plon: {formatNumber(performanceData.summary.totalYield)} t</p>
+        {/* Statystyki wydajności */}
+        <div className="efficiency-stats">
+          <div className="stat-card">
+            <h5>Podsumowanie wydajności</h5>
+            <p>Pola ze zbiorem: {fieldsWithYield.length} / {performanceData.performanceData.length}</p>
+            <p>Średnia wydajność: {performanceData.summary.averageYieldPerHectare > 0 ?
+              formatNumber(performanceData.summary.averageYieldPerHectare) + ' t/ha' : 'Brak danych'}</p>
+            <p>Łączny plon: {formatNumber(performanceData.summary.totalYield)} t</p>
+          </div>
         </div>
       </div>
     </div>
