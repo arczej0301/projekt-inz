@@ -30,11 +30,43 @@
   border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid #e9ecef;
+  /* Wyrównanie do dołu, żeby inputy były równo */
+}
+
+/* Nowe style dla selecta */
+.preset-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 15px;
+}
+
+.preset-container label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.preset-select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  min-width: 200px;
+  background-color: white;
+  cursor: pointer;
+  height: 38px; /* Żeby pasował wysokością do input type="date" */
+}
+
+.preset-select:focus {
+  outline: none;
+  border-color: #3498db;
 }
 
 .date-inputs {
   display: flex;
-  gap: 30px;
+  gap: 20px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -82,15 +114,26 @@
 
 .module-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  /* Zmiana na kolumnę, żeby pomieścić select pod nazwą */
+  flex-direction: column; 
+  align-items: flex-start; /* Wyrównaj do lewej */
+  justify-content: center;
   padding: 15px;
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
+  min-height: 60px; /* Minimalna wysokość */
+}
+
+/* Nowa klasa pomocnicza do ułożenia checkboxa i nazwy w jednej linii */
+.module-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
 .module-card:hover {
@@ -114,6 +157,35 @@
   font-weight: 600;
   color: #2c3e50;
   font-size: 0.95rem;
+}
+
+/* Styl dla selecta wewnątrz kafelka */
+.finance-sub-options {
+  margin-top: 10px;
+  width: 100%;
+  padding-left: 30px; /* Wcięcie, żeby było pod tekstem, a nie pod checkboxem */
+  animation: fadeIn 0.3s ease;
+}
+
+.finance-select {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #3498db; /* Niebieska ramka pasująca do aktywnego stanu */
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background-color: white;
+  color: #2c3e50;
+  cursor: pointer;
+}
+
+.finance-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .check-icon {
@@ -205,6 +277,8 @@
 .table-wrapper {
   padding: 20px;
   overflow-x: auto;
+  max-height: 500px; 
+  overflow-y: auto;
 }
 
 .preview-data-table {
@@ -325,5 +399,75 @@
   .tab-btn {
     flex: 1;
     min-width: 120px;
+  }
+}
+
+
+/* NOWE STYLE DLA SEKCJI FILTRÓW FINANSOWYCH POD MODULE-GRID */
+
+.finance-filters-section {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f1f8ff; /* Delikatny niebieski, pasujący do "Finansów" */
+  border-left: 4px solid #3498db;
+  border-radius: 4px;
+  animation: slideDown 0.3s ease;
+}
+
+.finance-filters-section h5 {
+  margin: 0 0 10px 0;
+  font-size: 0.95rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.finance-filters-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #576574;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  min-width: 200px;
+  background-color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsywność dla filtrów */
+@media (max-width: 600px) {
+  .finance-filters-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .filter-select {
+    width: 100%;
   }
 }
