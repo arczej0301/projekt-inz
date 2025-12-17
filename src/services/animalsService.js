@@ -7,40 +7,34 @@ import {
   getDocs, 
   onSnapshot,
   query,
-  orderBy 
+  orderBy,
+  where
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 const ANIMALS_COLLECTION = 'animals';
 
-// Zmienne cache w module (globalne dla tego pliku)
 let animalsCache = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 30000; // 30 sekund cache
+const CACHE_DURATION = 30000;
 
-// Funkcja do czyszczenia cache (może być używana w różnych funkcjach)
 const clearCache = () => {
   animalsCache = null;
   lastFetchTime = 0;
 };
 
 export const getAnimals = async () => {
-  // Zwróć dane z cache jeśli są świeże
   if (animalsCache && Date.now() - lastFetchTime < CACHE_DURATION) {
     return animalsCache;
   }
-
   try {
     const querySnapshot = await getDocs(collection(db, ANIMALS_COLLECTION));
     const animals = [];
     querySnapshot.forEach((doc) => {
       animals.push({ id: doc.id, ...doc.data() });
     });
-    
-    // Zapisz w cache
     animalsCache = animals;
     lastFetchTime = Date.now();
-    
     return animals;
   } catch (error) {
     console.error('Error getting animals:', error);
@@ -50,23 +44,17 @@ export const getAnimals = async () => {
 
 export const subscribeToAnimals = (callback) => {
   const q = query(collection(db, ANIMALS_COLLECTION), orderBy('name'));
-  
   return onSnapshot(q, 
     (querySnapshot) => {
       const animals = [];
       querySnapshot.forEach((doc) => {
         animals.push({ id: doc.id, ...doc.data() });
       });
-      
-      // Aktualizuj cache
       animalsCache = animals;
       lastFetchTime = Date.now();
-      
       callback(animals);
     },
-    (error) => {
-      console.error('Error in animals subscription:', error);
-    }
+    (error) => console.error('Error subscription:', error)
   );
 };
 
@@ -77,10 +65,7 @@ export const addAnimal = async (animalData) => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
-    
-    // Wyczyść cache po dodaniu nowego zwierzęcia
     clearCache();
-    
     return docRef.id;
   } catch (error) {
     console.error('Error adding animal:', error);
@@ -88,17 +73,54 @@ export const addAnimal = async (animalData) => {
   }
 };
 
-export const updateAnimal = async (animalId, animalData) => {
+// --- NOWOŚĆ: Funkcja do dodawania wpisu w historii ---
+export const addAnimalHistory = async (animalId, type, description) => {
+  try {
+    await addDoc(collection(db, 'animal_history'), {
+      animalId,
+      type,
+      description,
+      date: new Date()
+    });
+  } catch (error) {
+    console.error('Błąd dodawania historii:', error);
+    throw error; // Rzucamy błąd, aby UI mogło pokazać alert
+  }
+};
+
+// --- ZMODYFIKOWANO: Automatyczne dodawanie historii przy edycji ---
+export const updateAnimal = async (animalId, animalData, oldAnimalData = null) => {
   try {
     const animalRef = doc(db, ANIMALS_COLLECTION, animalId);
     await updateDoc(animalRef, {
       ...animalData,
       updatedAt: new Date()
     });
+
+    // Detekcja zmian
+    if (oldAnimalData) {
+      if (animalData.status && animalData.status !== oldAnimalData.status) {
+        await addAnimalHistory(animalId, 'Zmiana statusu', `Status zmieniony z "${oldAnimalData.status}" na "${animalData.status}"`);
+      }
+      if (animalData.health && animalData.health !== oldAnimalData.health) {
+        await addAnimalHistory(animalId, 'Zmiana zdrowia', `Stan zdrowia: ${oldAnimalData.health} -> ${animalData.health}`);
+      }
+      // Porównujemy wagi jako liczby
+      const newWeight = parseFloat(animalData.weight || 0);
+      const oldWeight = parseFloat(oldAnimalData.weight || 0);
+      if (newWeight !== oldWeight && newWeight > 0) {
+        await addAnimalHistory(animalId, 'Ważenie', `Nowa waga: ${newWeight} kg (było: ${oldWeight} kg)`);
+      }
+      // Jeśli zmieniono notatki
+      if (animalData.notes && animalData.notes !== oldAnimalData.notes) {
+        await addAnimalHistory(animalId, 'Notatka', 'Zaktualizowano notatki');
+      }
+    } else {
+      // Fallback
+      await addAnimalHistory(animalId, 'Edycja', 'Zaktualizowano dane zwierzęcia');
+    }
     
-    // Wyczyść cache po aktualizacji
     clearCache();
-    
   } catch (error) {
     console.error('Error updating animal:', error);
     throw error;
@@ -108,17 +130,30 @@ export const updateAnimal = async (animalId, animalData) => {
 export const deleteAnimal = async (animalId) => {
   try {
     await deleteDoc(doc(db, ANIMALS_COLLECTION, animalId));
-    
-    // Wyczyść cache po usunięciu
     clearCache();
-    
   } catch (error) {
     console.error('Error deleting animal:', error);
     throw error;
   }
 };
 
-// Opcjonalnie: funkcja do ręcznego czyszczenia cache
-export const clearAnimalsCache = () => {
-  clearCache();
+export const getAnimalHistory = async (animalId) => {
+  try {
+    const historyQuery = query(
+      collection(db, 'animal_history'),
+      where('animalId', '==', animalId),
+      orderBy('date', 'desc')
+    );
+    const querySnapshot = await getDocs(historyQuery);
+    const history = [];
+    querySnapshot.forEach((doc) => {
+      history.push({ id: doc.id, ...doc.data() });
+    });
+    return history;
+  } catch (error) {
+    console.error('Error getting history:', error);
+    throw error;
+  }
 };
+
+export const clearAnimalsCache = () => clearCache();

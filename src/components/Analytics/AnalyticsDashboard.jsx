@@ -176,12 +176,12 @@ const LineChart = ({ data }) => (
       {data.map((item, index) => (
         <div key={index} className="chart-bar">
           <div 
-            className="bar revenue" 
-            style={{ height: `${(item.revenue / 10000) * 100}%` }}
+            // className="bar revenue" 
+            // style={{ height: `${(item.revenue / 10000) * 100}%` }}
           ></div>
           <div 
-            className="bar expense" 
-            style={{ height: `${(item.expenses / 10000) * 100}%` }}
+            // className="bar expense" 
+            // style={{ height: `${(item.expenses / 10000) * 100}%` }}
           ></div>
         </div>
       ))}
