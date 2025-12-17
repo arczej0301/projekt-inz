@@ -1,0 +1,369 @@
+/* FinancialAnalysis.css - STYLE SPECYFICZNE DLA ANALIZY FINANSOWEJ */
+
+.financial-analysis {
+  padding: 20px;
+}
+
+/* Header */
+.tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.tab-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.report-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.control-select {
+  padding: 8px 12px;
+  border: 1px solid #bdc3c7;
+  border-radius: 5px;
+  background: white;
+  font-size: 0.9rem;
+  color: #2c3e50;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 180px;
+}
+
+.control-select:hover {
+  border-color: #95a5a6;
+}
+
+.control-select:focus {
+  outline: none;
+  border-color: #388e3c;
+  box-shadow: 0 0 0 2px rgba(56, 142, 60, 0.2);
+}
+
+/* Report Summary */
+.report-summary {
+  margin-bottom: 25px;
+}
+
+.report-summary .summary-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #f0f2f5;
+  transition: transform 0.2s ease;
+}
+
+.report-summary .summary-card:hover {
+  transform: translateY(-2px);
+}
+
+.report-summary .summary-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #bdc3c7;
+}
+
+.report-summary .summary-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.report-summary .summary-amount {
+  font-size: 2.8rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.report-summary .summary-amount.positive {
+  color: #27ae60;
+}
+
+.report-summary .summary-amount.negative {
+  color: #e74c3c;
+}
+
+.report-summary .summary-card:has(.positive)::after {
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+}
+
+.report-summary .summary-card:has(.negative)::after {
+  background: linear-gradient(90deg, #ff7675, #d63031);
+}
+
+.report-summary .summary-period {
+  font-size: 1rem;
+  color: #2c3e50;
+  font-weight: 600;
+  background: #eef2f7;
+  padding: 8px 24px;
+  border-radius: 20px;
+  margin-top: 12px;
+  border: 1px solid #dce4ec;
+  display: inline-block;
+}
+
+/* Distribution Chart */
+.distribution-section {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  min-height: 200px;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.dist-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 170px;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.dist-row:hover {
+  background-color: #f8f9fa;
+}
+
+.dist-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dist-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  background: #f1f2f6;
+}
+
+.dist-icon.income {
+  background: #e8f5e9;
+  color: #27ae60;
+}
+
+.dist-icon.expense {
+  background: #fde8e8;
+  color: #e74c3c;
+}
+
+.dist-name {
+  font-weight: 600;
+  color: #34495e;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dist-bar-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dist-track {
+  flex: 1;
+  height: 10px;
+  background-color: #edf2f7;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.dist-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dist-fill.income {
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+}
+
+.dist-fill.expense {
+  background: linear-gradient(90deg, #ff7675, #d63031);
+}
+
+.dist-percent {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7f8c8d;
+  width: 45px;
+  text-align: right;
+}
+
+.dist-amount {
+  text-align: right;
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+/* Transactions Table */
+.report-details {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.report-details h4 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.transactions-table {
+  overflow-x: auto;
+}
+
+.transactions-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transactions-table th {
+  background: #388e3c;
+  color: #ffffff;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  padding: 15px;
+  text-align: left;
+  border: none;
+}
+
+.transactions-table td {
+  padding: 15px;
+  border-bottom: 1px solid #f0f2f5;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.transactions-table tbody tr:hover {
+  background-color: rgba(52, 152, 219, 0.05);
+}
+
+.category-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-with-icon .icon {
+  font-size: 1.1rem;
+}
+
+.amount {
+  font-weight: 700;
+}
+
+.amount.income {
+  color: #27ae60;
+}
+
+.amount.expense {
+  color: #e74c3c;
+}
+
+.type-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.type-badge.income {
+  background: #e8f5e9;
+  color: #27ae60;
+}
+
+.type-badge.expense {
+  background: #fde8e8;
+  color: #e74c3c;
+}
+
+.no-data {
+  text-align: center;
+  color: #95a5a6;
+  font-style: italic;
+  padding: 40px 20px;
+  font-size: 0.9rem;
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+  .tab-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .report-controls {
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .control-select {
+    width: 100%;
+  }
+  
+  .dist-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 15px;
+  }
+  
+  .dist-amount {
+    text-align: left;
+    padding-left: 48px;
+  }
+  
+  .transactions-table table {
+    min-width: 600px;
+  }
+}

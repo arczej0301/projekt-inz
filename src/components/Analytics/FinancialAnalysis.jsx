@@ -1,7 +1,7 @@
 // components/Analytics/FinancialAnalysis.jsx
 import React, { useState, useMemo } from 'react'
 import { useFinance } from '../../hooks/useFinance'
-import './AnalyticsComponents.css'
+import './FinancialAnalysis.css'
 
 const FinancialAnalysis = ({ transactions, summary }) => {
   // 1. HOOKI NA POCZĄTKU

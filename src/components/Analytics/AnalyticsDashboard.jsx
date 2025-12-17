@@ -1,6 +1,7 @@
 import React, { useState } from 'react' // DODANY useState
 import CustomSelect from '../common/CustomSelect'
-import './AnalyticsComponents.css'
+import './AnalyticsDashboard.css'
+import './AnalyticsShared.css' 
 
 const AnalyticsDashboard = ({ 
   financialAnalytics, 

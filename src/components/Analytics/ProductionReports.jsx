@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import CustomSelect from '../common/CustomSelect';
 import { useFields } from '../../hooks/useFields';
-import './AnalyticsComponents.css';
+import { useAnimals } from '../../hooks/useAnimals';
+import './ProductionReports.css'
+import './AnalyticsShared.css' 
 
 const ProductionReports = ({
   formatCurrency,
@@ -21,10 +23,12 @@ const ProductionReports = ({
 
   const { generatePerformanceReport, generateStatusReport, getCropPerformance } = useFields();
 
+  const { animals, loading: animalsLoading, generateAnimalStats } = useAnimals();
+  const [animalStats, setAnimalStats] = useState(null);
+
   const tabOptions = [
-    { value: 'fields', label: 'Pola uprawne' },
-    { value: 'status', label: 'Stany pól' },
-    { value: 'efficiency', label: 'Wydajność' }
+    { value: 'fields', label: 'Pola uprawne' }, 
+    { value: 'animals', label: 'Zwierzęta' }
   ];
 
   const cropOptions = [
@@ -48,14 +52,18 @@ const ProductionReports = ({
         if (activeTab === 'fields' || activeTab === 'efficiency') {
           const report = await generatePerformanceReport();
           setPerformanceData(report);
-
-          // Pobierz również analizę upraw
           const crops = await getCropPerformance();
           setCropPerformance(crops);
+
         } else if (activeTab === 'status') {
           const report = await generateStatusReport();
           setStatusReport(report);
+        
+        } else if (activeTab === 'animals') { 
+          const stats = generateAnimalStats();
+          setAnimalStats(stats);
         }
+
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -64,7 +72,7 @@ const ProductionReports = ({
     };
 
     loadData();
-  }, [activeTab]);
+  }, [activeTab, animals]);
 
   // Pomocnicze funkcje do formatowania
   const defaultFormatNumber = (value) => {
@@ -86,6 +94,7 @@ const ProductionReports = ({
       <div className="reports-header">
         <h3>Analiza Wydajności Produkcyjnej</h3>
         <div className="report-controls">
+           {/* Ukryj filtr upraw jeśli jesteśmy w zakładce zwierząt */}
           {activeTab === 'fields' && (
             <CustomSelect
               options={cropOptions}
@@ -98,11 +107,10 @@ const ProductionReports = ({
             value={activeTab}
             onChange={setActiveTab}
           />
-
         </div>
       </div>
 
-      {loading ? (
+      {(loading || (activeTab === 'animals' && animalsLoading)) ? (
         <div className="loading-state">
           <div className="spinner"></div>
           <p>Ładowanie danych...</p>
@@ -132,6 +140,15 @@ const ProductionReports = ({
               formatNumber={defaultFormatNumber}
             />
           )}
+
+          {activeTab === 'animals' && (
+            <AnimalsReport 
+              stats={animalStats} 
+              animalsList={animals}
+              formatNumber={defaultFormatNumber}
+            />
+          )}
+
         </>
       )}
     </div>
@@ -602,6 +619,131 @@ const FieldProduction = ({ performanceData, cropPerformance, cropFilter, formatC
             <p>Łączny plon: {formatNumber(performanceData.summary.totalYield)} t</p>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// --- KOMPONENT 4: RAPORT ZWIERZĄT ---
+const AnimalsReport = ({ stats, animalsList, formatNumber }) => {
+  if (!stats || !animalsList || animalsList.length === 0) {
+    return <div className="no-data">Brak danych o zwierzętach w systemie.</div>;
+  }
+
+  // Funkcja pomocnicza do powiększania pierwszej litery
+  const capitalize = (text) => {
+    if (!text) return '-';
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+
+  // Nowa funkcja do formatowania daty (obsługuje Timestamp z Firebase i zwykłe stringi)
+  const formatDate = (date) => {
+    if (!date) return '-';
+    try {
+      // Jeśli to obiekt Timestamp z Firebase (posiada metodę toDate)
+      if (date.toDate && typeof date.toDate === 'function') {
+        return date.toDate().toLocaleDateString('pl-PL');
+      }
+      // Jeśli to zwykła data lub string
+      return new Date(date).toLocaleDateString('pl-PL');
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  const getAnimalStatusColor = (status) => {
+    const map = {
+      'Zdrowe': '#2ecc71',
+      'Chore': '#e74c3c',
+      'Kwarantanna': '#f39c12',
+      'Sprzedane': '#95a5a6',
+      'Leczenie': '#e67e22'
+    };
+    return map[status] || '#3498db';
+  };
+
+  return (
+    <div className="animals-report">
+      {/* 1. Podsumowanie KPI */}
+      <div className="production-summary">
+        <div className="summary-card">
+          <div className="summary-value">{stats.totalAnimals}</div>
+          <div className="summary-label">Wszystkie zwierzęta</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-value">{formatNumber(stats.averageWeight)} kg</div>
+          <div className="summary-label">Średnia waga</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-value">{Object.keys(stats.speciesCount).length}</div>
+          <div className="summary-label">Gatunki</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-value" style={{fontSize: '1.2rem'}}>
+             {capitalize(Object.entries(stats.statusCount).sort((a,b) => b[1] - a[1])[0]?.[0]) || '-'}
+          </div>
+          <div className="summary-label">Dominujący status</div>
+        </div>
+      </div>
+
+      {/* 2. Sekcja podziału na grupy */}
+      <div className="crop-performance-section">
+        <h4>Struktura stada (Gatunki)</h4>
+        <div className="crop-cards-grid">
+          {Object.entries(stats.speciesCount).map(([species, count]) => (
+            <div key={species} className="crop-card">
+              <div className="crop-header">
+                <span className="crop-name">{capitalize(species)}</span>
+                <span className="crop-area">{(count / stats.totalAnimals * 100).toFixed(1)}%</span>
+              </div>
+              <div className="crop-stats">
+                <div className="stat">
+                  <span className="label">Liczba sztuk</span>
+                  <span className="value highlight">{count}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 3. Tabela zwierząt */}
+      <div className="fields-table-container">
+        <h4>Lista inwentarza</h4>
+        <table className="fields-table">
+          <thead>
+            <tr>
+              <th>Nazwa / Nr kolczyka</th>
+              <th>Gatunek</th>
+              <th>Rasa</th>
+              <th>Data urodzenia</th> {/* Zmieniony nagłówek */}
+              <th>Waga (kg)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {animalsList.map((animal) => (
+              <tr key={animal.id}>
+                <td className="fw-bold">{animal.name || animal.tagNumber || 'Brak nazwy'}</td>
+                <td>{capitalize(animal.type)}</td>
+                <td>{capitalize(animal.breed)}</td>
+                
+                {/* Wyświetlanie sformatowanej daty urodzenia */}
+                <td>{formatDate(animal.birthDate)}</td>
+                
+                <td>{animal.weight ? formatNumber(animal.weight) : '-'}</td>
+                <td>
+                  <span 
+                    className="status-badge"
+                    style={{ backgroundColor: getAnimalStatusColor(animal.status) }}
+                  >
+                    {capitalize(animal.status)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

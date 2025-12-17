@@ -1,0 +1,140 @@
+/* AnalyticsShared.css - STYLE WSPÓLNE DLA WSZYSTKICH KOMPONENTÓW ANALITYCZNYCH */
+
+/* Alerty - używane w Dashboard i ReportsPage */
+.alerts-section {
+  margin-bottom: 30px;
+}
+
+.alerts-section h3 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  border-bottom: 2px solid #ecf0f1;
+  padding-bottom: 8px;
+}
+
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+.alert-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.alert-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.alert-card.danger {
+  border-left-color: #e74c3c;
+  background: linear-gradient(135deg, #fdf2f2, #fde8e8);
+}
+
+.alert-card.warning {
+  border-left-color: #f39c12;
+  background: linear-gradient(135deg, #fef9e7, #fef5e7);
+}
+
+.alert-card.info {
+  border-left-color: #3498db;
+  background: linear-gradient(135deg, #f0f8ff, #e8f4fd);
+}
+
+.alert-card.critical {
+  border-left-color: #c0392b;
+  background: linear-gradient(135deg, #fde8e8, #fadbd8);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.alert-icon {
+  font-size: 1.5rem;
+  margin-right: 12px;
+  margin-top: 2px;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.alert-message {
+  font-size: 0.9rem;
+  color: #5d6d7e;
+  line-height: 1.4;
+}
+
+/* Utility classes - używane wszędzie */
+.no-data {
+  text-align: center;
+  color: #95a5a6;
+  font-style: italic;
+  padding: 40px 20px;
+  font-size: 0.9rem;
+}
+
+.no-data-cell {
+  color: #95a5a6;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* Table Header Wrapper - używane w ProductionReports */
+.table-header-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  border-radius: 8px;
+  padding: 20px 25px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 100%;
+}
+
+.table-header-wrapper h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: none;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* Responsive helpers */
+@media (max-width: 768px) {
+  .table-header-wrapper,
+  .section-header-flex {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    padding-right: 20px;
+  }
+  
+  .alerts-grid {
+    grid-template-columns: 1fr;
+  }
+}
