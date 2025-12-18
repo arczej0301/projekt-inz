@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  format, 
-  subDays, 
-  subMonths, 
-  subYears, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfYear, 
-  endOfYear 
-} from 'date-fns'; 
+import {
+  format,
+  subDays,
+  subMonths,
+  subYears,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear
+} from 'date-fns';
 
 import { exportToExcel } from '../../utils/excelExport';
 import { exportToPDF } from '../../utils/pdfExport';
 import './ExportPanel.css';
 
-// Importy hooków
+// Importy hooków i serwisów
 import { useFinance } from '../../hooks/useFinance';
 import { useWarehouse } from '../../hooks/useWarehouse';
 import { useFields } from '../../hooks/useFields';
-// ZMIANA: Zamiast useTasks importujemy serwis garażu
+import { useAnimals } from '../../hooks/useAnimals';
 import { garageService } from '../../services/garageService';
 
 // --- KATEGORIE FINANSOWE ---
@@ -42,14 +42,55 @@ const expenseCategories = [
   { id: 'inne_koszty', name: 'Inne koszty', icon: '📉' }
 ];
 
-// --- NOWE KATEGORIE GARAŻOWE ---
-const garageCategories = [
-  { id: 'tractors', name: 'Ciągniki', icon: '🚜' },
-  { id: 'harvesters', name: 'Kombajny', icon: '🌾' },
-  { id: 'trailers', name: 'Przyczepy', icon: '🚛' },
-  { id: 'machines', name: 'Maszyny towarzyszące', icon: '⚙️' },
-  { id: 'other', name: 'Inne', icon: '🔧' }
+// --- KATEGORIE ZWIERZĄT ---
+const animalTypes = [
+  { value: 'krowa', label: 'Krowy' },
+  { value: 'byk', label: 'Byki' },
+  { value: 'świnia', label: 'Świnie' },
+  { value: 'koń', label: 'Konie' },
+  { value: 'owca', label: 'Owce' },
+  { value: 'koza', label: 'Kozy' },
+  { value: 'kura', label: 'Kury' }
 ];
+
+// --- SŁOWNIK TŁUMACZEŃ (Baza -> Polski) ---
+const categoryTranslations = {
+  'tractor': 'Ciągnik',
+  'harvester': 'Kombajn',
+  'forage': 'Sieczkarnia', // To jest ta kategoria z Twojej bazy!
+  'plow': 'Pług',
+  'seeder': 'Siewnik',
+  'sprayer': 'Opryskiwacz',
+  'trailer': 'Przyczepa',
+  'truck': 'Samochód',
+  'other': 'Inne',
+  'cultivator': 'Kultywator',
+  'loader': 'Ładowarka'
+};
+
+const garageStatusDictionary = {
+  'active': 'Sprawny',
+  'maintenance': 'W serwisie',
+  'broken': 'Awaria',
+  'sold': 'Sprzedany',
+  'needs_service': 'Wymaga przeglądu'
+};
+
+// Funkcja pomocnicza: Tłumaczy klucz z bazy na Polski
+const getPolishCategoryName = (dbKey) => {
+  if (!dbKey) return 'Inne';
+  const normalized = dbKey.toString().toLowerCase().trim();
+  // Jeśli mamy tłumaczenie -> zwracamy je. Jeśli nie -> zwracamy oryginał z dużej litery.
+  return categoryTranslations[normalized] || (normalized.charAt(0).toUpperCase() + normalized.slice(1));
+};
+
+// Formatowanie kasy (ze spacją)
+const formatMoney = (value) => {
+  if (value === null || value === undefined || value === '') return '-';
+  const num = Number(value);
+  if (isNaN(num)) return '-';
+  return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " PLN";
+};
 
 // --- HELPERY ---
 const getCategoryName = (catId) => {
@@ -61,14 +102,17 @@ const getCategoryName = (catId) => {
   return catId;
 };
 
-const getGarageCategoryName = (catId) => {
+const getWarehouseCategoryNameFromHook = (catId, warehouseCategories) => {
   if (!catId) return 'Inne';
-  const cat = garageCategories.find(c => c.id === catId);
-  return cat ? cat.name : catId;
+  if (warehouseCategories && warehouseCategories.length > 0) {
+    const cat = warehouseCategories.find(c => c.id === catId);
+    if (cat) return cat.name;
+  }
+  return capitalizeFirstLetter(catId);
 };
 
 const capitalizeFirstLetter = (string) => {
-  if (!string) return '';
+  if (!string) return '-';
   return string.charAt(0).toUpperCase() + string.slice(1);
 };
 
@@ -94,31 +138,34 @@ const ExportPanel = () => {
   const { transactions } = useFinance();
   const { warehouseData, categories: warehouseCategoriesFromHook } = useWarehouse();
   const { fields, generatePerformanceReport } = useFields();
-  
-  // ZMIANA: Stan dla danych z garażu
+  const { animals } = useAnimals();
+
   const [garageData, setGarageData] = useState([]);
 
+  // ZMIANA: Domyślnie wszystko odznaczone (false)
   const [selectedModules, setSelectedModules] = useState({
-    Finanse: true,
+    Finanse: false,
     Magazyn: false,
     Pola: false,
-    Garaż: false, // ZMIANA: Zamiast Zadania jest Garaż
+    Garaż: false,
+    Zwierzęta: false
   });
 
-  // --- STANY FILTROWANIA ---
   const [financeType, setFinanceType] = useState('all');
   const [selectedFinanceCategory, setSelectedFinanceCategory] = useState('all');
   const [selectedWarehouseCategory, setSelectedWarehouseCategory] = useState('all');
-  const [selectedGarageCategory, setSelectedGarageCategory] = useState('all'); // Nowy filtr
+  const [selectedGarageCategory, setSelectedGarageCategory] = useState('all');
+  const [selectedAnimalType, setSelectedAnimalType] = useState('all');
 
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [datePreset, setDatePreset] = useState('custom');
-  const [activePreviewTab, setActivePreviewTab] = useState('Finanse');
-  
-  // Dane wydajności pól
+
+  // ZMIANA: Brak domyślnej zakładki (null), bo nic nie jest zaznaczone na starcie
+  const [activePreviewTab, setActivePreviewTab] = useState(null);
+
   const [performanceDataMap, setPerformanceDataMap] = useState({});
 
-  // --- 1. EFEKT: POBIERANIE WYDAJNOŚCI PÓL ---
+  // --- EFEKT 1: POBIERANIE WYDAJNOŚCI PÓL ---
   useEffect(() => {
     const fetchPerformance = async () => {
       if (fields.length > 0) {
@@ -143,27 +190,20 @@ const ExportPanel = () => {
     fetchPerformance();
   }, [fields.length, generatePerformanceReport]);
 
-  // --- 2. EFEKT: POBIERANIE DANYCH GARAŻU I KOSZTÓW NAPRAW ---
+  // --- EFEKT 2: POBIERANIE GARAŻU + KOSZTY NAPRAW ---
   useEffect(() => {
     const fetchGarageData = async () => {
       try {
-        // 1. Pobierz wszystkie maszyny
         const machines = await garageService.getAllMachines();
-        
-        // 2. Dla każdej maszyny pobierz historię napraw, żeby policzyć koszty
+
         const machinesWithCosts = await Promise.all(machines.map(async (machine) => {
           const repairs = await garageService.getRepairHistory(machine.id);
-          
-          // Sumujemy koszty (zakładam, że pole w naprawie nazywa się 'cost' lub 'totalCost')
           const totalRepairCost = repairs.reduce((sum, repair) => {
             const cost = Number(repair.cost) || Number(repair.totalCost) || Number(repair.price) || 0;
             return sum + cost;
           }, 0);
 
-          return {
-            ...machine,
-            totalRepairCost
-          };
+          return { ...machine, totalRepairCost };
         }));
 
         setGarageData(machinesWithCosts);
@@ -173,19 +213,31 @@ const ExportPanel = () => {
     };
 
     fetchGarageData();
-  }, []); // Uruchom raz przy montowaniu
+  }, []);
 
-  // --- SPŁASZCZANIE DANYCH MAGAZYNOWYCH ---
+  // --- DYNAMICZNE FILTRY NA PODSTAWIE BAZY DANYCH ---
+  const availableGarageCategories = useMemo(() => {
+    if (!garageData || garageData.length === 0) return [];
+
+    // 1. Wyciągamy unikalne klucze z bazy (np. ['tractor', 'forage'])
+    const uniqueRawCategories = [...new Set(garageData.map(m =>
+      (m.category || 'other').toString().toLowerCase().trim()
+    ))];
+
+    // 2. Tworzymy opcje do selecta, TYLKO z tłumaczeniami (bez ikon)
+    return uniqueRawCategories.map(rawCat => {
+      const label = getPolishCategoryName(rawCat); // Tłumaczy na "Ciągnik", "Sieczkarnia"
+
+      // id = to co w bazie (angielski), name = to co widzi użytkownik (polski)
+      return { id: rawCat, name: label }; // BEZ ikon
+    });
+  }, [garageData]);
+
+  // --- DANE POMOCNICZE ---
   const allWarehouseItems = useMemo(() => {
     if (!warehouseData) return [];
     return Object.values(warehouseData).flat();
   }, [warehouseData]);
-
-  const getWarehouseCategoryName = (catId) => {
-    if (!catId) return 'Inne';
-    const cat = warehouseCategoriesFromHook.find(c => c.id === catId);
-    return cat ? cat.name : catId;
-  };
 
   // --- OBSŁUGA DAT ---
   const handleDatePresetChange = (e) => {
@@ -194,8 +246,8 @@ const ExportPanel = () => {
     const today = new Date();
     let startDate = '';
     let endDate = format(today, 'yyyy-MM-dd');
-    
-    switch(preset) {
+
+    switch (preset) {
       case 'last30days': startDate = format(subDays(today, 30), 'yyyy-MM-dd'); break;
       case 'lastMonth':
         startDate = format(startOfMonth(subMonths(today, 1)), 'yyyy-MM-dd');
@@ -223,12 +275,14 @@ const ExportPanel = () => {
   const handleCheckboxChange = (module) => {
     setSelectedModules(prev => {
       const newState = { ...prev, [module]: !prev[module] };
-      if (!newState[module] && activePreviewTab === module) {
-        const firstActive = Object.keys(newState).find(k => newState[k]);
-        setActivePreviewTab(firstActive || null);
-      }
+      // Jeśli zaznaczamy moduł, a żaden inny nie jest aktywny, ustawiamy go jako aktywny tab
       if (newState[module] && !activePreviewTab) {
         setActivePreviewTab(module);
+      }
+      // Jeśli odznaczamy aktywny moduł, czyścimy tab lub szukamy innego
+      if (!newState[module] && activePreviewTab === module) {
+        const firstActive = Object.keys(newState).find(k => newState[k] && k !== module);
+        setActivePreviewTab(firstActive || null);
       }
       return newState;
     });
@@ -245,14 +299,13 @@ const ExportPanel = () => {
     return [...incomeCategories, ...expenseCategories];
   }, [financeType]);
 
-  // --- PRZYGOTOWANIE DANYCH (GŁÓWNA LOGIKA) ---
+  // --- PRZYGOTOWANIE DANYCH ---
   const preparedData = useMemo(() => {
     const data = {};
 
     const isWithinRange = (itemDate) => {
       if (!dateRange.start && !dateRange.end) return true;
-      if (!itemDate) return true; 
-
+      if (!itemDate) return true;
       const targetDate = new Date(itemDate);
       const start = dateRange.start ? new Date(dateRange.start) : new Date('1900-01-01');
       const end = dateRange.end ? new Date(dateRange.end) : new Date('2100-01-01');
@@ -263,19 +316,17 @@ const ExportPanel = () => {
     // 1. FINANSE
     if (selectedModules.Finanse && transactions) {
       let filtered = transactions.filter(t => isWithinRange(t.date));
-
       if (financeType !== 'all') {
         filtered = filtered.filter(t => t.type === financeType);
       }
       if (selectedFinanceCategory !== 'all') {
         filtered = filtered.filter(t => t.category === selectedFinanceCategory);
       }
-      
       data['Finanse'] = filtered.map(t => ({
         Data: safeFormatDate(t.date),
         Typ: t.type === 'income' ? 'Przychód' : 'Wydatek',
         Kategoria: getCategoryName(t.category),
-        Kwota: `${Number(t.amount).toFixed(2)} PLN`,
+        Kwota: formatMoney(t.amount), // <--- UŻYCIE FUNKCJI
         Opis: t.description || '-'
       }));
     }
@@ -283,27 +334,24 @@ const ExportPanel = () => {
     // 2. MAGAZYN
     if (selectedModules.Magazyn && allWarehouseItems.length > 0) {
       let filtered = allWarehouseItems;
-
       if (selectedWarehouseCategory !== 'all') {
         filtered = filtered.filter(i => i.category === selectedWarehouseCategory);
       }
-
       data['Magazyn'] = filtered.map(i => {
         const price = Number(i.price) || 0;
         const quantity = Number(i.quantity) || 0;
         const totalValue = price * quantity;
-
         return {
           Produkt: i.name,
-          Kategoria: getWarehouseCategoryName(i.category),
+          Kategoria: getWarehouseCategoryNameFromHook(i.category, warehouseCategoriesFromHook),
           Ilość: `${quantity} ${i.unit}`,
-          Wartość: `${totalValue.toFixed(2)} PLN`, 
-          'Cena jedn.': `${price.toFixed(2)} PLN`, 
+          Wartość: formatMoney(totalValue), // <--- UŻYCIE FUNKCJI
+          'Cena jedn.': formatMoney(price),
           'Ostatnia zmiana': safeFormatDate(i.lastUpdate || i.createdAt)
         };
       });
     } else if (selectedModules.Magazyn) {
-       data['Magazyn'] = [];
+      data['Magazyn'] = [];
     }
 
     // 3. POLA
@@ -313,45 +361,77 @@ const ExportPanel = () => {
         const yieldValue = perfInfo.yield || f.yield || f.efficiency || 0;
         const lastCropValue = perfInfo.lastCrop || f.lastHarvestCrop || '';
         const currentStatus = perfInfo.status || f.status || '-';
-
         return {
           Nazwa: f.name,
           Powierzchnia: `${f.area} ha`,
           'Wydajność t/ha': yieldValue > 0 ? `${Number(yieldValue).toFixed(2)}` : '-',
           'Ostatnia uprawa': lastCropValue ? capitalizeFirstLetter(lastCropValue) : 'Brak',
-          Status: currentStatus 
+          Status: currentStatus
         };
       });
     }
 
-    // 4. GARAŻ (NOWOŚĆ)
-    if (selectedModules.Garaż && garageData) {
-      let filtered = garageData;
+    // 4. GARAŻ
+if (selectedModules.Garaż && garageData) {
+  let filtered = garageData;
+  
+  // Filtrowanie po dacie
+  filtered = filtered.filter(m => isWithinRange(m.purchaseDate));
 
-      // Filtr daty (filtrujemy po dacie zakupu - purchaseDate)
-      filtered = filtered.filter(m => isWithinRange(m.purchaseDate));
+  // Filtrowanie po kategorii (porównujemy klucze angielskie)
+  if (selectedGarageCategory !== 'all') {
+    filtered = filtered.filter(m => 
+      (m.category || '').toLowerCase().trim() === selectedGarageCategory
+    );
+  }
 
-      // Filtr kategorii
-      if (selectedGarageCategory !== 'all') {
-        filtered = filtered.filter(m => m.category === selectedGarageCategory);
+  data['Garaż'] = filtered.map(m => {
+    // 1. Pobieramy klucz z bazy (np. "forage")
+    const catKey = (m.category || '').toLowerCase().trim();
+    
+    // 2. Tłumaczymy na polski (np. "Sieczkarnia")
+    const categoryLabel = getPolishCategoryName(catKey);
+
+    // 3. Tłumaczymy status (BRAKUJĄCY FRAGMENT)
+    const statusKey = (m.status || 'active').toLowerCase().trim();
+    const statusLabel = garageStatusDictionary[statusKey] || m.status;
+
+    return {
+      Nazwa: m.name,
+      Marka: m.brand || '-',
+      Kategoria: categoryLabel, // Tylko polska nazwa (bez ikon)
+      Status: statusLabel, // Używamy zdefiniowanej zmiennej
+      'Data zakupu': safeFormatDate(m.purchaseDate),
+      'Cena zakupu': formatMoney(m.price || m.purchasePrice),
+      'Suma kosztów napraw': formatMoney(m.totalRepairCost)
+    };
+  });
+}
+
+    // 5. ZWIERZĘTA
+    if (selectedModules.Zwierzęta && animals) {
+      let filtered = animals;
+      if (selectedAnimalType !== 'all') {
+        filtered = filtered.filter(a => a.type === selectedAnimalType);
       }
-
-      data['Garaż'] = filtered.map(m => ({
-        Nazwa: m.name,
-        Marka: m.brand || '-',
-        Status: capitalizeFirstLetter(m.status) || 'Sprawny',
-        'Data zakupu': safeFormatDate(m.purchaseDate),
-        'Cena zakupu': m.price || m.purchasePrice ? `${Number(m.price || m.purchasePrice).toFixed(2)} PLN` : '-',
-        'Suma kosztów napraw': m.totalRepairCost > 0 ? `${Number(m.totalRepairCost).toFixed(2)} PLN` : '0.00 PLN'
+      data['Zwierzęta'] = filtered.map(a => ({
+        'Imię': a.name || '-',
+        'Typ': capitalizeFirstLetter(a.type),
+        'Rasa': capitalizeFirstLetter(a.breed),
+        'Numer kolczyka': a.earTag || '-',
+        'Data urodzenia': safeFormatDate(a.birthDate),
+        'Waga': a.weight ? `${a.weight} kg` : '-',
+        'Status': capitalizeFirstLetter(a.status),
+        'Stan zdrowia': capitalizeFirstLetter(a.health)
       }));
     }
 
     return data;
   }, [
-    selectedModules, transactions, allWarehouseItems, fields, garageData, // garageData zamiast tasks
-    dateRange, financeType, selectedFinanceCategory, selectedWarehouseCategory, 
-    selectedGarageCategory, // Dodano filtr
-    warehouseCategoriesFromHook, performanceDataMap
+    selectedModules, transactions, allWarehouseItems, fields, garageData, animals,
+    dateRange, financeType, selectedFinanceCategory, selectedWarehouseCategory,
+    selectedGarageCategory, selectedAnimalType,
+    warehouseCategoriesFromHook, performanceDataMap, availableGarageCategories
   ]);
 
   const hasData = Object.keys(preparedData).some(key => preparedData[key].length > 0);
@@ -388,15 +468,15 @@ const ExportPanel = () => {
 
       <div className="selection-section">
         <h4>2. Wybierz źródła danych</h4>
-        
+
         <div className="modules-grid">
           {Object.keys(selectedModules).map((key) => (
             <label key={key} className={`module-card ${selectedModules[key] ? 'active' : ''}`}>
               <div className="module-header-row">
-                <input 
-                  type="checkbox" 
-                  checked={selectedModules[key]} 
-                  onChange={() => handleCheckboxChange(key)} 
+                <input
+                  type="checkbox"
+                  checked={selectedModules[key]}
+                  onChange={() => handleCheckboxChange(key)}
                 />
                 <span className="module-name">{key}</span>
                 {selectedModules[key] && <div className="check-icon">✓</div>}
@@ -438,9 +518,9 @@ const ExportPanel = () => {
             <div className="finance-filters-row">
               <div className="filter-group">
                 <label>Kategoria produktu:</label>
-                <select 
-                  value={selectedWarehouseCategory} 
-                  onChange={(e) => setSelectedWarehouseCategory(e.target.value)} 
+                <select
+                  value={selectedWarehouseCategory}
+                  onChange={(e) => setSelectedWarehouseCategory(e.target.value)}
                   className="filter-select"
                 >
                   <option value="all">Wszystkie produkty</option>
@@ -455,23 +535,49 @@ const ExportPanel = () => {
           </div>
         )}
 
-        {/* --- FILTRY GARAŻOWE (NOWOŚĆ) --- */}
+        {/* FILTRY GARAŻOWE - DYNAMICZNE Z TŁUMACZENIEM */}
         {selectedModules.Garaż && (
           <div className="finance-filters-section" style={{ backgroundColor: '#fff0f0', borderLeftColor: '#e74c3c' }}>
-            <h5 style={{color: '#c0392b'}}>🚜 Filtry Garażowe:</h5>
+            <h5 style={{ color: '#c0392b' }}>🚜 Filtry Garażowe:</h5>
             <div className="finance-filters-row">
               <div className="filter-group">
                 <label>Kategoria maszyny:</label>
-                <select 
-                  value={selectedGarageCategory} 
-                  onChange={(e) => setSelectedGarageCategory(e.target.value)} 
+                <select
+                  value={selectedGarageCategory}
+                  onChange={(e) => setSelectedGarageCategory(e.target.value)}
                   className="filter-select"
                 >
                   <option value="all">Wszystkie maszyny</option>
-                  {garageCategories.map(cat => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.name}
-                    </option>
+                  {availableGarageCategories.length > 0 ? (
+                    availableGarageCategories.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>Brak kategorii w danych</option>
+                  )}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FILTRY ZWIERZĄT */}
+        {selectedModules.Zwierzęta && (
+          <div className="finance-filters-section" style={{ backgroundColor: '#e8f6f3', borderLeftColor: '#27ae60', marginTop: '10px' }}>
+            <h5 style={{ color: '#27ae60' }}>🐄 Filtry Zwierząt:</h5>
+            <div className="finance-filters-row">
+              <div className="filter-group">
+                <label>Gatunek:</label>
+                <select
+                  value={selectedAnimalType}
+                  onChange={(e) => setSelectedAnimalType(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">Wszystkie gatunki</option>
+                  {animalTypes.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
               </div>
@@ -483,7 +589,7 @@ const ExportPanel = () => {
       <div className="preview-section">
         <h4>3. Podgląd danych</h4>
         {!hasData ? (
-          <div className="empty-state">Brak danych dla wybranych filtrów.</div>
+          <div className="empty-state">Brak danych dla wybranych filtrów (zaznacz moduł i zakres dat).</div>
         ) : (
           <div className="preview-content">
             <div className="preview-tabs">
@@ -519,7 +625,7 @@ const ExportPanel = () => {
 const PreviewTable = ({ data }) => {
   if (!data || data.length === 0) return <p>Brak danych.</p>;
   const headers = Object.keys(data[0]);
-  const previewRows = data; 
+  const previewRows = data;
   return (
     <table className="preview-data-table">
       <thead>

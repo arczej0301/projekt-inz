@@ -458,6 +458,21 @@ const GaragePage = () => {
     { value: 'hybrid', label: 'Hybryda' }
   ];
 
+  const getCategoryLabel = (categoryValue) => {
+  if (!categoryValue) return 'Brak kategorii';
+  
+  // Szukamy dokładnego dopasowania
+  const option = categoryOptions.find(opt => opt.value === categoryValue);
+  
+  // Jeśli nie znaleziono, zwracamy oryginalną wartość
+  if (!option) {
+    const looseOption = categoryOptions.find(opt => opt.value.toLowerCase() === categoryValue.toLowerCase());
+    return looseOption ? looseOption.label : categoryValue;
+  }
+  
+  return option.label;
+};
+
   // Funkcje pomocnicze do wyświetlania aktualnych wartości
   const getCurrentCategoryLabel = () => {
     const option = categoryOptions.find(opt => opt.value === (formData?.category || ''));
@@ -708,7 +723,7 @@ const GaragePage = () => {
                           </div>
                         </div>
                       </td>
-                      <td>{categoryOptions.find(opt => opt.value === machine.category)?.label || machine.category}</td>
+                      <td>{getCategoryLabel(machine.category)}</td>
                       <td>
                         <div className="brand-model">
                           <div>{machine.brand}</div>
