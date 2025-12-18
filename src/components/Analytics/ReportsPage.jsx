@@ -176,6 +176,7 @@ const ReportsPage = () => {
       <div className="reports-content">
         {activeTab === 'dashboard' && (
           <AnalyticsDashboard 
+             useMockData={true}
             financialAnalytics={financialAnalytics}
             fieldAnalytics={fieldAnalytics}
             animalAnalytics={animalAnalytics}
