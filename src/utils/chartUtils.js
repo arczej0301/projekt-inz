@@ -1,81 +1,109 @@
 // utils/chartUtils.js
-
-/**
- * Przygotowuje dane dla wykresów
- * @param {Array} data - Surowe dane
- * @returns {Array} - Dane przygotowane dla Recharts
- */
-export const prepareChartData = (data) => {
-  if (!data || !Array.isArray(data)) {
-    console.warn('Invalid data passed to prepareChartData:', data);
-    return [];
-  }
-  
-  // Jeśli dane są już w dobrym formacie, zwróć je
-  if (data.length > 0 && data[0].name && data[0].revenue !== undefined) {
-    return data;
-  }
-  
-  try {
-    // Próba konwersji różnych formatów
-    return data.map(item => {
-      // Obsługa różnych formatów danych
-      return {
-        name: item.month || item.date?.substring(0, 7) || item.period || `Miesiąc ${Math.random().toString().substring(2, 5)}`,
-        revenue: parseFloat(item.revenue || item.income || item.przychody || 0),
-        expenses: parseFloat(item.expenses || item.costs || item.koszty || 0),
-        revenueTrend: parseFloat(item.revenueTrend || item.trend || 0)
-      };
-    });
-  } catch (error) {
-    console.error('Error preparing chart data:', error);
-    return [];
-  }
-};
-
-/**
- * Generuje przykładowe dane do testów
- */
 export const generateMockFinancialData = (months = 12) => {
-  const monthNames = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru'];
-  const data = [];
-  
-  let baseRevenue = 40000;
-  let baseExpenses = 25000;
-  
-  for (let i = 0; i < Math.min(months, monthNames.length); i++) {
-    // Losowe wahania (+/- 20%)
-    const revenue = baseRevenue + (Math.random() * 20000 - 10000);
-    const expenses = baseExpenses + (Math.random() * 10000 - 5000);
-    const trend = baseRevenue * 0.9; // Trend na poziomie 90% bazowego przychodu
-    
-    data.push({
-      name: monthNames[i],
-      revenue: Math.round(revenue),
-      expenses: Math.round(expenses),
-      revenueTrend: Math.round(trend)
-    });
-    
-    // Stopniowy wzrost bazowych wartości
-    baseRevenue *= 1.03; // 3% wzrost miesięcznie
-    baseExpenses *= 1.02; // 2% wzrost miesięcznie
-  }
-  
-  return data;
-};
+  // To tylko fallback - zostaw, ale nie będzie potrzebne z rzeczywistymi danymi
+  return []
+}
 
-/**
- * Generuje przykładową strukturę kosztów
- */
 export const generateMockCostStructure = () => {
-  return [
-    { name: 'Pasze', value: 28500 },
-    { name: 'Nawozy', value: 18700 },
-    { name: 'Paliwo', value: 15400 },
-    { name: 'Naprawy', value: 12300 },
-    { name: 'Pracownicy', value: 38500 },
-    { name: 'Leasing', value: 9800 },
-    { name: 'Ubezpieczenie', value: 5600 },
-    { name: 'Inne', value: 7200 },
-  ];
-};
+  return []
+}
+
+// GŁÓWNA FUNKCJA - przetwarzanie rzeczywistych transakcji na dane wykresu
+export const prepareChartData = (transactions = []) => {
+  if (!transactions || transactions.length === 0) {
+    return []
+  }
+
+  // Grupowanie transakcji miesięcznie
+  const monthlyData = {}
+  
+  transactions.forEach(transaction => {
+    if (!transaction.date) return
+    
+    const date = transaction.date.toDate ? transaction.date.toDate() : new Date(transaction.date)
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const monthName = date.toLocaleDateString('pl-PL', { month: 'short' })
+    
+    if (!monthlyData[monthKey]) {
+      monthlyData[monthKey] = {
+        name: monthName,
+        fullDate: `${monthName} ${date.getFullYear()}`,
+        revenue: 0,
+        expenses: 0,
+        transactionCount: 0
+      }
+    }
+    
+    const amount = parseFloat(transaction.amount) || 0
+    
+    if (transaction.type === 'income') {
+      monthlyData[monthKey].revenue += amount
+    } else if (transaction.type === 'expense') {
+      monthlyData[monthKey].expenses += amount
+    }
+    
+    monthlyData[monthKey].transactionCount++
+  })
+
+  // Sortowanie chronologicznie
+  const sortedData = Object.values(monthlyData)
+    .sort((a, b) => {
+      const [aYear, aMonth] = Object.keys(monthlyData).find(key => monthlyData[key] === a)?.split('-') || []
+      const [bYear, bMonth] = Object.keys(monthlyData).find(key => monthlyData[key] === b)?.split('-') || []
+      return new Date(aYear, aMonth - 1) - new Date(bYear, bMonth - 1)
+    })
+    .slice(-12) // Ostatnie 12 miesięcy
+
+  // Oblicz trend przychodów (średnia ruchoma 3-miesięczna)
+  const dataWithTrend = sortedData.map((item, index, array) => {
+    const trendWindow = 3
+    let trend = item.revenue
+    
+    if (index >= trendWindow - 1) {
+      const windowData = array.slice(index - trendWindow + 1, index + 1)
+      trend = windowData.reduce((sum, d) => sum + d.revenue, 0) / trendWindow
+    } else if (index > 0) {
+      trend = (array[index - 1].revenue + item.revenue) / 2
+    }
+    
+    return {
+      ...item,
+      revenue: parseFloat(item.revenue.toFixed(2)),
+      expenses: parseFloat(item.expenses.toFixed(2)),
+      revenueTrend: parseFloat(trend.toFixed(2)),
+      balance: parseFloat((item.revenue - item.expenses).toFixed(2))
+    }
+  })
+
+  return dataWithTrend
+}
+
+// Struktura kosztów z rzeczywistych transakcji
+export const prepareCostStructure = (transactions = []) => {
+  const expenses = transactions.filter(t => t.type === 'expense')
+  
+  if (expenses.length === 0) return []
+  
+  const categoryTotals = {}
+  
+  expenses.forEach(transaction => {
+    const category = transaction.category || 'Inne'
+    const amount = parseFloat(transaction.amount) || 0
+    
+    if (!categoryTotals[category]) {
+      categoryTotals[category] = 0
+    }
+    
+    categoryTotals[category] += amount
+  })
+  
+  const totalExpenses = Object.values(categoryTotals).reduce((sum, val) => sum + val, 0)
+  
+  return Object.entries(categoryTotals)
+    .map(([name, value]) => ({
+      name,
+      value: parseFloat(value.toFixed(2)),
+      percentage: totalExpenses > 0 ? parseFloat(((value / totalExpenses) * 100).toFixed(1)) : 0
+    }))
+    .sort((a, b) => b.value - a.value)
+}

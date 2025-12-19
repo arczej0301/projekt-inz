@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react'
+// components/Analytics/AnalyticsDashboard.jsx
+import React, { useState, useEffect, useMemo } from 'react'
 import CustomSelect from '../common/CustomSelect'
+import FieldYieldChart from './FieldYieldChart'
 import FinancialTrendChart from './FinancialTrendChart'
 import { 
   BarChart as RechartsBarChart, 
@@ -12,83 +14,240 @@ import {
   Cell 
 } from 'recharts'
 import './AnalyticsDashboard.css'
+import { useFinance } from '../../hooks/useFinance'
+import { useAnalytics } from '../../hooks/useAnalytics'
 
-// Import funkcji do generowania mock danych
+// Import funkcji do generowania mock danych (jako fallback)
 import { generateMockFinancialData, generateMockCostStructure } from '../../utils/chartUtils'
+
+// Główne funkcje przetwarzania danych
+const prepareChartData = (transactions = []) => {
+  if (!transactions || transactions.length === 0) {
+    return []
+  }
+
+  // Grupowanie transakcji miesięcznie
+  const monthlyData = {}
+  
+  transactions.forEach(transaction => {
+    if (!transaction.date) return
+    
+    // Konwersja daty
+    let date
+    if (transaction.date.toDate) {
+      date = transaction.date.toDate()
+    } else if (transaction.date instanceof Date) {
+      date = transaction.date
+    } else {
+      date = new Date(transaction.date)
+    }
+    
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const monthName = date.toLocaleDateString('pl-PL', { month: 'short' })
+    
+    if (!monthlyData[monthKey]) {
+      monthlyData[monthKey] = {
+        name: monthName,
+        fullDate: `${monthName} ${date.getFullYear()}`,
+        revenue: 0,
+        expenses: 0,
+        transactionCount: 0
+      }
+    }
+    
+    const amount = parseFloat(transaction.amount) || 0
+    
+    if (transaction.type === 'income') {
+      monthlyData[monthKey].revenue += amount
+    } else if (transaction.type === 'expense') {
+      monthlyData[monthKey].expenses += amount
+    }
+    
+    monthlyData[monthKey].transactionCount++
+  })
+
+  // Sortowanie chronologicznie
+  const sortedData = Object.keys(monthlyData)
+    .sort()
+    .map(key => monthlyData[key])
+    .slice(-12) // Ostatnie 12 miesięcy
+
+  // Oblicz trend przychodów (średnia ruchoma 3-miesięczna)
+  const dataWithTrend = sortedData.map((item, index, array) => {
+    const trendWindow = 3
+    let trend = item.revenue
+    
+    if (index >= trendWindow - 1) {
+      const windowData = array.slice(index - trendWindow + 1, index + 1)
+      trend = windowData.reduce((sum, d) => sum + d.revenue, 0) / trendWindow
+    } else if (index > 0) {
+      trend = (array[index - 1].revenue + item.revenue) / 2
+    }
+    
+    return {
+      ...item,
+      revenue: parseFloat(item.revenue.toFixed(2)),
+      expenses: parseFloat(item.expenses.toFixed(2)),
+      revenueTrend: parseFloat(trend.toFixed(2)),
+      balance: parseFloat((item.revenue - item.expenses).toFixed(2))
+    }
+  })
+
+  return dataWithTrend
+}
+
+// Struktura kosztów z rzeczywistych transakcji
+const prepareCostStructure = (transactions = []) => {
+  const expenses = transactions.filter(t => t.type === 'expense')
+  
+  if (expenses.length === 0) return []
+  
+  const categoryTotals = {}
+  
+  expenses.forEach(transaction => {
+    const category = transaction.category || 'Inne'
+    const amount = parseFloat(transaction.amount) || 0
+    
+    if (!categoryTotals[category]) {
+      categoryTotals[category] = 0
+    }
+    
+    categoryTotals[category] += amount
+  })
+  
+  const totalExpenses = Object.values(categoryTotals).reduce((sum, val) => sum + val, 0)
+  
+  return Object.entries(categoryTotals)
+    .map(([name, value]) => ({
+      name,
+      value: parseFloat(value.toFixed(2)),
+      percentage: totalExpenses > 0 ? parseFloat(((value / totalExpenses) * 100).toFixed(1)) : 0
+    }))
+    .sort((a, b) => b.value - a.value)
+}
 
 const AnalyticsDashboard = () => {
   const [timeRange, setTimeRange] = useState('month')
   const [viewType, setViewType] = useState('overview')
-  const [isLoading, setIsLoading] = useState(true)
   
-  // Stan dla danych - zaczynamy od mock danych
-  const [dashboardData, setDashboardData] = useState({
-    financialTrends: [],
-    costStructure: [],
-    productivity: [],
-    healthData: {},
-    alerts: []
-  })
+  // UŻYJ rzeczywistych hooków
+  const { 
+    financialAnalytics, 
+    fieldAnalytics, 
+    animalAnalytics, 
+    loading: analyticsLoading, 
+    error: analyticsError,
+    alerts: realAlerts,
+    data: analyticsData
+  } = useAnalytics()
+  
+  const { 
+    transactions: financeTransactions = [],
+    getFinancialSummary,
+    getBudgetsWithStatus,
+    loading: financeLoading,
+    error: financeError
+  } = useFinance()
 
-  // Załaduj dane przy pierwszym renderowaniu
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true)
+  const isLoading = analyticsLoading || financeLoading
+  const error = analyticsError || financeError
+
+  // Przygotuj dane dla wykresów z rzeczywistych transakcji
+  const dashboardData = useMemo(() => {
+    // Fallback do mock danych jeśli nie ma rzeczywistych
+    if (!financeTransactions || financeTransactions.length === 0) {
+      console.log('Brak transakcji, używam mock danych')
+      const mockTrends = generateMockFinancialData ? generateMockFinancialData(12) : []
+      const mockCosts = generateMockCostStructure ? generateMockCostStructure() : []
       
-      // Tutaj możesz dodać pobieranie danych z API
-      // Na razie używamy tylko mock danych
-      
-      const mockTrends = generateMockFinancialData(12)
-      const mockCosts = generateMockCostStructure()
-      
-      // Przykładowe dane produktywności
-      const mockProductivity = [
-        { name: 'Pole A', efficiency: 85 },
-        { name: 'Pole B', efficiency: 92 },
-        { name: 'Pole C', efficiency: 78 },
-        { name: 'Pole D', efficiency: 95 },
-        { name: 'Pole E', efficiency: 88 }
-      ]
-      
-      // Przykładowe dane zdrowia
-      const mockHealthData = {
-        healthIndex: 87,
-        commonIssues: [
-          { issue: 'Choroby układu oddechowego', count: 3 },
-          { issue: 'Problemy z racicami', count: 2 },
-          { issue: 'Zapalenie wymienia', count: 1 }
-        ]
-      }
-      
-      // Przykładowe alerty
-      const mockAlerts = [
-        { 
-          type: 'warning', 
-          priority: 'high',
-          title: 'Niski poziom paszy',
-          message: 'Zapas paszy wystarczy tylko na 3 dni'
-        },
-        { 
-          type: 'info', 
-          priority: 'low',
-          title: 'Planowane szczepienia',
-          message: 'Za 5 dni szczepienie przeciw BVD'
-        }
-      ]
-      
-      setDashboardData({
+      return {
         financialTrends: mockTrends,
         costStructure: mockCosts,
-        productivity: mockProductivity,
-        healthData: mockHealthData,
-        alerts: mockAlerts
-      })
-      
-      setIsLoading(false)
+        productivity: fieldAnalytics?.productivity || [],
+        healthData: animalAnalytics?.health || {
+          healthIndex: 95,
+          commonIssues: [],
+          healthDistribution: {}
+        },
+        alerts: realAlerts || []
+      }
     }
+
+    console.log('Używam rzeczywistych transakcji:', financeTransactions.length)
+
+    return {
+      financialTrends: prepareChartData(financeTransactions),
+      costStructure: prepareCostStructure(financeTransactions),
+      productivity: fieldAnalytics?.productivity || [],
+      healthData: animalAnalytics?.health || {
+        healthIndex: 95,
+        commonIssues: [],
+        healthDistribution: {}
+      },
+      alerts: realAlerts || []
+    }
+  }, [financeTransactions, fieldAnalytics, animalAnalytics, realAlerts])
+
+  // Oblicz rzeczywiste KPI z transakcji
+  const realKPIs = useMemo(() => {
+    if (!financeTransactions || financeTransactions.length === 0) {
+      // Fallback do przykładowych wartości
+      return {
+        totalRevenue: 892000,
+        netProfit: 215000,
+        profitMargin: 24.1,
+        revenueTrend: 12.5,
+        monthlyExpenses: 0,
+        activeFields: fieldAnalytics?.totalFields || 0
+      }
+    }
+
+    const summary = getFinancialSummary ? getFinancialSummary() : { totalIncome: 0, totalExpenses: 0, monthlyExpenses: 0 }
+    const totalRevenue = summary.totalIncome || 0
+    const totalExpenses = summary.totalExpenses || 0
+    const netProfit = totalRevenue - totalExpenses
+    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
     
-    loadData()
-  }, [])
+    // Oblicz trend (ostatni miesiąc vs poprzedni miesiąc)
+    const currentMonth = new Date().getMonth()
+    const currentYear = new Date().getFullYear()
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear
+    
+    const currentMonthRevenue = financeTransactions
+      .filter(t => {
+        if (!t.date) return false
+        const date = t.date.toDate ? t.date.toDate() : new Date(t.date)
+        return t.type === 'income' && 
+          date.getMonth() === currentMonth && 
+          date.getFullYear() === currentYear
+      })
+      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+    
+    const lastMonthRevenue = financeTransactions
+      .filter(t => {
+        if (!t.date) return false
+        const date = t.date.toDate ? t.date.toDate() : new Date(t.date)
+        return t.type === 'income' && 
+          date.getMonth() === lastMonth && 
+          date.getFullYear() === lastMonthYear
+      })
+      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+    
+    const revenueTrend = lastMonthRevenue > 0 
+      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+      : (currentMonthRevenue > 0 ? 100 : 0)
+    
+    return {
+      totalRevenue,
+      netProfit,
+      profitMargin: parseFloat(profitMargin.toFixed(1)),
+      revenueTrend: parseFloat(revenueTrend.toFixed(1)),
+      monthlyExpenses: summary.monthlyExpenses || 0,
+      activeFields: fieldAnalytics?.totalFields || 0,
+      totalArea: fieldAnalytics?.totalArea || 0
+    }
+  }, [financeTransactions, getFinancialSummary, fieldAnalytics])
 
   // Funkcje formatujące
   const safeFormatCurrency = (amount) => {
@@ -116,9 +275,49 @@ const AnalyticsDashboard = () => {
   if (isLoading) {
     return (
       <div className="analytics-dashboard">
-        <div className="loading-container">
+        <div className="loading-container" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '400px'
+        }}>
           <div className="loading-spinner"></div>
-          <p>Ładowanie danych dashboardu...</p>
+          <p style={{ marginTop: '20px', color: '#7f8c8d' }}>Ładowanie danych dashboardu...</p>
+          {financeTransactions.length === 0 && (
+            <p style={{ fontSize: '0.9rem', color: '#95a5a6', marginTop: '10px' }}>
+              Pierwsze uruchomienie może trwać dłużej
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="analytics-dashboard">
+        <div className="error-container" style={{
+          padding: '40px',
+          textAlign: 'center',
+          color: '#e74c3c'
+        }}>
+          <h3>Błąd ładowania danych</h3>
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: '20px',
+              padding: '10px 20px',
+              backgroundColor: '#3498db',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Odśwież stronę
+          </button>
         </div>
       </div>
     )
@@ -145,18 +344,30 @@ const AnalyticsDashboard = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards z rzeczywistymi danymi */}
       <div className="kpi-section">
-        <h3>Kluczowe Wskaźniki Wydajności</h3>
+        <h3>Kluczowe Wskaźniki Wydajności 
+          {financeTransactions.length > 0 ? (
+            <span style={{fontSize: '0.8rem', color: '#27ae60', marginLeft: '10px'}}>
+              (dane rzeczywiste)
+            </span>
+          ) : (
+            <span style={{fontSize: '0.8rem', color: '#f39c12', marginLeft: '10px'}}>
+              (dane przykładowe)
+            </span>
+          )}
+        </h3>
         <div className="kpi-grid">
           <div className="kpi-card revenue">
             <div className="kpi-icon">💰</div>
             <div className="kpi-content">
               <div className="kpi-value">
-                {safeFormatCurrency(892000)}
+                {safeFormatCurrency(realKPIs.totalRevenue)}
               </div>
-              <div className="kpi-label">Przychód roczny</div>
-              <div className="kpi-trend positive">+12.5%</div>
+              <div className="kpi-label">Przychód całkowity</div>
+              <div className={`kpi-trend ${realKPIs.revenueTrend >= 0 ? 'positive' : 'negative'}`}>
+                {realKPIs.revenueTrend >= 0 ? '+' : ''}{realKPIs.revenueTrend.toFixed(1)}%
+              </div>
             </div>
           </div>
           
@@ -164,28 +375,34 @@ const AnalyticsDashboard = () => {
             <div className="kpi-icon">📈</div>
             <div className="kpi-content">
               <div className="kpi-value">
-                {safeFormatCurrency(215000)}
+                {safeFormatCurrency(realKPIs.netProfit)}
               </div>
               <div className="kpi-label">Zysk netto</div>
-              <div className="kpi-trend positive">+8.2%</div>
+              <div className={`kpi-trend ${realKPIs.netProfit >= 0 ? 'positive' : 'negative'}`}>
+                {realKPIs.netProfit >= 0 ? '+' : ''}{realKPIs.profitMargin >= 0 ? '+' : ''}{realKPIs.profitMargin.toFixed(1)}%
+              </div>
             </div>
           </div>
           
           <div className="kpi-card margin">
             <div className="kpi-icon">⚖️</div>
             <div className="kpi-content">
-              <div className="kpi-value">24.1%</div>
+              <div className="kpi-value">{realKPIs.profitMargin.toFixed(1)}%</div>
               <div className="kpi-label">Marża zysku</div>
-              <div className="kpi-trend positive">+2.4%</div>
+              <div className={`kpi-trend ${realKPIs.profitMargin >= 0 ? 'positive' : 'negative'}`}>
+                {realKPIs.profitMargin >= 0 ? 'Dodatnia' : 'Ujemna'}
+              </div>
             </div>
           </div>
 
           <div className="kpi-card efficiency">
             <div className="kpi-icon">🌾</div>
             <div className="kpi-content">
-              <div className="kpi-value">6</div>
+              <div className="kpi-value">{realKPIs.activeFields}</div>
               <div className="kpi-label">Aktywne pola</div>
-              <div className="kpi-trend neutral">0%</div>
+              <div className="kpi-trend neutral">
+                {realKPIs.totalArea > 0 ? `${realKPIs.totalArea.toFixed(1)} ha` : '0 ha'}
+              </div>
             </div>
           </div>
         </div>
@@ -213,7 +430,8 @@ const AnalyticsDashboard = () => {
         <div className="chart-row">
           <div className="chart-card">
             <h4>Wydajność pól</h4>
-            <BarChart data={dashboardData.productivity} />
+            <div className="chart-card-content"></div>
+             <FieldYieldChart />
           </div>
           
           <div className="chart-card">
@@ -247,9 +465,6 @@ const AnalyticsDashboard = () => {
   )
 }
 
-// Komponenty pomocnicze pozostają bez zmian...
-// (CostStructureChart, BarChart, HealthChart)
-
 // --- Komponenty Pomocnicze ---
 
 // Wykres słupkowy poziomy dla struktury kosztów (korzysta z Recharts)
@@ -264,6 +479,7 @@ const CostStructureChart = ({ data, formatCurrency }) => {
       <div style={{ 
         height: '300px', 
         display: 'flex', 
+        flexDirection: 'column',
         alignItems: 'center', 
         justifyContent: 'center', 
         color: '#999',
@@ -271,7 +487,11 @@ const CostStructureChart = ({ data, formatCurrency }) => {
         borderRadius: '8px',
         border: '1px dashed #ddd'
       }}>
-        Brak danych kosztowych
+        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📊</div>
+        <div>Brak danych kosztowych</div>
+        <div style={{ fontSize: '0.8rem', marginTop: '5px', color: '#bbb' }}>
+          Dodaj transakcje wydatków w module Finanse
+        </div>
       </div>
     );
   }
@@ -290,6 +510,9 @@ const CostStructureChart = ({ data, formatCurrency }) => {
           <p style={{ color: payload[0].payload.fill || '#e74c3c' }}>
             Koszt: {formatCurrency ? formatCurrency(payload[0].value) : payload[0].value}
           </p>
+          <p style={{ color: '#7f8c8d', fontSize: '0.85rem', marginTop: '3px' }}>
+            {payload[0].payload.percentage}% wszystkich kosztów
+          </p>
         </div>
       );
     }
@@ -298,7 +521,27 @@ const CostStructureChart = ({ data, formatCurrency }) => {
 
   return (
     <div style={{ width: '100%', height: '350px', minHeight: '350px' }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '10px',
+        padding: '0 10px'
+      }}>
+        <h4 style={{ margin: 0, fontSize: '1rem', color: '#2c3e50' }}>
+          Rozkład kosztów
+          <span style={{ 
+            fontSize: '0.8rem', 
+            color: '#7f8c8d', 
+            marginLeft: '10px',
+            fontWeight: 'normal'
+          }}>
+            ({sortedData.length} kategorii)
+          </span>
+        </h4>
+      </div>
+      
+      <ResponsiveContainer width="100%" height="90%">
         <RechartsBarChart
           layout="vertical"
           data={sortedData}
@@ -307,7 +550,7 @@ const CostStructureChart = ({ data, formatCurrency }) => {
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eee" />
           <XAxis 
             type="number" 
-            tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+            tickFormatter={(value) => `${(value / 1000).toFixed(0)}k zł`}
             tick={{ fontSize: 11, fill: '#666' }}
           />
           <YAxis 
@@ -329,7 +572,6 @@ const CostStructureChart = ({ data, formatCurrency }) => {
   );
 };
 
-// Lokalny komponent BarChart (prosty HTML/CSS)
 // Lokalny komponent BarChart dla wydajności pól
 const BarChart = ({ data = [] }) => {
   // Jeśli brak danych, pokaż placeholder
@@ -338,6 +580,7 @@ const BarChart = ({ data = [] }) => {
       <div style={{ 
         height: '300px', 
         display: 'flex', 
+        flexDirection: 'column',
         alignItems: 'center', 
         justifyContent: 'center', 
         color: '#999',
@@ -345,7 +588,11 @@ const BarChart = ({ data = [] }) => {
         borderRadius: '8px',
         border: '1px dashed #ddd'
       }}>
-        Brak danych o wydajności pól
+        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🌾</div>
+        <div>Brak danych o wydajności pól</div>
+        <div style={{ fontSize: '0.8rem', marginTop: '5px', color: '#bbb' }}>
+          Dodaj pola w module Pola
+        </div>
       </div>
     );
   }
@@ -596,33 +843,134 @@ const BarChart = ({ data = [] }) => {
   );
 };
 
+// W AnalyticsDashboard.jsx - zaktualizuj komponent HealthChart
 const HealthChart = ({ data = {} }) => {
   const healthIndex = data.healthIndex || 0;
   const commonIssues = data.commonIssues || [];
-  
+  const healthDistribution = data.healthDistribution || {};
+  const totalAnimals = data.totalAnimals || 0;
+  const sickAnimals = data.sickAnimals || 0;
+  const healthyAnimals = totalAnimals - sickAnimals;
+
+  // Mapowanie statusów zdrowia na klasy CSS
+  const getHealthDotClass = (status) => {
+    const statusMap = {
+      'zdrowy': 'healthy',
+      'chory': 'sick',
+      'w leczeniu': 'treating',
+      'w kwarantannie': 'quarantine',
+      'krytyczny': 'critical',
+      'nieznany': 'unknown'
+    };
+    return statusMap[status.toLowerCase()] || 'unknown';
+  };
+
+  // Mapowanie severity na klasy CSS
+  const getIssueSeverityClass = (severity) => {
+    return severity || 'medium';
+  };
+
+  // Określenie klasy dla wskaźnika zdrowia
+  const getHealthScoreClass = () => {
+    if (healthIndex >= 80) return 'excellent';
+    if (healthIndex >= 60) return 'good';
+    if (healthIndex >= 40) return 'poor';
+    return 'critical';
+  };
+
+  // Przygotowanie danych dla wykresu
+  const chartData = Object.entries(healthDistribution)
+    .filter(([status, count]) => count > 0)
+    .map(([status, count]) => ({
+      name: status.charAt(0).toUpperCase() + status.slice(1),
+      value: count,
+      percentage: totalAnimals > 0 ? Math.round((count / totalAnimals) * 100) : 0,
+      dotClass: getHealthDotClass(status)
+    }));
+
+  // Jeśli nie ma danych o zwierzętach
+  if (totalAnimals === 0) {
+    return (
+      <div className="no-animals-data">
+        <div className="no-animals-icon">🐮</div>
+        <div className="no-animals-text">Brak danych o zwierzętach</div>
+        <div className="no-animals-subtext">
+          Dodaj zwierzęta w module Zwierzęta
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="health-chart">
-      <div className="health-score">
-        <div className="score-value">{healthIndex}%</div>
-        <div className="score-label">Wskaźnik zdrowia</div>
+    <div className="compact-health-chart">
+      <div className="health-score-compact">
+        <div className={`score-value-compact ${getHealthScoreClass()}`}>
+          {healthIndex}%
+        </div>
+        <div className="score-label-compact">
+          Wskaźnik zdrowia stada
+        </div>
+        <div className="health-stats-compact">
+          <span className="total-animals">🐄 {totalAnimals} zwierząt</span>
+          <span className={sickAnimals > 0 ? 'sick-animals' : 'healthy-animals'}>
+            {sickAnimals > 0 ? '⚠️' : '✓'} {sickAnimals} chorych
+          </span>
+        </div>
       </div>
-      <div className="health-issues">
-        {commonIssues.map((issue, index) => (
-          <div key={index} className="health-issue">
-            <span>{issue.issue || `Problem ${index + 1}`}</span>
-            <span>{issue.count || 0} przypadków</span>
+      
+      {/* Prosty wykres rozkładu zdrowia */}
+      {chartData.length > 0 && (
+        <div className="health-distribution-compact">
+          <div className="health-distribution-title">
+            Rozkład zdrowia:
           </div>
-        ))}
-        
-        {commonIssues.length === 0 && (
-          <div className="health-issue" style={{ color: '#27ae60', fontWeight: '600' }}>
-            <span>Brak poważnych problemów zdrowotnych</span>
-            <span>👍</span>
+          
+          <div className="health-distribution-list">
+            {chartData.map((item, index) => (
+              <div key={index} className="health-distribution-item-compact">
+                <div className={`health-dot ${item.dotClass}`}></div>
+                <div className="health-item-name">
+                  {item.name}
+                </div>
+                <div className="health-item-count">
+                  {item.value}
+                </div>
+                <div className="health-item-percentage">
+                  {item.percentage}%
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Lista problemów zdrowotnych */}
+      {commonIssues.length > 0 && (
+        <div className="health-issues-compact">
+          <div className="health-issues-title">
+            Problemy:
+          </div>
+          
+          <div className="health-issues-list">
+            {commonIssues.map((issue, index) => (
+              <div key={index} className="health-issue-item">
+                <span className="issue-name">
+                  {issue.issue}
+                </span>
+                <span className={`issue-count ${getIssueSeverityClass(issue.severity)}`}>
+                  {issue.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
+// Eksport domyślny - TYLKO AnalyticsDashboard
 export default AnalyticsDashboard;
+
+// Jeśli potrzebujesz eksportować inne komponenty, dodaj:
+// export { CostStructureChart, BarChart, HealthChart };

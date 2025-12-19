@@ -1,0 +1,308 @@
+/* FieldYieldChart.css - Style dla komponentu wewnątrz chart-card */
+
+/* Header - dopasowany do chart-card */
+.field-yield-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-right {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.stat-badge {
+  padding: 8px 15px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 120px;
+}
+
+.total-plon {
+  background-color: #e8f5e9;
+  border-left: 3px solid #4caf50;
+}
+
+.average-plon {
+  background-color: #e3f2fd;
+  border-left: 3px solid #2196f3;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 16px;
+  color: #333;
+}
+
+/* Obszar wykresu - wypełnia chart-card */
+.chart-wrapper {
+  height: 220px;
+  min-height: 220px;
+  position: relative;
+  margin-bottom: 10px;
+}
+
+/* Stopka wykresu */
+.chart-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 0.75rem;
+}
+
+/* Legend dla upraw */
+.crop-legend {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  width: 100%;
+}
+
+.legend-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.legend-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.crop-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.crop-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Tooltip */
+.field-yield-tooltip {
+  background-color: white;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 280px;
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+.tooltip-field-name {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 6px;
+}
+
+.tooltip-crop-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.tooltip-row {
+  margin: 6px 0;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tooltip-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.tooltip-value {
+  font-weight: 600;
+}
+
+.tooltip-value.has-data {
+  color: #2e7d32;
+  font-size: 0.9rem;
+}
+
+.tooltip-value.no-data {
+  color: #95a5a6;
+}
+
+.no-yield-warning {
+  background-color: #fff3e0;
+  color: #ef6c00;
+  padding: 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-top: 8px;
+  text-align: center;
+  border: 1px solid #ffcc80;
+}
+
+.tooltip-date {
+  font-size: 0.7rem;
+  color: #95a5a6;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed #e0e0e0;
+  text-align: center;
+}
+
+/* Stany ładowania i błędu */
+.field-yield-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #7f8c8d;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #4caf50;
+  border-radius: 50%;
+  animation: spin 1.5s linear infinite;
+  margin-bottom: 15px;
+}
+
+.loading-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.loading-subtext {
+  font-size: 0.75rem;
+  color: #95a5a6;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.field-yield-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #e74c3c;
+  text-align: center;
+  padding: 20px;
+}
+
+.error-icon {
+  font-size: 2rem;
+  margin-bottom: 15px;
+}
+
+.error-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: #c53030;
+}
+
+.error-message {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  margin-bottom: 20px;
+  max-width: 250px;
+  line-height: 1.4;
+}
+
+.retry-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.8rem;
+}
+
+.retry-button:hover {
+  background-color: #2980b9;
+}
+
+/* Animacje */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+  .field-yield-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .header-right {
+    align-items: flex-start;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .stat-badge {
+    flex: 1;
+    min-width: calc(50% - 3px);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+  }
+  
+  .chart-wrapper {
+    height: 180px;
+  }
+  
+  .chart-footer {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .crop-legend {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-wrapper {
+    height: 150px;
+  }
+}

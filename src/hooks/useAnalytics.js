@@ -165,15 +165,97 @@ export const useAnalytics = () => {
     }
   }, [data.fields, data.field_yields, data.field_costs, data.field_status])
 
-  const animalAnalytics = useMemo(() => {
-    const animals = data.animals || []
-    const transactions = data.transactions || []
-    return {
-      totalAnimals: animals.length,
-      health: { healthIndex: 95 }, 
-      costs: analyzeAnimalCosts(transactions, animals)
+ // W sekcji animalAnalytics w useAnalytics.js - ZASTĄP obecną sekcję:
+
+const animalAnalytics = useMemo(() => {
+  const animals = data.animals || []
+  const transactions = data.transactions || []
+  
+  // Pobierz statystyki zdrowia ze zwierząt
+  let healthStats = { 
+    healthIndex: 100, 
+    commonIssues: [], 
+    healthDistribution: {},
+    sickAnimals: 0,
+    totalAnimals: 0
+  };
+  
+  // Jeśli mamy dane zwierząt, oblicz statystyki
+  if (animals.length > 0) {
+    // Zliczanie statusów zdrowia
+    const healthDistribution = {
+      'zdrowy': 0,
+      'chory': 0,
+      'w leczeniu': 0,
+      'w kwarantannie': 0,
+      'krytyczny': 0,
+      'nieznany': 0
+    };
+    
+    animals.forEach(animal => {
+      let healthStatus = (animal.health || 'nieznany').toLowerCase();
+      
+      // Normalizacja statusów
+      if (healthStatus.includes('zdrow')) healthDistribution['zdrowy']++;
+      else if (healthStatus.includes('chor')) healthDistribution['chory']++;
+      else if (healthStatus.includes('leczen')) healthDistribution['w leczeniu']++;
+      else if (healthStatus.includes('kwarantann')) healthDistribution['w kwarantannie']++;
+      else if (healthStatus.includes('krytycz')) healthDistribution['krytyczny']++;
+      else healthDistribution['nieznany']++;
+    });
+    
+    // Oblicz wskaźnik zdrowia
+    const weights = {
+      'zdrowy': 100,
+      'chory': 40,
+      'w leczeniu': 60,
+      'w kwarantannie': 30,
+      'krytyczny': 10,
+      'nieznany': 50
+    };
+    
+    let weightedSum = 0;
+    Object.entries(healthDistribution).forEach(([status, count]) => {
+      weightedSum += count * weights[status];
+    });
+    
+    const healthIndex = animals.length > 0 ? Math.round(weightedSum / animals.length) : 100;
+    
+    // Przygotuj listę problemów
+    const commonIssues = [];
+    if (healthDistribution['krytyczny'] > 0) {
+      commonIssues.push({
+        issue: 'Zwierzęta w stanie krytycznym',
+        count: healthDistribution['krytyczny'],
+        severity: 'critical'
+      });
     }
-  }, [data.animals, data.transactions])
+    if (healthDistribution['chory'] > 0) {
+      commonIssues.push({
+        issue: 'Zwierzęta chore',
+        count: healthDistribution['chory'],
+        severity: 'high'
+      });
+    }
+    
+    healthStats = {
+      healthIndex,
+      commonIssues,
+      healthDistribution,
+      sickAnimals: healthDistribution['chory'] + 
+                  healthDistribution['w leczeniu'] + 
+                  healthDistribution['w kwarantannie'] + 
+                  healthDistribution['krytyczny'],
+      totalAnimals: animals.length
+    };
+  }
+  
+  return {
+    totalAnimals: animals.length,
+    health: healthStats,
+    costs: analyzeAnimalCosts(transactions, animals)
+  }
+}, [data.animals, data.transactions])
 
   const alerts = useMemo(() => {
     const newAlerts = []
