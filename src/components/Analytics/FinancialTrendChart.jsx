@@ -208,6 +208,14 @@ const FinancialTrendChart = ({ data, formatCurrency }) => {
           />
         </ComposedChart>
       </ResponsiveContainer>
+      <div className="chart-header">
+
+  
+  <p style={{ fontSize: '0.75rem', color: '#7f8c8d', margin: '5px 0 15px 0' }}>
+    <span style={{ marginRight: '5px', verticalAlign: 'middle' }}></span>
+    Linia trendu: średnia z 3 miesięcy (wygładza skoki sezonowe).
+  </p>
+</div>
     </div>
   );
 };

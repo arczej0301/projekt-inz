@@ -19,7 +19,9 @@ const COLLECTIONS = {
   GARAGE: 'garage',
   FIELD_YIELDS: 'field_yields',
   FIELD_COSTS: 'field_costs',
-  FIELD_STATUS: 'field_status' // 1. DODANO KOLEKCJĘ STATUSÓW
+  FIELD_STATUS: 'field_status',
+  REPAIRS: 'repairs', // DODANO KOLEKCJĘ NAPRAW
+  WAREHOUSE_HISTORY: 'warehouseHistory' // DODANO HISTORIĘ MAGAZYNU
 }
 
 export const useAnalytics = () => {
@@ -55,7 +57,9 @@ export const useAnalytics = () => {
           
           // Specyficzne mapowania kluczy dla wygody
           if (key === 'finance_transactions') key = 'transactions'
-          if (key === 'field_status') key = 'field_status' // Upewniamy się, że klucz jest poprawny
+          if (key === 'field_status') key = 'field_status'
+          if (key === 'warehouse_history') key = 'warehouseHistory'
+          if (key === 'repairs') key = 'repairs'
 
           if (result.status === 'fulfilled') {
             collectedData[key] = result.value
@@ -109,9 +113,9 @@ export const useAnalytics = () => {
     const fields = data.fields || []
     const fieldYields = data.field_yields || []
     const fieldCosts = data.field_costs || []
-    const fieldStatuses = data.field_status || [] // 2. Pobieramy statusy
+    const fieldStatuses = data.field_status || []
 
-    // Logika Crop Performance (wklejona z poprzedniej odpowiedzi)
+    // Logika Crop Performance
     const cropMap = {}
     fields.forEach(field => {
       const cropName = field.crop || 'Nieprzypisane'
@@ -158,104 +162,111 @@ export const useAnalytics = () => {
     return {
       totalFields: fields.length,
       totalArea: fields.reduce((sum, f) => sum + (parseFloat(f.area) || 0), 0),
-      // 3. Przekazujemy fieldStatuses do funkcji analizującej
       productivity: analyzeFieldProductivity(fields, fieldYields, fieldStatuses),
       soilEfficiency: analyzeSoilEfficiency(fields),
       cropPerformance: cropPerformance
     }
   }, [data.fields, data.field_yields, data.field_costs, data.field_status])
 
- // W sekcji animalAnalytics w useAnalytics.js - ZASTĄP obecną sekcję:
-
-const animalAnalytics = useMemo(() => {
-  const animals = data.animals || []
-  const transactions = data.transactions || []
-  
-  // Pobierz statystyki zdrowia ze zwierząt
-  let healthStats = { 
-    healthIndex: 100, 
-    commonIssues: [], 
-    healthDistribution: {},
-    sickAnimals: 0,
-    totalAnimals: 0
-  };
-  
-  // Jeśli mamy dane zwierząt, oblicz statystyki
-  if (animals.length > 0) {
-    // Zliczanie statusów zdrowia
-    const healthDistribution = {
-      'zdrowy': 0,
-      'chory': 0,
-      'w leczeniu': 0,
-      'w kwarantannie': 0,
-      'krytyczny': 0,
-      'nieznany': 0
+  const animalAnalytics = useMemo(() => {
+    const animals = data.animals || []
+    const transactions = data.transactions || []
+    
+    // Pobierz statystyki zdrowia ze zwierząt
+    let healthStats = { 
+      healthIndex: 100, 
+      commonIssues: [], 
+      healthDistribution: {},
+      sickAnimals: 0,
+      totalAnimals: 0
     };
     
-    animals.forEach(animal => {
-      let healthStatus = (animal.health || 'nieznany').toLowerCase();
+    // Jeśli mamy dane zwierząt, oblicz statystyki
+    if (animals.length > 0) {
+      // Zliczanie statusów zdrowia
+      const healthDistribution = {
+        'zdrowy': 0,
+        'chory': 0,
+        'w leczeniu': 0,
+        'w kwarantannie': 0,
+        'krytyczny': 0,
+        'nieznany': 0
+      };
       
-      // Normalizacja statusów
-      if (healthStatus.includes('zdrow')) healthDistribution['zdrowy']++;
-      else if (healthStatus.includes('chor')) healthDistribution['chory']++;
-      else if (healthStatus.includes('leczen')) healthDistribution['w leczeniu']++;
-      else if (healthStatus.includes('kwarantann')) healthDistribution['w kwarantannie']++;
-      else if (healthStatus.includes('krytycz')) healthDistribution['krytyczny']++;
-      else healthDistribution['nieznany']++;
-    });
-    
-    // Oblicz wskaźnik zdrowia
-    const weights = {
-      'zdrowy': 100,
-      'chory': 40,
-      'w leczeniu': 60,
-      'w kwarantannie': 30,
-      'krytyczny': 10,
-      'nieznany': 50
-    };
-    
-    let weightedSum = 0;
-    Object.entries(healthDistribution).forEach(([status, count]) => {
-      weightedSum += count * weights[status];
-    });
-    
-    const healthIndex = animals.length > 0 ? Math.round(weightedSum / animals.length) : 100;
-    
-    // Przygotuj listę problemów
-    const commonIssues = [];
-    if (healthDistribution['krytyczny'] > 0) {
-      commonIssues.push({
-        issue: 'Zwierzęta w stanie krytycznym',
-        count: healthDistribution['krytyczny'],
-        severity: 'critical'
+      animals.forEach(animal => {
+        let healthStatus = (animal.health || 'nieznany').toLowerCase();
+        
+        // Normalizacja statusów
+        if (healthStatus.includes('zdrow')) healthDistribution['zdrowy']++;
+        else if (healthStatus.includes('chor')) healthDistribution['chory']++;
+        else if (healthStatus.includes('leczen')) healthDistribution['w leczeniu']++;
+        else if (healthStatus.includes('kwarantann')) healthDistribution['w kwarantannie']++;
+        else if (healthStatus.includes('krytycz')) healthDistribution['krytyczny']++;
+        else healthDistribution['nieznany']++;
       });
-    }
-    if (healthDistribution['chory'] > 0) {
-      commonIssues.push({
-        issue: 'Zwierzęta chore',
-        count: healthDistribution['chory'],
-        severity: 'high'
+      
+      // Oblicz wskaźnik zdrowia
+      const weights = {
+        'zdrowy': 100,
+        'chory': 40,
+        'w leczeniu': 60,
+        'w kwarantannie': 30,
+        'krytyczny': 10,
+        'nieznany': 50
+      };
+      
+      let weightedSum = 0;
+      Object.entries(healthDistribution).forEach(([status, count]) => {
+        weightedSum += count * weights[status];
       });
+      
+      const healthIndex = animals.length > 0 ? Math.round(weightedSum / animals.length) : 100;
+      
+      // Przygotuj listę problemów
+      const commonIssues = [];
+      if (healthDistribution['krytyczny'] > 0) {
+        commonIssues.push({
+          issue: 'Zwierzęta w stanie krytycznym',
+          count: healthDistribution['krytyczny'],
+          severity: 'critical'
+        });
+      }
+      if (healthDistribution['chory'] > 0) {
+        commonIssues.push({
+          issue: 'Zwierzęta chore',
+          count: healthDistribution['chory'],
+          severity: 'high'
+        });
+      }
+      
+      healthStats = {
+        healthIndex,
+        commonIssues,
+        healthDistribution,
+        sickAnimals: healthDistribution['chory'] + 
+                    healthDistribution['w leczeniu'] + 
+                    healthDistribution['w kwarantannie'] + 
+                    healthDistribution['krytyczny'],
+        totalAnimals: animals.length
+      };
     }
     
-    healthStats = {
-      healthIndex,
-      commonIssues,
-      healthDistribution,
-      sickAnimals: healthDistribution['chory'] + 
-                  healthDistribution['w leczeniu'] + 
-                  healthDistribution['w kwarantannie'] + 
-                  healthDistribution['krytyczny'],
-      totalAnimals: animals.length
-    };
-  }
-  
-  return {
-    totalAnimals: animals.length,
-    health: healthStats,
-    costs: analyzeAnimalCosts(transactions, animals)
-  }
-}, [data.animals, data.transactions])
+    return {
+      totalAnimals: animals.length,
+      health: healthStats,
+      costs: analyzeAnimalCosts(transactions, animals)
+    }
+  }, [data.animals, data.transactions])
+
+  // Analizuj WSZYSTKIE koszty z różnych źródeł
+  const completeCostStructure = useMemo(() => {
+    return analyzeCompleteCostStructure(
+      data.transactions || [],
+      data.repairs || [],
+      data.warehouseHistory || [],
+      data.garage || []
+    );
+  }, [data.transactions, data.repairs, data.warehouseHistory, data.garage]);
 
   const alerts = useMemo(() => {
     const newAlerts = []
@@ -271,6 +282,7 @@ const animalAnalytics = useMemo(() => {
     financialAnalytics,
     fieldAnalytics,
     animalAnalytics,
+    completeCostStructure, // DODANO TĘ LINIJKĘ
     warehouseAnalytics: { stockLevels: { lowStock: 0 } },
     equipmentAnalytics: { maintenanceNeeded: 0 },
     alerts,
@@ -313,7 +325,256 @@ const fetchCollectionData = async (collectionName) => {
   }
 }
 
-// 4. ZAKTUALIZOWANA FUNKCJA ANALIZY PÓL
+// Analizuj WSZYSTKIE koszty z różnych źródeł
+const analyzeCompleteCostStructure = (transactions = [], repairs = [], warehouseHistory = [], garageData = []) => {
+  const allCosts = [];
+  
+  // 1. Koszty z transakcji finansowych (expense)
+  const expenseTransactions = transactions.filter(t => t.type === 'expense');
+  
+  expenseTransactions.forEach(transaction => {
+    allCosts.push({
+      source: 'finance',
+      category: transaction.category || 'Inne',
+      subcategory: transaction.budgetCategory || '',
+      amount: parseFloat(transaction.amount) || 0,
+      date: transaction.date,
+      description: transaction.description || '',
+      sourceDetail: transaction.source,
+      transactionId: transaction.id
+    });
+  });
+  
+  // 2. Koszty napraw z modułu garażu
+  if (repairs && repairs.length > 0) {
+    repairs.forEach(repair => {
+      const repairCost = parseFloat(repair.cost) || 0;
+      if (repairCost > 0) {
+        allCosts.push({
+          source: 'garage',
+          category: 'naprawy_konserwacja',
+          subcategory: 'naprawa_maszyny',
+          amount: repairCost,
+          date: repair.date ? (typeof repair.date === 'string' ? new Date(repair.date) : repair.date) : new Date(),
+          description: repair.description || `Naprawa: ${repair.machineName || 'Maszyna'}`,
+          machineId: repair.machineId
+        });
+      }
+    });
+  }
+  
+  // 3. Koszty zakupu materiałów z magazynu
+  if (warehouseHistory && warehouseHistory.length > 0) {
+    const purchaseHistory = warehouseHistory.filter(item => 
+      item.operation === 'purchase' || item.source === 'warehouse_purchase'
+    );
+    
+    purchaseHistory.forEach(purchase => {
+      const quantity = parseFloat(purchase.quantity) || 0;
+      const unitPrice = parseFloat(purchase.unitPrice) || 0;
+      const purchaseCost = quantity * unitPrice;
+      
+      if (purchaseCost > 0) {
+        allCosts.push({
+          source: 'warehouse',
+          category: 'zakup_materialow',
+          subcategory: purchase.category || 'materialy',
+          amount: purchaseCost,
+          date: purchase.timestamp ? (purchase.timestamp.toDate ? purchase.timestamp.toDate() : new Date(purchase.timestamp)) : new Date(),
+          description: `Zakup: ${purchase.productName || 'Produkt'}`,
+          productId: purchase.productId
+        });
+      }
+    });
+  }
+  
+  // 4. Koszty zakupu maszyn z garażu
+  if (garageData && garageData.length > 0) {
+    garageData.forEach(machine => {
+      const purchasePrice = parseFloat(machine.purchasePrice) || parseFloat(machine.price) || 0;
+      if (purchasePrice > 0) {
+        allCosts.push({
+          source: 'garage',
+          category: 'zakup_maszyn',
+          subcategory: 'maszyna',
+          amount: purchasePrice,
+          date: machine.purchaseDate ? (typeof machine.purchaseDate === 'string' ? new Date(machine.purchaseDate) : machine.purchaseDate) : new Date(),
+          description: `Zakup maszyny: ${machine.name || 'Maszyna'}`,
+          machineId: machine.id
+        });
+      }
+    });
+  }
+
+  // Jeśli nie ma kosztów, zwróć pustą tablicę
+  if (allCosts.length === 0) {
+    return {
+      summary: [],
+      totalExpenses: 0,
+      totalTransactions: 0,
+      byMonth: [],
+      bySource: {}
+    };
+  }
+
+  // Grupowanie kosztów po kategorii
+  const categoryTotals = {};
+  
+  allCosts.forEach(cost => {
+    const category = cost.category || 'Inne';
+    const amount = cost.amount || 0;
+    
+    if (!categoryTotals[category]) {
+      categoryTotals[category] = {
+        total: 0,
+        bySource: {},
+        details: []
+      };
+    }
+    
+    categoryTotals[category].total += amount;
+    
+    // Grupowanie po źródle
+    const source = cost.source || 'unknown';
+    if (!categoryTotals[category].bySource[source]) {
+      categoryTotals[category].bySource[source] = 0;
+    }
+    categoryTotals[category].bySource[source] += amount;
+    
+    // Zbieranie szczegółów (maksymalnie 5)
+    if (categoryTotals[category].details.length < 5) {
+      categoryTotals[category].details.push(cost);
+    }
+  });
+  
+  // Obliczanie procentów i przygotowanie danych do wykresu
+  const totalExpenses = Object.values(categoryTotals)
+    .reduce((sum, cat) => sum + cat.total, 0);
+  
+  const summary = Object.entries(categoryTotals)
+    .map(([name, data]) => ({
+      name: formatCategoryName(name),
+      value: parseFloat(data.total.toFixed(2)),
+      percentage: totalExpenses > 0 ? 
+        parseFloat(((data.total / totalExpenses) * 100).toFixed(1)) : 0,
+      bySource: data.bySource,
+      details: data.details,
+      transactionCount: data.details.length,
+      rawCategory: name
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  // Grupowanie miesięczne
+  const byMonth = groupCostsByMonth(allCosts);
+  
+  // Grupowanie po źródle
+  const bySource = groupCostsBySource(allCosts);
+
+  return {
+    summary,
+    totalExpenses,
+    totalTransactions: allCosts.length,
+    byMonth,
+    bySource,
+    allCosts: allCosts.slice(0, 50) // Ostatnie 50 kosztów
+  };
+};
+
+// Formatowanie nazw kategorii
+const formatCategoryName = (category) => {
+  const nameMap = {
+    'naprawy_konserwacja': 'Naprawy i konserwacja',
+    'zakup_materialow': 'Zakup materiałów',
+    'zakup_maszyn': 'Zakup maszyn',
+    'zwierzeta': 'Zwierzęta',
+    'maszyny': 'Maszyny',
+    'zboza': 'Zboża',
+    'nawozy_nasiona': 'Nawozy i nasiona',
+    'pasze': 'Pasze',
+    'paliwo': 'Paliwo',
+    'sprzet_czesci': 'Narzędzia i części',
+    'inne_koszty': 'Inne koszty'
+  };
+  
+  return nameMap[category] || category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' ');
+};
+
+// Grupowanie kosztów miesięcznie
+const groupCostsByMonth = (costs) => {
+  const monthly = {};
+  
+  costs.forEach(cost => {
+    if (!cost.date) return;
+    
+    let date;
+    if (cost.date.toDate) {
+      date = cost.date.toDate();
+    } else if (cost.date instanceof Date) {
+      date = cost.date;
+    } else {
+      date = new Date(cost.date);
+    }
+    
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const monthName = date.toLocaleDateString('pl-PL', { month: 'short', year: 'numeric' });
+    
+    if (!monthly[monthKey]) {
+      monthly[monthKey] = {
+        name: monthName,
+        total: 0,
+        categories: {}
+      };
+    }
+    
+    monthly[monthKey].total += cost.amount;
+    
+    const category = cost.category || 'Inne';
+    if (!monthly[monthKey].categories[category]) {
+      monthly[monthKey].categories[category] = 0;
+    }
+    monthly[monthKey].categories[category] += cost.amount;
+  });
+  
+  return Object.keys(monthly)
+    .sort()
+    .slice(-12) // Ostatnie 12 miesięcy
+    .map(key => ({
+      ...monthly[key],
+      categories: Object.entries(monthly[key].categories)
+        .map(([name, value]) => ({ 
+          name: formatCategoryName(name), 
+          value,
+          rawName: name 
+        }))
+        .sort((a, b) => b.value - a.value)
+    }));
+};
+
+// Grupowanie kosztów po źródle
+const groupCostsBySource = (costs) => {
+  const bySource = {};
+  
+  costs.forEach(cost => {
+    const source = cost.source || 'unknown';
+    if (!bySource[source]) {
+      bySource[source] = {
+        total: 0,
+        categories: {}
+      };
+    }
+    
+    bySource[source].total += cost.amount;
+    
+    const category = cost.category || 'Inne';
+    if (!bySource[source].categories[category]) {
+      bySource[source].categories[category] = 0;
+    }
+    bySource[source].categories[category] += cost.amount;
+  });
+  
+  return bySource;
+};
+
 const analyzeFieldProductivity = (fields, yields, statuses) => {
   return fields.map(f => {
     // a) Znajdź ostatni zbiór
@@ -349,7 +610,6 @@ const analyzeFieldProductivity = (fields, yields, statuses) => {
   })
 }
 
-// Pozostałe niezmienione funkcje pomocnicze...
 const calculateTotalAmount = (transactions, type) => {
   return transactions
     .filter(t => t.type === type)

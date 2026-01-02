@@ -96,34 +96,21 @@ const prepareChartData = (transactions = []) => {
   return dataWithTrend
 }
 
-// Struktura kosztów z rzeczywistych transakcji
-const prepareCostStructure = (transactions = []) => {
-  const expenses = transactions.filter(t => t.type === 'expense')
-  
-  if (expenses.length === 0) return []
-  
-  const categoryTotals = {}
-  
-  expenses.forEach(transaction => {
-    const category = transaction.category || 'Inne'
-    const amount = parseFloat(transaction.amount) || 0
-    
-    if (!categoryTotals[category]) {
-      categoryTotals[category] = 0
-    }
-    
-    categoryTotals[category] += amount
-  })
-  
-  const totalExpenses = Object.values(categoryTotals).reduce((sum, val) => sum + val, 0)
-  
-  return Object.entries(categoryTotals)
-    .map(([name, value]) => ({
-      name,
-      value: parseFloat(value.toFixed(2)),
-      percentage: totalExpenses > 0 ? parseFloat(((value / totalExpenses) * 100).toFixed(1)) : 0
-    }))
-    .sort((a, b) => b.value - a.value)
+// Struktura kosztów z WSZYSTKICH źródeł
+const prepareCostStructure = (completeCostData) => {
+  if (!completeCostData || !completeCostData.summary || completeCostData.summary.length === 0) {
+    console.log('Brak danych kosztowych z różnych źródeł')
+    return []
+  }
+
+  return completeCostData.summary.map(item => ({
+    name: item.name,
+    value: item.value,
+    percentage: item.percentage,
+    bySource: item.bySource,
+    details: item.details,
+    transactionCount: item.transactionCount
+  }))
 }
 
 const AnalyticsDashboard = () => {
@@ -138,7 +125,8 @@ const AnalyticsDashboard = () => {
     loading: analyticsLoading, 
     error: analyticsError,
     alerts: realAlerts,
-    data: analyticsData
+    data: analyticsData,
+    completeCostStructure
   } = useAnalytics()
   
   const { 
@@ -177,77 +165,17 @@ const AnalyticsDashboard = () => {
 
     return {
       financialTrends: prepareChartData(financeTransactions),
-      costStructure: prepareCostStructure(financeTransactions),
+      costStructure: prepareCostStructure(completeCostStructure),
       productivity: fieldAnalytics?.productivity || [],
       healthData: animalAnalytics?.health || {
         healthIndex: 95,
         commonIssues: [],
         healthDistribution: {}
       },
-      alerts: realAlerts || []
+      alerts: realAlerts || [],
+      completeCostData: completeCostStructure
     }
-  }, [financeTransactions, fieldAnalytics, animalAnalytics, realAlerts])
-
-  // Oblicz rzeczywiste KPI z transakcji
-  const realKPIs = useMemo(() => {
-    if (!financeTransactions || financeTransactions.length === 0) {
-      // Fallback do przykładowych wartości
-      return {
-        totalRevenue: 892000,
-        netProfit: 215000,
-        profitMargin: 24.1,
-        revenueTrend: 12.5,
-        monthlyExpenses: 0,
-        activeFields: fieldAnalytics?.totalFields || 0
-      }
-    }
-
-    const summary = getFinancialSummary ? getFinancialSummary() : { totalIncome: 0, totalExpenses: 0, monthlyExpenses: 0 }
-    const totalRevenue = summary.totalIncome || 0
-    const totalExpenses = summary.totalExpenses || 0
-    const netProfit = totalRevenue - totalExpenses
-    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
-    
-    // Oblicz trend (ostatni miesiąc vs poprzedni miesiąc)
-    const currentMonth = new Date().getMonth()
-    const currentYear = new Date().getFullYear()
-    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1
-    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear
-    
-    const currentMonthRevenue = financeTransactions
-      .filter(t => {
-        if (!t.date) return false
-        const date = t.date.toDate ? t.date.toDate() : new Date(t.date)
-        return t.type === 'income' && 
-          date.getMonth() === currentMonth && 
-          date.getFullYear() === currentYear
-      })
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
-    
-    const lastMonthRevenue = financeTransactions
-      .filter(t => {
-        if (!t.date) return false
-        const date = t.date.toDate ? t.date.toDate() : new Date(t.date)
-        return t.type === 'income' && 
-          date.getMonth() === lastMonth && 
-          date.getFullYear() === lastMonthYear
-      })
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
-    
-    const revenueTrend = lastMonthRevenue > 0 
-      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
-      : (currentMonthRevenue > 0 ? 100 : 0)
-    
-    return {
-      totalRevenue,
-      netProfit,
-      profitMargin: parseFloat(profitMargin.toFixed(1)),
-      revenueTrend: parseFloat(revenueTrend.toFixed(1)),
-      monthlyExpenses: summary.monthlyExpenses || 0,
-      activeFields: fieldAnalytics?.totalFields || 0,
-      totalArea: fieldAnalytics?.totalArea || 0
-    }
-  }, [financeTransactions, getFinancialSummary, fieldAnalytics])
+  }, [financeTransactions, fieldAnalytics, animalAnalytics, realAlerts, completeCostStructure])
 
   // Funkcje formatujące
   const safeFormatCurrency = (amount) => {
@@ -260,32 +188,14 @@ const AnalyticsDashboard = () => {
     return `${formatted} zł`
   }
 
-  const timeRangeOptions = [
-    { value: 'week', label: 'Tydzień', icon: '📅' },
-    { value: 'month', label: 'Miesiąc', icon: '📊' },
-    { value: 'quarter', label: 'Kwartał', icon: '📈' },
-    { value: 'year', label: 'Rok', icon: '🎯' }
-  ]
-
-  const viewTypeOptions = [
-    { value: 'overview', label: 'Przegląd', icon: '👁️' },
-    { value: 'detailed', label: 'Szczegółowy', icon: '🔍' }
-  ]
-
   if (isLoading) {
     return (
       <div className="analytics-dashboard">
-        <div className="loading-container" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '400px'
-        }}>
+        <div className="state-container">
           <div className="loading-spinner"></div>
-          <p style={{ marginTop: '20px', color: '#7f8c8d' }}>Ładowanie danych dashboardu...</p>
+          <p className="loading-text">Ładowanie danych dashboardu...</p>
           {financeTransactions.length === 0 && (
-            <p style={{ fontSize: '0.9rem', color: '#95a5a6', marginTop: '10px' }}>
+            <p className="loading-subtext">
               Pierwsze uruchomienie może trwać dłużej
             </p>
           )}
@@ -297,24 +207,12 @@ const AnalyticsDashboard = () => {
   if (error) {
     return (
       <div className="analytics-dashboard">
-        <div className="error-container" style={{
-          padding: '40px',
-          textAlign: 'center',
-          color: '#e74c3c'
-        }}>
+        <div className="state-container error">
           <h3>Błąd ładowania danych</h3>
           <p>{error}</p>
           <button 
             onClick={() => window.location.reload()}
-            style={{
-              marginTop: '20px',
-              padding: '10px 20px',
-              backgroundColor: '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer'
-            }}
+            className="btn-refresh"
           >
             Odśwież stronę
           </button>
@@ -325,88 +223,7 @@ const AnalyticsDashboard = () => {
 
   return (
     <div className="analytics-dashboard">
-      <div className="dashboard-controls">
-        <div className="control-group">
-          <label>Zakres czasowy:</label>
-          <CustomSelect
-            options={timeRangeOptions}
-            value={timeRange}
-            onChange={setTimeRange}
-          />
-        </div>
-        <div className="control-group">
-          <label>Widok:</label>
-          <CustomSelect
-            options={viewTypeOptions}
-            value={viewType}
-            onChange={setViewType}
-          />
-        </div>
-      </div>
-
-      {/* KPI Cards z rzeczywistymi danymi */}
-      <div className="kpi-section">
-        <h3>Kluczowe Wskaźniki Wydajności 
-          {financeTransactions.length > 0 ? (
-            <span style={{fontSize: '0.8rem', color: '#27ae60', marginLeft: '10px'}}>
-              (dane rzeczywiste)
-            </span>
-          ) : (
-            <span style={{fontSize: '0.8rem', color: '#f39c12', marginLeft: '10px'}}>
-              (dane przykładowe)
-            </span>
-          )}
-        </h3>
-        <div className="kpi-grid">
-          <div className="kpi-card revenue">
-            <div className="kpi-icon">💰</div>
-            <div className="kpi-content">
-              <div className="kpi-value">
-                {safeFormatCurrency(realKPIs.totalRevenue)}
-              </div>
-              <div className="kpi-label">Przychód całkowity</div>
-              <div className={`kpi-trend ${realKPIs.revenueTrend >= 0 ? 'positive' : 'negative'}`}>
-                {realKPIs.revenueTrend >= 0 ? '+' : ''}{realKPIs.revenueTrend.toFixed(1)}%
-              </div>
-            </div>
-          </div>
-          
-          <div className="kpi-card profit">
-            <div className="kpi-icon">📈</div>
-            <div className="kpi-content">
-              <div className="kpi-value">
-                {safeFormatCurrency(realKPIs.netProfit)}
-              </div>
-              <div className="kpi-label">Zysk netto</div>
-              <div className={`kpi-trend ${realKPIs.netProfit >= 0 ? 'positive' : 'negative'}`}>
-                {realKPIs.netProfit >= 0 ? '+' : ''}{realKPIs.profitMargin >= 0 ? '+' : ''}{realKPIs.profitMargin.toFixed(1)}%
-              </div>
-            </div>
-          </div>
-          
-          <div className="kpi-card margin">
-            <div className="kpi-icon">⚖️</div>
-            <div className="kpi-content">
-              <div className="kpi-value">{realKPIs.profitMargin.toFixed(1)}%</div>
-              <div className="kpi-label">Marża zysku</div>
-              <div className={`kpi-trend ${realKPIs.profitMargin >= 0 ? 'positive' : 'negative'}`}>
-                {realKPIs.profitMargin >= 0 ? 'Dodatnia' : 'Ujemna'}
-              </div>
-            </div>
-          </div>
-
-          <div className="kpi-card efficiency">
-            <div className="kpi-icon">🌾</div>
-            <div className="kpi-content">
-              <div className="kpi-value">{realKPIs.activeFields}</div>
-              <div className="kpi-label">Aktywne pola</div>
-              <div className="kpi-trend neutral">
-                {realKPIs.totalArea > 0 ? `${realKPIs.totalArea.toFixed(1)} ha` : '0 ha'}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <h3>Kluczowe Wskaźniki Wydajności</h3>
 
       {/* Wykresy */}
       <div className="charts-section">
@@ -416,6 +233,7 @@ const AnalyticsDashboard = () => {
               data={dashboardData.financialTrends}
               formatCurrency={safeFormatCurrency}
             />
+            
           </div>
           
           <div className="chart-card">
@@ -470,27 +288,57 @@ const AnalyticsDashboard = () => {
 // Wykres słupkowy poziomy dla struktury kosztów (korzysta z Recharts)
 const CostStructureChart = ({ data, formatCurrency }) => {
   const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#95a5a6'];
+  const [selectedSource, setSelectedSource] = useState('all');
+  
+  // Filtruj dane według źródła
+  const filteredData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    if (selectedSource === 'all') {
+      return data;
+    }
+    
+    // Filtruj dane według źródła
+    return data
+      .filter(item => item.bySource && item.bySource[selectedSource] > 0)
+      .map(item => ({
+        ...item,
+        value: item.bySource[selectedSource] || 0,
+        percentage: (item.bySource[selectedSource] / 
+          Object.values(item.bySource).reduce((sum, val) => sum + val, 0)) * 100
+      }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [data, selectedSource]);
+
+  // Przygotuj listę źródeł
+  const sources = useMemo(() => {
+    if (!data || data.length === 0) return ['all'];
+    
+    const sourceSet = new Set(['all']);
+    data.forEach(item => {
+      if (item.bySource) {
+        Object.keys(item.bySource).forEach(source => sourceSet.add(source));
+      }
+    });
+    
+    return Array.from(sourceSet);
+  }, [data]);
 
   // Sortowanie danych malejąco
-  const sortedData = data ? [...data].sort((a, b) => (b.value || 0) - (a.value || 0)) : [];
+  const sortedData = filteredData ? [...filteredData].sort((a, b) => (b.value || 0) - (a.value || 0)) : [];
 
   if (!sortedData || sortedData.length === 0) {
     return (
-      <div style={{ 
-        height: '300px', 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        color: '#999',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '8px',
-        border: '1px dashed #ddd'
-      }}>
-        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📊</div>
-        <div>Brak danych kosztowych</div>
-        <div style={{ fontSize: '0.8rem', marginTop: '5px', color: '#bbb' }}>
-          Dodaj transakcje wydatków w module Finanse
+      <div className="empty-state-placeholder cost-chart">
+        <div className="empty-icon large">💰</div>
+        <div className="empty-title">
+          Brak danych kosztowych
+        </div>
+        <div className="empty-subtitle">
+          {selectedSource !== 'all' 
+            ? `Brak kosztów z źródła: ${selectedSource}`
+            : 'Dodaj transakcje wydatków w module Finanse, naprawy w Garażu lub zakupy w Magazynie'}
         </div>
       </div>
     );
@@ -498,76 +346,157 @@ const CostStructureChart = ({ data, formatCurrency }) => {
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      const dataItem = payload[0].payload;
       return (
-        <div style={{ 
-          backgroundColor: 'white', 
-          padding: '10px', 
-          border: '1px solid #ccc', 
-          borderRadius: '5px',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-        }}>
-          <p style={{ fontWeight: 'bold', marginBottom: '5px', color: '#333' }}>{label}</p>
-          <p style={{ color: payload[0].payload.fill || '#e74c3c' }}>
-            Koszt: {formatCurrency ? formatCurrency(payload[0].value) : payload[0].value}
+        <div className="custom-tooltip-container">
+          <p className="tooltip-title">
+            {label}
           </p>
-          <p style={{ color: '#7f8c8d', fontSize: '0.85rem', marginTop: '3px' }}>
-            {payload[0].payload.percentage}% wszystkich kosztów
+          <p className="tooltip-row" style={{ color: payload[0].payload.fill || '#e74c3c' }}>
+            <strong>Koszt:</strong> {formatCurrency ? formatCurrency(payload[0].value) : payload[0].value}
           </p>
+          <p className="tooltip-row" style={{ color: '#7f8c8d' }}>
+            <strong>Procent kosztów:</strong> {dataItem.percentage.toFixed(1)}%
+          </p>
+          
+          {dataItem.bySource && (
+            <div className="tooltip-section">
+              <p className="tooltip-subtitle">Rozkład źródeł:</p>
+              {Object.entries(dataItem.bySource).map(([source, amount], index) => (
+                <div key={index} className="tooltip-detail-row">
+                  <span style={{ color: '#7f8c8d' }}>
+                    {source === 'finance' ? 'Finanse' : 
+                     source === 'garage' ? 'Garaż' : 
+                     source === 'warehouse' ? 'Magazyn' : source}
+                  </span>
+                  <span style={{ fontWeight: '600', color: '#2c3e50' }}>
+                    {formatCurrency ? formatCurrency(amount) : amount}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {dataItem.details && dataItem.details.length > 0 && (
+            <div className="tooltip-section">
+              <p className="tooltip-subtitle">Ostatnie transakcje:</p>
+              {dataItem.details.slice(0, 3).map((detail, index) => (
+                <div key={index} className="tooltip-transaction-item">
+                  <div style={{ color: '#2c3e50' }}>
+                    {detail.description || 'Brak opisu'}
+                  </div>
+                  <div className="tooltip-transaction-date">
+                    {formatCurrency ? formatCurrency(detail.amount) : detail.amount} • 
+                    {detail.date ? new Date(detail.date).toLocaleDateString('pl-PL') : 'Brak daty'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
     return null;
   };
 
+  const totalValue = sortedData.reduce((sum, item) => sum + (item.value || 0), 0);
+  const categoryCount = sortedData.length;
+
   return (
-    <div style={{ width: '100%', height: '350px', minHeight: '350px' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '10px',
-        padding: '0 10px'
-      }}>
-        <h4 style={{ margin: 0, fontSize: '1rem', color: '#2c3e50' }}>
-          Rozkład kosztów
-          <span style={{ 
-            fontSize: '0.8rem', 
-            color: '#7f8c8d', 
-            marginLeft: '10px',
-            fontWeight: 'normal'
-          }}>
-            ({sortedData.length} kategorii)
-          </span>
-        </h4>
+    <div className="cost-chart-wrapper">
+      {/* Nagłówek z filtrami */}
+      <div className="cost-chart-header">
+          <div className="header-subtitle">
+            {categoryCount} kategorii • Łącznie: {formatCurrency ? formatCurrency(totalValue) : totalValue}
+          </div>
+        
+        
+        {/* Filtry źródeł */}
+        <div className="cost-filters">
+          <span className="filter-label">Źródło:</span>
+          <div className="filter-buttons">
+            {sources.map(source => (
+              <button
+                key={source}
+                onClick={() => setSelectedSource(source)}
+                className={`source-btn ${selectedSource === source ? 'active' : ''}`}
+              >
+                {source === 'all' ? 'Wszystkie' : 
+                 source === 'finance' ? 'Finanse' : 
+                 source === 'garage' ? 'Garaż' : 
+                 source === 'warehouse' ? 'Magazyn' : source}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       
-      <ResponsiveContainer width="100%" height="90%">
+      {/* Wykres */}
+      <ResponsiveContainer width="100%" height="85%">
         <RechartsBarChart
           layout="vertical"
           data={sortedData}
-          margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+          margin={{ top: 5, right: 30, left: 120, bottom: 15 }}
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eee" />
           <XAxis 
             type="number" 
-            tickFormatter={(value) => `${(value / 1000).toFixed(0)}k zł`}
+            tickFormatter={(value) => {
+              if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M zł`;
+              if (value >= 1000) return `${(value / 1000).toFixed(0)}k zł`;
+              return `${value} zł`;
+            }}
             tick={{ fontSize: 11, fill: '#666' }}
+            label={{ 
+              value: 'Kwota (zł)', 
+              position: 'insideBottom', 
+              offset: -5,
+              fontSize: 11,
+              fill: '#7f8c8d'
+            }}
           />
           <YAxis 
             dataKey="name" 
             type="category" 
-            width={120} 
+            width={115}
             tick={{ fontSize: 11, fill: '#666' }}
             interval={0}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
-          <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+          <Bar 
+            dataKey="value" 
+            radius={[0, 4, 4, 0]} 
+            barSize={24}
+            animationDuration={1500}
+            animationBegin={300}
+          >
             {sortedData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell 
+                key={`cell-${index}`} 
+                fill={COLORS[index % COLORS.length]}
+                strokeWidth={1}
+                stroke="#fff"
+              />
             ))}
           </Bar>
         </RechartsBarChart>
       </ResponsiveContainer>
+      
+      {/* Legenda procentowa na dole */}
+      <div className="cost-chart-legend">
+        {sortedData.slice(0, 5).map((item, index) => (
+          <div key={index} className="legend-item">
+            <div 
+              className="legend-color-box"
+              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+            ></div>
+            <span className="legend-text">{item.name}:</span>
+            <span className="legend-percent">
+              {item.percentage.toFixed(1)}%
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -577,20 +506,10 @@ const BarChart = ({ data = [] }) => {
   // Jeśli brak danych, pokaż placeholder
   if (!data || data.length === 0) {
     return (
-      <div style={{ 
-        height: '300px', 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        color: '#999',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '8px',
-        border: '1px dashed #ddd'
-      }}>
-        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🌾</div>
+      <div className="empty-state-placeholder yield-chart">
+        <div className="empty-icon">🌾</div>
         <div>Brak danych o wydajności pól</div>
-        <div style={{ fontSize: '0.8rem', marginTop: '5px', color: '#bbb' }}>
+        <div className="empty-subtitle" style={{ marginTop: '5px' }}>
           Dodaj pola w module Pola
         </div>
       </div>
@@ -606,74 +525,34 @@ const BarChart = ({ data = [] }) => {
     : 0;
 
   return (
-    <div style={{ width: '100%', height: '350px' }}>
+    <div className="yield-chart-wrapper">
       {/* Nagłówek z informacjami */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '15px',
-        paddingBottom: '10px',
-        borderBottom: '1px solid #eee'
-      }}>
-        <div>
-          <h4 style={{ margin: 0, fontSize: '1rem', color: '#2c3e50' }}>
+      <div className="yield-header">
+        <div className="yield-header-info">
+          <h4>
             Wydajność wszystkich pól
           </h4>
-          <div style={{ fontSize: '0.8rem', color: '#7f8c8d', marginTop: '4px' }}>
+          <div className="yield-subtitle">
             {data.length} pól • Średnia: {averageEfficiency.toFixed(1)}%
           </div>
         </div>
         
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          gap: '10px',
-          fontSize: '0.8rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ 
-              width: '12px', 
-              height: '12px', 
-              backgroundColor: '#2ecc71',
-              marginRight: '6px',
-              borderRadius: '2px'
-            }}></div>
-            <span style={{ color: '#7f8c8d' }}>Wydajność</span>
+        <div className="yield-legend-mini">
+          <div className="mini-legend-item">
+            <div className="mini-color-box"></div>
+            <span className="mini-label">Wydajność</span>
           </div>
         </div>
       </div>
 
       {/* Kontener wykresu */}
-      <div style={{ 
-        height: '250px', 
-        display: 'flex', 
-        alignItems: 'flex-end',
-        gap: '8px',
-        padding: '0 10px',
-        position: 'relative'
-      }}>
+      <div className="yield-bars-container">
         {/* Linia średniej */}
-        <div style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          height: '2px',
-          backgroundColor: '#e74c3c',
-          top: `${100 - (averageEfficiency / maxEfficiency * 100)}%`,
-          zIndex: 1,
-          opacity: 0.7
-        }}>
-          <div style={{
-            position: 'absolute',
-            right: '10px',
-            top: '-20px',
-            backgroundColor: '#e74c3c',
-            color: 'white',
-            fontSize: '0.7rem',
-            padding: '2px 6px',
-            borderRadius: '3px'
-          }}>
+        <div 
+          className="average-line"
+          style={{ top: `${100 - (averageEfficiency / maxEfficiency * 100)}%` }}
+        >
+          <div className="average-label">
             Średnia: {averageEfficiency.toFixed(1)}%
           </div>
         </div>
@@ -685,112 +564,36 @@ const BarChart = ({ data = [] }) => {
           const isAboveAverage = efficiency > averageEfficiency;
           
           return (
-            <div 
-              key={index} 
-              style={{ 
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                height: '100%',
-                position: 'relative'
-              }}
-            >
+            <div key={index} className="bar-column">
               {/* Kolumna */}
               <div
-                style={{
-                  width: '80%',
-                  height: `${height}%`,
-                  backgroundColor: isAboveAverage ? '#2ecc71' : '#3498db',
-                  backgroundImage: isAboveAverage 
-                    ? 'linear-gradient(to top, #27ae60, #2ecc71)' 
-                    : 'linear-gradient(to top, #2980b9, #3498db)',
-                  borderRadius: '4px 4px 0 0',
-                  position: 'relative',
-                  transition: 'all 0.3s ease',
-                  minHeight: '3px',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
+                className={`bar-visual ${isAboveAverage ? 'above-average' : 'below-average'}`}
+                style={{ height: `${height}%` }}
               >
                 {/* Tooltip na hover */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: '100%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'rgba(0,0,0,0.8)',
-                  color: 'white',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  minWidth: '120px',
-                  textAlign: 'center',
-                  opacity: 0,
-                  pointerEvents: 'none',
-                  transition: 'opacity 0.2s',
-                  zIndex: 10,
-                  whiteSpace: 'nowrap',
-                  marginBottom: '8px'
-                }} className="bar-tooltip">
-                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                <div className="bar-tooltip">
+                  <div className="tooltip-header">
                     {item.name || `Pole ${index + 1}`}
                   </div>
                   <div>Wydajność: {efficiency.toFixed(1)}%</div>
-                  <div style={{ 
-                    fontSize: '0.7rem', 
-                    marginTop: '4px',
-                    color: isAboveAverage ? '#2ecc71' : '#e74c3c'
-                  }}>
+                  <div className={`tooltip-status ${isAboveAverage ? 'status-good' : 'status-bad'}`}>
                     {isAboveAverage ? 'Powyżej średniej' : 'Poniżej średniej'}
                   </div>
                 </div>
                 
                 {/* Wartość na kolumnie */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-25px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  fontSize: '0.75rem',
-                  fontWeight: 'bold',
-                  color: '#2c3e50',
-                  opacity: 0.8
-                }}>
+                <div className="bar-value">
                   {efficiency.toFixed(0)}%
                 </div>
               </div>
               
               {/* Podpis pola */}
-              <div style={{
-                marginTop: '8px',
-                fontSize: '0.8rem',
-                color: '#7f8c8d',
-                textAlign: 'center',
-                fontWeight: '600',
-                maxWidth: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                padding: '0 4px'
-              }}>
+              <div className="bar-label">
                 {item.name || `Pole ${index + 1}`}
               </div>
               
               {/* Oznaczenie powyżej/poniżej średniej */}
-              <div style={{
-                marginTop: '4px',
-                fontSize: '0.7rem',
-                color: isAboveAverage ? '#27ae60' : '#e74c3c',
-                fontWeight: '600'
-              }}>
+              <div className={`bar-trend ${isAboveAverage ? 'trend-up' : 'trend-down'}`}>
                 {isAboveAverage ? '↑' : '↓'}
               </div>
             </div>
@@ -799,46 +602,16 @@ const BarChart = ({ data = [] }) => {
       </div>
 
       {/* Legenda */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        gap: '20px',
-        marginTop: '15px',
-        paddingTop: '10px',
-        borderTop: '1px solid #eee',
-        fontSize: '0.8rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ 
-            width: '15px', 
-            height: '15px', 
-            backgroundColor: '#2ecc71',
-            marginRight: '6px',
-            borderRadius: '3px'
-          }}></div>
-          <span style={{ color: '#7f8c8d' }}>Powyżej średniej</span>
+      <div className="yield-legend-footer">
+        <div className="footer-legend-item">
+          <div className="footer-color-box good"></div>
+          <span className="mini-label">Powyżej średniej</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ 
-            width: '15px', 
-            height: '15px', 
-            backgroundColor: '#3498db',
-            marginRight: '6px',
-            borderRadius: '3px'
-          }}></div>
-          <span style={{ color: '#7f8c8d' }}>Poniżej średniej</span>
+        <div className="footer-legend-item">
+          <div className="footer-color-box bad"></div>
+          <span className="mini-label">Poniżej średniej</span>
         </div>
       </div>
-
-      {/* Skrypt do pokazywania tooltipów */}
-      <style>{`
-        .bar-tooltip {
-          opacity: 0 !important;
-        }
-        div[style*="cursor: pointer"]:hover .bar-tooltip {
-          opacity: 1 !important;
-        }
-      `}</style>
     </div>
   );
 };
@@ -971,6 +744,3 @@ const HealthChart = ({ data = {} }) => {
 
 // Eksport domyślny - TYLKO AnalyticsDashboard
 export default AnalyticsDashboard;
-
-// Jeśli potrzebujesz eksportować inne komponenty, dodaj:
-// export { CostStructureChart, BarChart, HealthChart };
