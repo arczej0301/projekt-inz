@@ -116,7 +116,7 @@
   font-weight: 500;
 }
 
-.operation-type{
+.operation-type {
   font-size: 0.8rem;
   color: #7f8c8d;
 }
@@ -254,13 +254,7 @@
   font-weight: bold;
 }
 
-.auto-badge {
-  background: #3498db;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-}
+
 
 .no-data {
   text-align: center;
@@ -478,9 +472,27 @@
 
 .control-select {
   padding: 8px 12px;
-  border: 1px solid #bdc3c7;
-  border-radius: 5px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
   background: white;
+  font-size: 0.9rem;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+  max-width: 180px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.control-select:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.control-select:hover {
+  border-color: #adb5bd;
 }
 
 .report-summary {
@@ -720,25 +732,7 @@
   gap: 8px;
 }
 
-.type-badge {
-  padding: 6px 12px;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
 
-.type-badge.income {
-  background: #d5f4e6;
-  color: #27ae60;
-  border: 1px solid #27ae60;
-}
-
-.type-badge.expense {
-  background: #fadbd8;
-  color: #e74c3c;
-  border: 1px solid #e74c3c;
-}
 
 /* Dynamiczny Budżet */
 .budget-summary-cards {
@@ -927,13 +921,6 @@
   font-size: 1rem;
 }
 
-.warehouse-badge {
-  background: #17a2b8;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-}
 
 .form-hint {
   font-size: 0.8rem;
@@ -1097,28 +1084,9 @@
   font-weight: bold;
 }
 
-.manual-badge {
-  background: #6c757d;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 15px;
-  font-size: 0.8rem;
-}
 
-.product-badge {
-  background: #e9ecef;
-  color: #495057;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  display: inline-block;
-}
 
-.product-badge .quantity {
-  color: #6c757d;
-  font-size: 0.8rem;
-  margin-left: 5px;
-}
+
 
 .transaction-description .product-info-small {
   margin-top: 3px;
@@ -1178,7 +1146,343 @@
   border-left: 3px solid #28a745;
 }
 
+/* Informacja o filtrze */
+.filter-info {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  margin-left: 10px;
+  font-style: italic;
+}
+
+/* Period Selector Styles */
+.period-selector {
+  background: white;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.period-selector h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.period-selector p {
+  margin: 5px 0 0 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.finance-page .form-group {
+  padding: 0 20px 0;
+}
+
+.finance-page,
+.finance-content,
+.reports-tab,
+.chart-container,
+.bar-chart {
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+}
+
+.product-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.product-details {
+  flex: 1;
+  min-width: 250px;
+}
+
+.order-preview-side {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  min-width: 200px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.preview-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-row .label {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.preview-row .value {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.amount-positive {
+  color: #28a745;
+  font-weight: 700;
+}
+
+/* SELEKTOR OKRESU - NOWY UKŁAD W JEDNEJ LINII */
+.income-period-selector,
+.expenses-period-selector,
+.period-selector-row {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 30px;
+  border-bottom: 2px solid #f8f9fa;
+}
+
+/* LEWA SEKCJA - TYTUŁ I PRZYCISKI OKRESU W JEDNEJ LINII */
+.period-left-section {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  flex: 1;
+  min-width: 0;
+}
+
+.period-header {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 180px;
+}
+
+.period-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.period-label {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.period-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.period-button {
+  padding: 10px 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: white;
+  color: #495057;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.period-button:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.period-button.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+}
+
+.period-button .period-icon {
+  font-size: 1.1rem;
+}
+
+.period-selector-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  width: 100%;
+  grid-column: 1 / -1; /* Rozciągnij na całą szerokość gridu */
+}
+
+.period-selector-header {
+  flex: 1;
+}
+
+.period-selector-header h3 {
+  margin: 0 0 5px 0;
+  font-size: 1.5rem;
+}
+
+.period-label {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.period-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.period-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 15px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 80px;
+}
+
+.period-button:hover {
+  background: #f5f5f5;
+}
+
+.period-button.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.period-icon {
+  font-size: 1.2rem;
+  margin-bottom: 5px;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+  grid-column: 1 / -1; /* Rozciągnij na całą szerokość gridu */
+}
+
+/* PRAWA SEKCJA - SORTOWANIE I DODAWANIE */
+.period-right-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+/* SEKCJA SORTOWANIA I FILTROWANIA - ZMODYFIKOWANA */
+.sort-filter-section {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.sort-filter-section label {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  margin-right: 5px;
+}
+
+.sort-filter-section .btn-primary {
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  margin-left: 5px;
+}
+
+/* Styl dla braku transakcji w okresie */
+.no-data-with-period {
+  text-align: center;
+  color: #7f8c8d;
+  font-style: italic;
+  padding: 40px 20px;
+  font-size: 1.1rem;
+}
+
+.no-data-with-period::before {
+  content: "📊";
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 15px;
+  opacity: 0.5;
+}
+
 /* Responsywność */
+@media (max-width: 1200px) {
+  .income-period-selector,
+  .expenses-period-selector {
+    gap: 20px;
+  }
+  
+  .period-left-section {
+    gap: 20px;
+  }
+  
+  .period-right-section {
+    gap: 15px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .income-period-selector,
+  .expenses-period-selector {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .period-left-section {
+    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  .period-right-section {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -1276,6 +1580,56 @@
   .preview-row {
     font-size: 0.85rem;
   }
+  
+  /* Responsywność dla nowego układu */
+  .income-period-selector,
+  .expenses-period-selector {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  
+  .period-left-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+    width: 100%;
+  }
+  
+  .period-header {
+    text-align: center;
+    width: 100%;
+  }
+  
+  .period-buttons {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .period-right-section {
+    width: 100%;
+  }
+  
+  .sort-filter-section {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .control-select {
+    flex: 1;
+    min-width: 150px;
+  }
+  
+  .product-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .order-preview-side {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1305,6 +1659,35 @@
     font-size: 1.1rem;
     min-width: 25px;
   }
+  
+  .sort-filter-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .sort-filter-section label {
+    margin-bottom: 5px;
+    text-align: center;
+  }
+  
+  .control-select {
+    width: 100%;
+  }
+  
+  .period-buttons {
+    flex-direction: column;
+  }
+  
+  .period-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .sort-filter-section .btn-primary {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 360px) {
@@ -1328,163 +1711,23 @@
     text-align: left;
     width: 100%;
   }
-}
-
-.finance-page .form-group {
-  padding: 0 20px 0;
-}
-
-.finance-page,
-.finance-content,
-.reports-tab,
-.chart-container,
-.bar-chart {
-  height: auto !important;
-  min-height: auto !important;
-  max-height: none !important;
-}
-
-.product-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 20px;
-    justify-content: space-between;
-    flex-wrap: wrap;
-}
-
-.product-details {
-    flex: 1;
-    min-width: 250px;
-}
-
-.order-preview-side {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 15px;
-    min-width: 200px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.preview-summary {
-    display: flex;
+  
+  .period-selector {
     flex-direction: column;
-    gap: 8px;
-}
-
-.preview-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.preview-row .label {
-    font-weight: 500;
-    color: #495057;
-    font-size: 0.9rem;
-}
-
-.preview-row .value {
-    font-weight: 600;
-    font-size: 1rem;
-}
-
-.amount-positive {
-    color: #28a745;
-    font-weight: 700;
-}
-
-/* Dla mniejszych ekranów */
-@media (max-width: 768px) {
-    .product-header {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .order-preview-side {
-        width: 100%;
-    }
-}
-
-/* SORTOWANIE I FILTROWANIE */
-.sort-filter-section {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-right: 15px;
-}
-
-.control-select {
-  padding: 8px 12px;
-  border: 1px solid #bdc3c7;
-  border-radius: 5px;
-  background: white;
-  font-size: 0.9rem;
-  color: #2c3e50;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.control-select:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-.control-select:hover {
-  border-color: #95a5a6;
-}
-
-/* Informacja o filtrze */
-.filter-info {
-  font-size: 0.8rem;
-  color: #7f8c8d;
-  margin-left: 10px;
-  font-style: italic;
-}
-
-/* Responsywność dla sekcji sortowania */
-@media (max-width: 768px) {
-  .sort-filter-section {
-    order: 2;
-    margin-right: 0;
-    margin-top: 10px;
-    width: 100%;
-    justify-content: flex-start;
+    align-items: stretch;
+    gap: 15px;
   }
   
-  .control-select {
-    flex: 1;
+  .period-buttons {
+    justify-content: center;
   }
   
-  .tab-actions {
-    flex-wrap: wrap;
-  }
-}
-
-@media (max-width: 480px) {
-  .sort-filter-section {
+  .period-buttons {
     flex-direction: column;
-    gap: 5px;
   }
   
-  .control-select {
+  .period-button {
     width: 100%;
+    justify-content: center;
   }
 }
-
-.sort-filter-section {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-right: 15px;
-  flex-wrap: wrap;
-}
-
-.sort-filter-section label {
-  font-weight: 500;
-  color: #2c3e50;
-  font-size: 0.9rem;
-  white-space: nowrap;
-}
-

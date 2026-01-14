@@ -49,15 +49,13 @@ function Dashboard({ farmData, onTabChange }) {
       
       try {
         setLoading(true)
-        
-        // 1. POBIERANIE DANYCH Z BAZY
-        // Używamy getFieldStatusLogs(20) aby pobrać 20 ostatnich zdarzeń historycznych
+        // Równoległe pobieranie danych z 5 niezależnych serwisów
         const [fields, animals, financialSummary, yields, statusHistoryLog] = await Promise.all([
           getFields(),
           getAnimals(),           
           getFinancialSummary(),
           getAllFieldYields(),    
-          getFieldStatusLogs(20) // <--- Pobieramy surową historię z bazy
+          getFieldStatusLogs(20) 
         ])
         
         // 2. Oblicz statystyki

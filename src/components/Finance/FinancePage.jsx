@@ -4,7 +4,7 @@ import { useFinance } from '../../hooks/useFinance'
 import FinanceDashboard from './FinanceDashboard'
 import IncomeTab from './IncomeTab'
 import ExpensesTab from './ExpensesTab'
-import BudgetTab from './BudgetTab'
+
 import './FinancePage.css'
 
 function FinancePage() {
@@ -61,7 +61,7 @@ function FinancePage() {
     { id: 'dashboard', name: 'Pulpit', icon: '📊' },
     { id: 'income', name: 'Przychody', icon: '💰' },
     { id: 'expenses', name: 'Koszty', icon: '📉' },
-    { id: 'budget', name: 'Budżet', icon: '🎯' }
+   
   ]
 
   if (loading) {
@@ -117,12 +117,7 @@ function FinancePage() {
             transactions={transactions.filter(t => t.type === 'expense')}
           />
         )}
-        {activeTab === 'budget' && (
-          <BudgetTab 
-            budgets={budgets}
-            transactions={transactions}
-          />
-        )}
+        
       </div>
     </div>
   )

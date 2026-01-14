@@ -1,4 +1,4 @@
-// components/Finance/IncomeTab.jsx - Z DODANĄ SEKCJĄ SORTOWANIA
+// components/Finance/IncomeTab.jsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useFinance } from '../../hooks/useFinance'
 import { useWarehouse } from '../../hooks/useWarehouse'
@@ -10,16 +10,25 @@ import './FinanceComponents.css'
 const IncomeTab = ({ transactions }) => {
   const { incomeCategories, addTransaction } = useFinance()
   const { warehouseData, categories: warehouseCategories } = useWarehouse()
+  
+  // Stan dla wybranego okresu
+  const [period, setPeriod] = useState('yearly') // yearly, quarterly, monthly
+  
+  // Opcje dla selektora okresu
+  const periodOptions = [
+    { value: 'yearly', label: 'Rok', icon: '📈' },
+    { value: 'quarterly', label: 'Kwartał', icon: '📊' },
+    { value: 'monthly', label: 'Miesiąc', icon: '📅' }
+  ]
+
   const [showAddForm, setShowAddForm] = useState(() => {
     return localStorage.getItem('openIncomeForm') === 'true';
   })
 
   useEffect(() => {
-    // Jeśli jest flaga w localStorage, otwórz formularz
     const shouldOpenForm = localStorage.getItem('openIncomeForm');
     if (shouldOpenForm === 'true') {
       setShowAddForm(true);
-      // Wyczyść flagę po otwarciu
       localStorage.removeItem('openIncomeForm');
     }
   }, []);
@@ -50,13 +59,12 @@ const IncomeTab = ({ transactions }) => {
   const [selectedAnimal, setSelectedAnimal] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  // Użyj ref do przechowywania poprzednich wartości
   const prevCategoryRef = useRef('')
   const prevProductIdRef = useRef('')
   const prevAnimalIdRef = useRef('')
   const prevQuantityRef = useRef('')
 
-  // Static formatter functions - nie zmieniają się nigdy
+  // Static formatter functions
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return '0,00 zł'
@@ -153,8 +161,119 @@ const IncomeTab = ({ transactions }) => {
     { value: 'all', label: 'Wszystkie kategorie' },
     { value: 'sprzedaz_plonow', label: 'Sprzedaż plonów' },
     { value: 'sprzedaz_zwierzat', label: 'Sprzedaż zwierząt' },
-    { value: 'other', label: 'Inne przychody' }
+    { value: 'sprzedaz_maszyn', label: 'Sprzedaż maszyn' },
+    { value: 'dotacje', label: 'Dotacje' },
+    { value: 'inne_przychody', label: 'Inne przychody' }
   ]
+
+  // Funkcja do pobierania daty transakcji
+  const getTransactionDate = (t) => {
+    if (t.date?.toDate) return t.date.toDate()
+    if (t.date instanceof Date) return t.date
+    if (typeof t.date === 'string') return new Date(t.date)
+    if (t.createdAt?.toDate) return t.createdAt.toDate()
+    return new Date(t.date || t.createdAt || 0)
+  }
+
+  // Funkcja do filtrowania transakcji według okresu
+  const getFilteredTransactionsByPeriod = useMemo(() => {
+    const now = new Date()
+    
+    let startDate = new Date()
+    let endDate = new Date()
+    
+    switch (period) {
+      case 'yearly':
+        endDate = now
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+        break
+        
+      case 'quarterly':
+        const currentYear = now.getFullYear()
+        const currentMonth = now.getMonth()
+        const previousQuarter = Math.floor((currentMonth - 1) / 3)
+        
+        if (previousQuarter < 0) {
+          startDate = new Date(currentYear - 1, 9, 1)
+          endDate = new Date(currentYear - 1, 11, 31, 23, 59, 59)
+        } else {
+          const quarterStartMonth = previousQuarter * 3
+          startDate = new Date(currentYear, quarterStartMonth, 1)
+          endDate = new Date(currentYear, quarterStartMonth + 3, 0, 23, 59, 59)
+        }
+        break
+        
+      case 'monthly':
+        const currentYearNow = now.getFullYear()
+        const currentMonthNow = now.getMonth()
+        
+        if (currentMonthNow === 0) {
+          startDate = new Date(currentYearNow - 1, 11, 1)
+          endDate = new Date(currentYearNow - 1, 11, 31, 23, 59, 59)
+        } else {
+          startDate = new Date(currentYearNow, currentMonthNow - 1, 1)
+          endDate = new Date(currentYearNow, currentMonthNow, 0, 23, 59, 59)
+        }
+        break
+        
+      default:
+        endDate = now
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+    }
+    
+    return transactions.filter(transaction => {
+      const transactionDate = getTransactionDate(transaction)
+      return transactionDate >= startDate && transactionDate <= endDate
+    })
+  }, [transactions, period])
+  
+  // Etykiety dla okresu
+  const getPeriodLabel = () => {
+    const now = new Date()
+    const monthNames = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
+                       'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']
+    
+    switch (period) {
+      case 'yearly':
+        const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+        const startDay = oneYearAgo.getDate()
+        const startMonth = monthNames[oneYearAgo.getMonth()]
+        const startYear = oneYearAgo.getFullYear()
+        const endDay = now.getDate()
+        const endMonth = monthNames[now.getMonth()]
+        const endYear = now.getFullYear()
+        
+        return `${startDay} ${startMonth.toLowerCase()} ${startYear} - ${endDay} ${endMonth.toLowerCase()} ${endYear}`
+        
+      case 'quarterly':
+        const currentMonth = now.getMonth()
+        const quarterNames = ['I kwartał', 'II kwartał', 'III kwartał', 'IV kwartał']
+        
+        let quarterIndex = Math.floor((currentMonth - 1) / 3)
+        let year = now.getFullYear()
+        
+        if (quarterIndex < 0) {
+          quarterIndex = 3
+          year = year - 1
+        }
+        
+        return `${quarterNames[quarterIndex]} ${year}`
+        
+      case 'monthly':
+        let monthIndex = now.getMonth() - 1
+        let monthYear = now.getFullYear()
+        
+        if (monthIndex < 0) {
+          monthIndex = 11
+          monthYear = monthYear - 1
+        }
+        
+        return `${monthNames[monthIndex]} ${monthYear}`
+        
+      default:
+        return `Ostatnie 12 miesięcy`
+    }
+  }
 
   // Effect 1: Filtrowanie produktów gdy zmienia się kategoria
   useEffect(() => {
@@ -166,7 +285,6 @@ const IncomeTab = ({ transactions }) => {
       )
       setAvailableProducts(sellableProducts)
 
-      // Jeśli produkt jest niedostępny, wyczyść go
       if (newTransaction.productId) {
         const productStillAvailable = sellableProducts.some(p => p.id === newTransaction.productId)
         if (!productStillAvailable) {
@@ -181,7 +299,6 @@ const IncomeTab = ({ transactions }) => {
     } else {
       setAvailableProducts([])
       setSelectedProduct(null)
-      // Czyść pola związane z magazynem
       if (newTransaction.productId || newTransaction.quantity) {
         setNewTransaction(prev => ({
           ...prev,
@@ -201,7 +318,6 @@ const IncomeTab = ({ transactions }) => {
     } else {
       setAnimalsData([])
       setSelectedAnimal(null)
-      // Czyść pola związane ze zwierzętami
       if (newTransaction.animalId) {
         setNewTransaction(prev => ({
           ...prev,
@@ -228,7 +344,6 @@ const IncomeTab = ({ transactions }) => {
       setSelectedProduct(product || null)
       prevProductIdRef.current = newTransaction.productId
 
-      // Automatycznie ustaw opis
       if (product && !newTransaction.description.includes(product.name)) {
         setNewTransaction(prev => ({
           ...prev,
@@ -248,7 +363,6 @@ const IncomeTab = ({ transactions }) => {
       setSelectedAnimal(animal || null)
       prevAnimalIdRef.current = newTransaction.animalId
 
-      // Automatycznie ustaw opis
       if (animal && !newTransaction.description.includes(animal.name)) {
         setNewTransaction(prev => ({
           ...prev,
@@ -274,7 +388,6 @@ const IncomeTab = ({ transactions }) => {
       }
       prevQuantityRef.current = newTransaction.quantity
     } else if (!newTransaction.quantity && selectedProduct) {
-      // Wyczyść kwotę jeśli nie ma ilości
       setNewTransaction(prev => ({
         ...prev,
         amount: ''
@@ -286,7 +399,6 @@ const IncomeTab = ({ transactions }) => {
     try {
       setLoadingMachines(true)
       const machines = await garageService.getAllMachines()
-      // Filtruj tylko maszyny które NIE są sprzedane
       const availableMachines = machines.filter(machine =>
         machine.status !== 'sold' && machine.status !== 'sprzedany'
       )
@@ -299,14 +411,13 @@ const IncomeTab = ({ transactions }) => {
     }
   }
 
-  // Effect 3: Pobieranie maszyn dla sprzedaży maszyn
+  // Effect 6: Pobieranie maszyn dla sprzedaży maszyn
   useEffect(() => {
     if (newTransaction.category === 'sprzedaz_maszyn') {
       fetchMachines()
     } else {
       setMachinesData([])
       setSelectedMachine(null)
-      // Czyść pola związane z maszynami
       if (newTransaction.machineId) {
         setNewTransaction(prev => ({
           ...prev,
@@ -317,13 +428,12 @@ const IncomeTab = ({ transactions }) => {
     }
   }, [newTransaction.category])
 
-  // Effect 6: Ustawianie selectedMachine gdy zmienia się machineId
+  // Effect 7: Ustawianie selectedMachine gdy zmienia się machineId
   useEffect(() => {
     if (newTransaction.machineId && machinesData.length > 0) {
       const machine = machinesData.find(m => m.id === newTransaction.machineId)
       setSelectedMachine(machine || null)
 
-      // Automatycznie ustaw opis
       if (machine && !newTransaction.description.includes(machine.name)) {
         setNewTransaction(prev => ({
           ...prev,
@@ -373,7 +483,48 @@ const IncomeTab = ({ transactions }) => {
     return icons[category] || '🚜'
   }
 
-  // Handlers - useCallback z pustymi zależnościami
+  // Sortowanie i filtrowanie transakcji
+  const sortedTransactions = useMemo(() => {
+    let filtered = [...getFilteredTransactionsByPeriod]
+
+    // Filtrowanie
+    if (filterOption !== 'all') {
+      filtered = filtered.filter(t => t.category === filterOption)
+    }
+
+    // Sortowanie
+    return filtered.sort((a, b) => {
+      const dateA = getTransactionDate(a)
+      const dateB = getTransactionDate(b)
+
+      switch (sortOption) {
+        case 'date_asc':
+          return dateA.getTime() - dateB.getTime()
+
+        case 'date_desc':
+        default:
+          return dateB.getTime() - dateA.getTime()
+
+        case 'amount_desc':
+          return b.amount - a.amount
+
+        case 'amount_asc':
+          return a.amount - b.amount
+
+        case 'category':
+          const catA = incomeCategories.find(c => c.id === a.category)?.name || a.category
+          const catB = incomeCategories.find(c => c.id === b.category)?.name || b.category
+          return catA.localeCompare(catB)
+      }
+    })
+  }, [getFilteredTransactionsByPeriod, sortOption, filterOption, incomeCategories])
+
+  const totalIncome = useMemo(() =>
+    sortedTransactions.reduce((sum, t) => sum + t.amount, 0),
+    [sortedTransactions]
+  )
+
+  // Handlers
   const handleCategoryChange = useCallback((value) => {
     setNewTransaction(prev => {
       if (prev.category === value) return prev
@@ -451,14 +602,12 @@ const IncomeTab = ({ transactions }) => {
     setLoading(true)
 
     try {
-      // Walidacja
       if (!newTransaction.category || !newTransaction.amount || !newTransaction.description) {
         alert('Proszę wypełnić wszystkie pola')
         setLoading(false)
         return
       }
 
-      // Walidacja dla sprzedaży plonów
       if (newTransaction.category === 'sprzedaz_plonow') {
         if (!newTransaction.productId || !newTransaction.quantity) {
           alert('Proszę wybrać produkt z magazynu i podać ilość')
@@ -473,7 +622,6 @@ const IncomeTab = ({ transactions }) => {
           return
         }
 
-        // Sprawdź czy mamy wystarczającą ilość
         if (selectedProduct && quantity > (selectedProduct.quantity || 0)) {
           alert(`Nie masz wystarczającej ilości w magazynie! Dostępne: ${formatNumber(selectedProduct.quantity)} ${selectedProduct.unit}`)
           setLoading(false)
@@ -481,7 +629,6 @@ const IncomeTab = ({ transactions }) => {
         }
       }
 
-      // Walidacja dla sprzedaży zwierząt
       if (newTransaction.category === 'sprzedaz_zwierzat') {
         if (!newTransaction.animalId) {
           alert('Proszę wybrać zwierzę do sprzedaży')
@@ -497,7 +644,6 @@ const IncomeTab = ({ transactions }) => {
         }
       }
 
-      // Walidacja dla sprzedaży maszyn
       if (newTransaction.category === 'sprzedaz_maszyn') {
         if (!newTransaction.machineId) {
           alert('Proszę wybrać maszynę do sprzedaży')
@@ -513,7 +659,6 @@ const IncomeTab = ({ transactions }) => {
         }
       }
 
-      // Przygotuj dane transakcji
       const transactionData = {
         type: 'income',
         category: newTransaction.category,
@@ -522,7 +667,6 @@ const IncomeTab = ({ transactions }) => {
         date: newTransaction.date
       }
 
-      // Dodaj dane magazynowe dla sprzedaży plonów
       if (newTransaction.category === 'sprzedaz_plonow' && selectedProduct) {
         transactionData.productId = newTransaction.productId
         transactionData.quantity = parseFloat(newTransaction.quantity)
@@ -532,7 +676,6 @@ const IncomeTab = ({ transactions }) => {
         transactionData.unitPrice = selectedProduct.price || 0
       }
 
-      // Dodaj dane zwierzęcia dla sprzedaży zwierząt
       if (newTransaction.category === 'sprzedaz_zwierzat' && selectedAnimal) {
         transactionData.animalId = newTransaction.animalId
         transactionData.animalName = selectedAnimal.name
@@ -541,7 +684,6 @@ const IncomeTab = ({ transactions }) => {
         transactionData.source = 'animals'
       }
 
-      // Dodaj dane maszyny dla sprzedaży maszyn
       if (newTransaction.category === 'sprzedaz_maszyn' && selectedMachine) {
         transactionData.machineId = newTransaction.machineId
         transactionData.machineName = selectedMachine.name
@@ -550,11 +692,9 @@ const IncomeTab = ({ transactions }) => {
         transactionData.source = 'garage'
       }
 
-      // Dodaj transakcję
       const result = await addTransaction(transactionData)
 
       if (result.success) {
-        // Reset formularza
         setShowAddForm(false)
         setNewTransaction({
           type: 'income',
@@ -572,7 +712,6 @@ const IncomeTab = ({ transactions }) => {
         setAvailableProducts([])
         setAnimalsData([])
 
-        // Komunikat sukcesu
         if (newTransaction.category === 'sprzedaz_plonow') {
           alert(`✅ Sprzedaż zarejestrowana! Sprzedano ${newTransaction.quantity} ${selectedProduct.unit} ${selectedProduct.name}`)
         } else if (newTransaction.category === 'sprzedaz_zwierzat') {
@@ -593,70 +732,9 @@ const IncomeTab = ({ transactions }) => {
     }
   }
 
-  // Sortowanie i filtrowanie transakcji
-  const sortedTransactions = useMemo(() => {
-    let filtered = [...transactions]
-
-    // Filtrowanie
-    if (filterOption !== 'all') {
-      filtered = filtered.filter(t => t.category === filterOption)
-    }
-
-    // Sortowanie - DODAJ poprawne parsowanie daty
-    return filtered.sort((a, b) => {
-      // Poprawiona funkcja do pobierania daty
-      const getDate = (t) => {
-        // Jeśli date jest Timestamp (Firestore)
-        if (t.date?.toDate) {
-          return t.date.toDate()
-        }
-        // Jeśli date jest stringiem
-        if (typeof t.date === 'string') {
-          return new Date(t.date)
-        }
-        // Jeśli date jest obiektem Date
-        if (t.date instanceof Date) {
-          return t.date
-        }
-        // Domyślnie zwróć bieżącą datę
-        return new Date()
-      }
-
-      const dateA = getDate(a)
-      const dateB = getDate(b)
-
-      switch (sortOption) {
-        case 'date_asc':
-          return dateA.getTime() - dateB.getTime()
-
-        case 'date_desc':
-        default: // DODAJ default dla sortowania domyślnego
-          return dateB.getTime() - dateA.getTime()
-
-        case 'amount_desc':
-          return b.amount - a.amount
-
-        case 'amount_asc':
-          return a.amount - b.amount
-
-        case 'category':
-          const catA = incomeCategories.find(c => c.id === a.category)?.name || a.category
-          const catB = incomeCategories.find(c => c.id === b.category)?.name || b.category
-          return catA.localeCompare(catB)
-      }
-    })
-  }, [transactions, sortOption, filterOption, incomeCategories])
-
-  const totalIncome = useMemo(() =>
-    sortedTransactions.reduce((sum, t) => sum + t.amount, 0),
-    [sortedTransactions]
-  )
-
-  // Reset form on close
-   const handleCloseForm = useCallback(() => {
+  const handleCloseForm = useCallback(() => {
     if (!loading) {
       setShowAddForm(false);
-      // Upewnij się że wyczyścimy flagę
       localStorage.removeItem('openIncomeForm');
       setNewTransaction({
         type: 'income',
@@ -676,58 +754,77 @@ const IncomeTab = ({ transactions }) => {
     }
   }, [loading])
 
-
   return (
     <div className="income-tab">
-      <div className="tab-header">
+  {/* SELEKTOR OKRESU - NOWY UKŁAD */}
+  <div className="income-period-selector">
+    <div className="period-left-section">
+      <div className="period-header">
         <h3>Przychody</h3>
-        <div className="tab-actions">
-          {/* SEKCJA SORTOWANIA I FILTROWANIA */}
-          <div className="sort-filter-section">
-            <label>Sortowanie i filtrowanie:</label>
-
-            <select
-              className="control-select"
-              value={filterOption}
-              onChange={(e) => setFilterOption(e.target.value)}
-            >
-              <option value="all">Wszystkie kategorie</option>
-              {incomeCategories.map(cat => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="control-select"
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-            >
-              {sortOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowAddForm(true)}
-            disabled={loading}
-          >
-            + Dodaj przychód
-          </button>
-        </div>
+        <p className="period-label">{getPeriodLabel()}</p>
       </div>
+      
+      <div className="period-buttons">
+        {periodOptions.map(option => (
+          <button
+            key={option.value}
+            onClick={() => setPeriod(option.value)}
+            className={`period-button ${period === option.value ? 'active' : ''}`}
+          >
+            <span className="period-icon">{option.icon}</span>
+            <span>{option.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+    
+    <div className="period-right-section">
+      {/* SEKCJA SORTOWANIA I FILTROWANIA */}
+      <div className="sort-filter-section">
+        <label>Sortowanie i filtrowanie:</label>
 
-      <div className="total-summary">
-        Łączne przychody: <strong>{formatCurrency(totalIncome)}</strong>
-        {filterOption !== 'all' && (
-          <span className="filter-info">
-            (Filtr: {filterOptions.find(f => f.value === filterOption)?.label})
-          </span>
+        <select
+          className="control-select"
+          value={filterOption}
+          onChange={(e) => setFilterOption(e.target.value)}
+        >
+          <option value="all">Wszystkie kategorie</option>
+          {incomeCategories.map(cat => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="control-select"
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
+        >
+          {sortOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowAddForm(true)}
+          disabled={loading}
+        >
+          + Dodaj przychód
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div className="total-summary">
+    Łączne przychody dla wybranego okresu: <strong>{formatCurrency(totalIncome)}</strong>
+    {filterOption !== 'all' && (
+      <span className="filter-info">
+        (Filtr: {filterOptions.find(f => f.value === filterOption)?.label})
+      </span>
         )}
       </div>
 
@@ -1064,83 +1161,84 @@ const IncomeTab = ({ transactions }) => {
 
       {/* TABELA TRANSAKCJI */}
       <div className="transactions-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Kategoria</th>
-              <th>Opis</th>
-              <th>Kwota</th>
-              <th>Szczegóły</th>
-              <th>Typ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedTransactions.map(transaction => {
-              const categoryInfo = incomeCategories.find(cat => cat.id === transaction.category)
-              return (
-                <tr key={transaction.id}>
-                  <td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
-                  <td>
-                    <span className="category-with-icon">
-                      <span className="icon" style={{ color: categoryInfo?.color }}>
-                        {categoryInfo?.icon || '💰'}
-                      </span>
-                      {categoryInfo?.name || transaction.category}
-                    </span>
-                  </td>
-                  <td>{transaction.description}</td>
-                  <td className="amount positive">+{formatCurrency(transaction.amount)}</td>
-
-                  {/* Kolumna Szczegóły */}
-                  <td>
-                    {transaction.productName ? (
-                      <span className="product-badge">
-                        {transaction.productName}
-                        {transaction.quantity && ` (${transaction.quantity} ${transaction.unit})`}
-                      </span>
-                    ) : transaction.animalName ? (
-                      <span className="animal-badge">
-                        {transaction.animalName} ({transaction.earTag})
-                      </span>
-                    ) : transaction.machineName ? (
-                      <div className="machine-details">
-                        <span className="machine-badge">
-                          {transaction.machineName}
-                        </span>
-                        {transaction.machineStatus && (
-                          <span className="machine-status">
-                            Status: {translateMachineStatus(transaction.machineStatus)}
-                          </span>
-                        )}
-                      </div>
-                    ) : '-'}
-                  </td>
-
-                  {/* Kolumna Typ - ZMIENIONE wyświetlanie */}
-                  <td>
-                    {transaction.source === 'warehouse' ? (
-                      <span className="warehouse-badge">Magazyn</span>
-                    ) : transaction.source === 'animals' ? (
-                      <span className="animal-badge">Zwierzęta</span>
-                    ) : transaction.autoGenerated ? (
-                      <span className="auto-badge">Auto</span>
-                    ) : (
-                      <span className="manual-badge">Ręczne</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-            {transactions.length === 0 && (
+        {sortedTransactions.length === 0 ? (
+          <div className="no-data-with-period">
+            <p>Brak transakcji przychodowych dla wybranego okresu</p>
+            <p style={{ fontSize: '0.9rem', marginTop: '10px' }}>
+              Wybierz inny okres lub dodaj nową transakcję
+            </p>
+          </div>
+        ) : (
+          <table>
+            <thead>
               <tr>
-                <td colSpan="6" className="no-data"> {/* Zmień colSpan na 6 */}
-                  Brak transakcji przychodowych
-                </td>
+                <th>Data</th>
+                <th>Kategoria</th>
+                <th>Opis</th>
+                <th>Kwota</th>
+                <th>Szczegóły</th>
+                <th>Typ</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sortedTransactions.map(transaction => {
+                const categoryInfo = incomeCategories.find(cat => cat.id === transaction.category)
+                return (
+                  <tr key={transaction.id}>
+                    <td>{getTransactionDate(transaction).toLocaleDateString('pl-PL')}</td>
+                    <td>
+                      <span className="category-with-icon">
+                        <span className="icon" style={{ color: categoryInfo?.color }}>
+                          {categoryInfo?.icon || '💰'}
+                        </span>
+                        {categoryInfo?.name || transaction.category}
+                      </span>
+                    </td>
+                    <td>{transaction.description}</td>
+                    <td className="amount positive">+{formatCurrency(transaction.amount)}</td>
+
+                    {/* Kolumna Szczegóły */}
+                    <td>
+                      {transaction.productName ? (
+                        <span className="product-badge">
+                          {transaction.productName}
+                          {transaction.quantity && ` (${transaction.quantity} ${transaction.unit})`}
+                        </span>
+                      ) : transaction.animalName ? (
+                        <span className="animal-badge">
+                          {transaction.animalName} ({transaction.earTag})
+                        </span>
+                      ) : transaction.machineName ? (
+                        <div className="machine-details">
+                          <span className="machine-badge">
+                            {transaction.machineName}
+                          </span>
+                          {transaction.machineStatus && (
+                            <span className="machine-status">
+                              Status: {translateMachineStatus(transaction.machineStatus)}
+                            </span>
+                          )}
+                        </div>
+                      ) : '-'}
+                    </td>
+
+                    <td>
+                      {transaction.source === 'warehouse' ? (
+                        <span className="warehouse-badge">Magazyn</span>
+                      ) : transaction.source === 'animals' ? (
+                        <span className="animal-badge">Zwierzęta</span>
+                      ) : transaction.autoGenerated ? (
+                        <span className="auto-badge">Auto</span>
+                      ) : (
+                        <span className="manual-badge">Ręczne</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
