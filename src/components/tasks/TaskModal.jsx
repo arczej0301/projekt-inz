@@ -1,13 +1,11 @@
-// src/components/TaskModal.jsx - POPRAWIONA WERSJA (SPÓJNE ETYKIETY)
 import React, { useState, useEffect } from 'react';
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../hooks/useAuth';
 import CustomSelect from '../common/CustomSelect';
 import './TaskModal.css';
 
-
 const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
-  const { addTask, updateTask, fields, tractors, machines, warehouseItems } = useTasks();
+  const { addTask, updateTask, fields, tractors, machines, warehouseItems, refreshWarehouseItems } = useTasks();
   const { user } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -27,6 +25,7 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [productAvailability, setProductAvailability] = useState({}); // Nowy stan dla dostępności
 
   const FIELD_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
@@ -123,48 +122,94 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     }));
   };
 
+  // NOWA FUNKCJA: Sprawdź dostępność produktów
+  const checkProductAvailability = () => {
+    const availability = {};
+    
+    formData.materials.forEach((material, index) => {
+      if (material.productId && material.quantity) {
+        const product = warehouseItems.find(item => item.id === material.productId);
+        if (product) {
+          const availableQty = parseFloat(product.quantity || 0);
+          const requestedQty = parseFloat(material.quantity);
+          const unit = material.unit || product.unit;
+          
+          availability[index] = {
+            available: availableQty,
+            requested: requestedQty,
+            isAvailable: requestedQty <= availableQty,
+            unit: unit,
+            productName: product.name
+          };
+        }
+      }
+    });
+    
+    setProductAvailability(availability);
+    return Object.values(availability).every(item => item.isAvailable);
+  };
+
+  // ZMODYFIKOWANA FUNKCJA: Sprawdzaj dostępność przy każdej zmianie materiałów
   const handleMaterialChange = (index, field, value) => {
     const updatedMaterials = [...formData.materials];
     updatedMaterials[index] = {
       ...updatedMaterials[index],
       [field]: value
     };
+    
     setFormData(prev => ({
       ...prev,
       materials: updatedMaterials
     }));
+    
+    // Sprawdź dostępność po krótkim opóźnieniu
+    setTimeout(() => {
+      checkProductAvailability();
+    }, 100);
   };
 
-  const addMaterial = () => {
+  // ZMODYFIKOWANA FUNKCJA: Przy dodawaniu materiału odśwież magazyn
+  const addMaterial = async () => {
+    // Odśwież listę produktów przed dodaniem nowego materiału
+    await refreshWarehouseItems();
+    
     setFormData(prev => ({
       ...prev,
       materials: [...prev.materials, { productId: '', quantity: '', unit: 'kg' }]
     }));
   };
 
-  const removeMaterial = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      materials: prev.materials.filter((_, i) => i !== index)
-    }));
-  };
-
+  // ZMODYFIKOWANA FUNKCJA handleSubmit: dodaj walidację magazynu
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      // Walidacja podstawowa
       if (!formData.title.trim()) {
         throw new Error('Tytuł jest wymagany');
       }
 
+      // Walidacja dostępności materiałów
+      const isAvailable = checkProductAvailability();
+      if (!isAvailable) {
+        const unavailableItems = Object.entries(productAvailability)
+          .filter(([_, info]) => !info.isAvailable)
+          .map(([index, info]) => `${info.productName} (dostępne: ${info.available} ${info.unit}, wymagane: ${info.requested} ${info.unit})`)
+          .join(', ');
+        
+        throw new Error(`Niewystarczająca ilość produktów: ${unavailableItems}`);
+      }
+
+      // Przygotuj dane zadania
       const taskData = {
         ...formData,
         fieldId: formData.fieldId || null,
         tractorId: formData.tractorId || null,
         machineId: formData.machineId || null,
         materialId: formData.materialId || null,
+        materials: formData.materials.filter(m => m.productId && m.quantity) // Filtruj puste
       };
 
       if (task) {
@@ -311,36 +356,33 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Nasiona i Nawozy</label>
-                <CustomSelect
-                  value={formData.materialId}
-                  onChange={(value) => handleSelectChange('materialId', value)}
-                  options={WAREHOUSE_OPTIONS}
-                />
-                <div className="select-info">
-                  {warehouseItems.length === 0 ? 'Brak nasion i nawozów w magazynie' : `${warehouseItems.length} produktów dostępnych`}
-                </div>
-              </div>
+              
             </div>
           </div>
 
           <div className="form-section">
-            <div className="section-header">
-              <h3>Nasiona i nawozy do zużycia</h3>
-              <button type="button" onClick={addMaterial} className="btn-secondary">
-                + Dodaj produkt
-              </button>
-            </div>
+          <div className="section-header">
+            <h3>Nasiona i nawozy do zużycia</h3>
+            <button type="button" onClick={addMaterial} className="btn-secondary">
+              + Dodaj produkt
+            </button>
+          </div>
+          
+          {formData.materials.map((material, index, info) => {
+            const product = warehouseItems.find(item => item.id === material.productId);
+            const availableQty = product ? parseFloat(product.quantity || 0) : 0;
             
-            {formData.materials.map((material, index) => (
+            return (
               <div key={index} className="material-row">
-                <CustomSelect
-                  value={material.productId}
-                  onChange={(value) => handleMaterialChange(index, 'productId', value)}
-                  options={PRODUCT_OPTIONS}
-                  className="material-select"
-                />
+                <div className="material-select-wrapper">
+                  <CustomSelect
+                    value={material.productId}
+                    onChange={(value) => handleMaterialChange(index, 'productId', value)}
+                    options={PRODUCT_OPTIONS}
+                    className="material-select"
+                  />
+                  
+                </div>
                 
                 <input
                   type="number"
@@ -349,7 +391,8 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
                   placeholder="Ilość"
                   className="material-quantity"
                   min="0"
-                  step="0.01"
+                  step="1"
+                  max={availableQty}
                 />
                 
                 <CustomSelect
@@ -367,8 +410,9 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
                   ×
                 </button>
               </div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
           <div className="form-actions">
             <button 

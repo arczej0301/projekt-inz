@@ -1,4 +1,3 @@
-// src/hooks/useTasks.js - POPRAWIONA WERSJA (Z CIĄGNIKAMI)
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -10,7 +9,8 @@ import {
   query, 
   orderBy,
   where,
-  Timestamp 
+  Timestamp,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from './useAuth';
@@ -21,7 +21,7 @@ export const useTasks = () => {
   const [error, setError] = useState(null);
   const [fields, setFields] = useState([]);
   const [machines, setMachines] = useState([]);
-  const [tractors, setTractors] = useState([]); // NOWE: ciągniki i kombajny
+  const [tractors, setTractors] = useState([]);
   const [warehouseItems, setWarehouseItems] = useState([]);
   const { user } = useAuth();
 
@@ -249,47 +249,166 @@ export const useTasks = () => {
     });
   };
 
-  const addTask = async (taskData) => {
-    if (!user || !db) throw new Error('Użytkownik nie jest zalogowany lub baza nie jest dostępna');
 
+   // NOWA FUNKCJA: Aktualizuj stan magazynu przy użyciu produktów
+  const updateWarehouseStock = async (materials, operation = 'use', taskId = null, rollback = false) => {
+    if (!materials || materials.length === 0) return;
+    
+    const updates = [];
+    
     try {
-      const taskWithMetadata = {
-        ...taskData,
-        createdBy: user.uid,
-        createdAt: Timestamp.now(),
-        status: taskData.status || 'pending'
-      };
+      for (const material of materials) {
+        if (!material.productId || !material.quantity || parseFloat(material.quantity) <= 0) {
+          continue;
+        }
 
-      if (taskWithMetadata.dueDate) {
-        taskWithMetadata.dueDate = Timestamp.fromDate(new Date(taskWithMetadata.dueDate));
+        const productRef = doc(db, 'warehouse', material.productId);
+        const productDoc = await getDoc(productRef);
+        
+        if (!productDoc.exists()) {
+          console.warn(`Produkt ${material.productId} nie istnieje w magazynie`);
+          continue;
+        }
+
+        const product = productDoc.data();
+        const currentQuantity = parseFloat(product.quantity || 0);
+        const requestedQuantity = parseFloat(material.quantity);
+        
+        // Sprawdź czy wystarczająca ilość (tylko przy użyciu)
+        if (operation === 'use' && requestedQuantity > currentQuantity && !rollback) {
+          throw new Error(`Niewystarczająca ilość produktu "${product.name}". Dostępne: ${currentQuantity} ${product.unit}, Wymagane: ${requestedQuantity} ${material.unit || product.unit}`);
+        }
+
+        // Oblicz nową ilość
+        let newQuantity;
+        if (rollback) {
+          // Przywracanie stanu (np. przy usuwaniu zadania)
+          newQuantity = operation === 'use' 
+            ? currentQuantity + requestedQuantity  // Dodaj z powrotem
+            : currentQuantity - requestedQuantity; // Odejmij z powrotem
+        } else {
+          // Normalna operacja
+          newQuantity = operation === 'use' 
+            ? currentQuantity - requestedQuantity  // Odejmij przy użyciu
+            : currentQuantity + requestedQuantity; // Dodaj przy zwrocie
+        }
+
+        // Sprawdź czy nie ujemna ilość
+        if (newQuantity < 0) {
+          throw new Error(`Nieprawidłowa ilość produktu "${product.name}". Wynik: ${newQuantity}`);
+        }
+
+        // Przygotuj aktualizację
+        updates.push({
+          productRef,
+          productName: product.name,
+          newQuantity,
+          previousQuantity: currentQuantity,
+          quantityChange: rollback ? requestedQuantity : -requestedQuantity,
+          operation,
+          taskId
+        });
       }
 
-      taskWithMetadata.fieldId = taskWithMetadata.fieldId || null;
-      taskWithMetadata.tractorId = taskWithMetadata.tractorId || null; // NOWE
-      taskWithMetadata.machineId = taskWithMetadata.machineId || null;
-      taskWithMetadata.materialId = taskWithMetadata.materialId || null;
+      // Wykonaj wszystkie aktualizacje
+      for (const update of updates) {
+        await updateDoc(update.productRef, {
+          quantity: update.newQuantity,
+          lastUpdate: Timestamp.now(),
+          lastOperation: update.operation,
+          lastTaskId: taskId
+        });
 
-      const docRef = await addDoc(collection(db, 'tasks'), taskWithMetadata);
+        // Dodaj wpis do historii magazynu
+        await addDoc(collection(db, 'warehouseHistory'), {
+          productId: update.productRef.id,
+          productName: update.productName,
+          operation: update.operation,
+          quantity: Math.abs(update.quantityChange),
+          previousQuantity: update.previousQuantity,
+          newQuantity: update.newQuantity,
+          timestamp: Timestamp.now(),
+          source: 'task',
+          taskId: taskId,
+          userId: user?.uid,
+          description: `Zużycie z zadania: ${taskId || 'nowe zadanie'}`
+        });
+      }
+
+      console.log(`Zaktualizowano ${updates.length} produktów w magazynie`);
+      return updates;
       
-      const newTask = {
-        id: docRef.id,
-        ...taskWithMetadata
-      };
-      
-      setTasks(prev => [...prev, newTask]);
-      
-      return docRef.id;
     } catch (err) {
-      setError('Błąd podczas dodawania zadania: ' + err.message);
-      console.error('Error adding task:', err);
+      console.error('Błąd podczas aktualizacji magazynu:', err);
       throw err;
     }
   };
 
+  // ZMODYFIKOWANA FUNKCJA addTask: teraz aktualizuje magazyn
+ const addTask = async (taskData) => {
+  if (!user || !db) throw new Error('Użytkownik nie jest zalogowany lub baza nie jest dostępna');
+
+  try {
+    // Przygotuj dane zadania
+    const taskWithMetadata = {
+      ...taskData,
+      createdBy: user.uid,
+      createdAt: Timestamp.now(),
+      status: taskData.status || 'pending',
+      materialsUsed: taskData.materials || []
+    };
+
+    // Konwertuj datę
+    if (taskWithMetadata.dueDate) {
+      taskWithMetadata.dueDate = Timestamp.fromDate(new Date(taskWithMetadata.dueDate));
+    }
+
+    // Oczyść pola
+    taskWithMetadata.fieldId = taskWithMetadata.fieldId || null;
+    taskWithMetadata.tractorId = taskWithMetadata.tractorId || null;
+    taskWithMetadata.machineId = taskWithMetadata.machineId || null;
+    taskWithMetadata.materialId = taskWithMetadata.materialId || null;
+
+    // KROK 1: Zaktualizuj magazyn (ta funkcja sama doda historię)
+    if (taskWithMetadata.materialsUsed.length > 0) {
+      await updateWarehouseStock(taskWithMetadata.materialsUsed, null, false);
+    }
+
+    // KROK 2: Dodaj zadanie
+    const docRef = await addDoc(collection(db, 'tasks'), taskWithMetadata);
+    const newTaskId = docRef.id;
+
+    // Aktualizuj stan lokalny
+    const newTask = {
+      id: newTaskId,
+      ...taskWithMetadata
+    };
+    
+    setTasks(prev => [...prev, newTask]);
+    
+    return newTaskId;
+    
+  } catch (err) {
+    setError('Błąd podczas dodawania zadania: ' + err.message);
+    console.error('Error adding task:', err);
+    throw err;
+  }
+};
+
+  // ZMODYFIKOWANA FUNKCJA updateTask: obsługa zmiany materiałów
   const updateTask = async (taskId, updates) => {
     if (!db) throw new Error('Baza danych nie jest dostępna');
 
     try {
+      // Pobierz aktualne zadanie
+      const taskRef = doc(db, 'tasks', taskId);
+      const taskDoc = await getDoc(taskRef);
+      const oldTask = taskDoc.exists() ? taskDoc.data() : null;
+      
+      if (!oldTask) {
+        throw new Error('Zadanie nie istnieje');
+      }
+
       const processedUpdates = { ...updates };
       if (processedUpdates.dueDate) {
         processedUpdates.dueDate = Timestamp.fromDate(new Date(processedUpdates.dueDate));
@@ -300,15 +419,35 @@ export const useTasks = () => {
       }
 
       processedUpdates.fieldId = processedUpdates.fieldId || null;
-      processedUpdates.tractorId = processedUpdates.tractorId || null; // NOWE
+      processedUpdates.tractorId = processedUpdates.tractorId || null;
       processedUpdates.machineId = processedUpdates.machineId || null;
       processedUpdates.materialId = processedUpdates.materialId || null;
 
-      await updateDoc(doc(db, 'tasks', taskId), processedUpdates);
+      // KROK 1: Obsługa materiałów - porównanie starej i nowej listy
+      const oldMaterials = oldTask.materialsUsed || [];
+      const newMaterials = processedUpdates.materials || [];
+      
+      // Jeśli zmieniły się materiały, zaktualizuj magazyn
+      if (JSON.stringify(oldMaterials) !== JSON.stringify(newMaterials)) {
+        // 1a. Przywróć stare materiały (cofnij ich użycie)
+        if (oldMaterials.length > 0) {
+          await updateWarehouseStock(oldMaterials, 'use', taskId, true); // rollback = true
+        }
+        
+        // 1b. Odciągnij nowe materiały
+        if (newMaterials.length > 0) {
+          await updateWarehouseStock(newMaterials, 'use', taskId, false);
+        }
+        
+        processedUpdates.materialsUsed = newMaterials;
+      }
+
+      // KROK 2: Aktualizuj zadanie
+      await updateDoc(taskRef, processedUpdates);
       
       setTasks(prev => prev.map(task => 
         task.id === taskId 
-          ? { ...task, ...processedUpdates }
+          ? { ...task, ...processedUpdates, materialsUsed: newMaterials }
           : task
       ));
       
@@ -319,16 +458,53 @@ export const useTasks = () => {
     }
   };
 
+  // ZMODYFIKOWANA FUNKCJA deleteTask: przywróć materiały do magazynu
   const deleteTask = async (taskId) => {
     if (!db) throw new Error('Baza danych nie jest dostępna');
 
     try {
-      await deleteDoc(doc(db, 'tasks', taskId));
+      // Pobierz zadanie aby sprawdzić użyte materiały
+      const taskRef = doc(db, 'tasks', taskId);
+      const taskDoc = await getDoc(taskRef);
+      
+      if (taskDoc.exists()) {
+        const task = taskDoc.data();
+        
+        // Przywróć materiały do magazynu
+        if (task.materialsUsed && task.materialsUsed.length > 0) {
+          await updateWarehouseStock(task.materialsUsed, 'use', taskId, true); // rollback = true
+        }
+      }
+
+      // Usuń zadanie
+      await deleteDoc(taskRef);
       setTasks(prev => prev.filter(task => task.id !== taskId));
+      
     } catch (err) {
       setError('Błąd podczas usuwania zadania: ' + err.message);
       console.error('Error deleting task:', err);
       throw err;
+    }
+  };
+
+  // NOWA FUNKCJA: Pobierz aktualne dane magazynu (do sprawdzenia dostępności)
+  const refreshWarehouseItems = async () => {
+    try {
+      const warehouseQuery = query(
+        collection(db, 'warehouse'),
+        where('category', '==', 'nawozy')
+      );
+      const warehouseSnapshot = await getDocs(warehouseQuery);
+      const warehouseData = warehouseSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setWarehouseItems(warehouseData);
+      return warehouseData;
+    } catch (err) {
+      console.warn('Brak kolekcji warehouse lub kategorii "nawozy":', err);
+      setWarehouseItems([]);
+      return [];
     }
   };
 
@@ -372,10 +548,11 @@ export const useTasks = () => {
     setError(null);
   };
 
-  useEffect(() => {
+   useEffect(() => {
     if (user && db) {
       fetchTasks();
       fetchRelatedData();
+      refreshWarehouseItems(); // Odśwież dane magazynu
     }
   }, [user]);
 
@@ -384,7 +561,7 @@ export const useTasks = () => {
     loading,
     error,
     fields,
-    tractors, // NOWE
+    tractors,
     machines,
     warehouseItems,
     fetchTasks,
@@ -394,6 +571,7 @@ export const useTasks = () => {
     addComment,
     getTasksByReference,
     clearError,
+    refreshWarehouseItems, // Eksportuj nową funkcję
     TASK_TYPES,
     TASK_STATUS,
     PRIORITIES
