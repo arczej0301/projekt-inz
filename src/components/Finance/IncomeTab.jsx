@@ -10,10 +10,10 @@ import './FinanceComponents.css'
 const IncomeTab = ({ transactions }) => {
   const { incomeCategories, addTransaction } = useFinance()
   const { warehouseData, categories: warehouseCategories } = useWarehouse()
-  
+
   // Stan dla wybranego okresu
   const [period, setPeriod] = useState('yearly') // yearly, quarterly, monthly
-  
+
   // Opcje dla selektora okresu
   const periodOptions = [
     { value: 'yearly', label: 'Rok', icon: '📈' },
@@ -178,21 +178,21 @@ const IncomeTab = ({ transactions }) => {
   // Funkcja do filtrowania transakcji według okresu
   const getFilteredTransactionsByPeriod = useMemo(() => {
     const now = new Date()
-    
+
     let startDate = new Date()
     let endDate = new Date()
-    
+
     switch (period) {
       case 'yearly':
         endDate = now
         startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
         break
-        
+
       case 'quarterly':
         const currentYear = now.getFullYear()
         const currentMonth = now.getMonth()
         const previousQuarter = Math.floor((currentMonth - 1) / 3)
-        
+
         if (previousQuarter < 0) {
           startDate = new Date(currentYear - 1, 9, 1)
           endDate = new Date(currentYear - 1, 11, 31, 23, 59, 59)
@@ -202,11 +202,11 @@ const IncomeTab = ({ transactions }) => {
           endDate = new Date(currentYear, quarterStartMonth + 3, 0, 23, 59, 59)
         }
         break
-        
+
       case 'monthly':
         const currentYearNow = now.getFullYear()
         const currentMonthNow = now.getMonth()
-        
+
         if (currentMonthNow === 0) {
           startDate = new Date(currentYearNow - 1, 11, 1)
           endDate = new Date(currentYearNow - 1, 11, 31, 23, 59, 59)
@@ -215,24 +215,24 @@ const IncomeTab = ({ transactions }) => {
           endDate = new Date(currentYearNow, currentMonthNow, 0, 23, 59, 59)
         }
         break
-        
+
       default:
         endDate = now
         startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
     }
-    
+
     return transactions.filter(transaction => {
       const transactionDate = getTransactionDate(transaction)
       return transactionDate >= startDate && transactionDate <= endDate
     })
   }, [transactions, period])
-  
+
   // Etykiety dla okresu
   const getPeriodLabel = () => {
     const now = new Date()
-    const monthNames = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
-                       'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']
-    
+    const monthNames = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+      'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']
+
     switch (period) {
       case 'yearly':
         const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
@@ -242,34 +242,34 @@ const IncomeTab = ({ transactions }) => {
         const endDay = now.getDate()
         const endMonth = monthNames[now.getMonth()]
         const endYear = now.getFullYear()
-        
+
         return `${startDay} ${startMonth.toLowerCase()} ${startYear} - ${endDay} ${endMonth.toLowerCase()} ${endYear}`
-        
+
       case 'quarterly':
         const currentMonth = now.getMonth()
         const quarterNames = ['I kwartał', 'II kwartał', 'III kwartał', 'IV kwartał']
-        
+
         let quarterIndex = Math.floor((currentMonth - 1) / 3)
         let year = now.getFullYear()
-        
+
         if (quarterIndex < 0) {
           quarterIndex = 3
           year = year - 1
         }
-        
+
         return `${quarterNames[quarterIndex]} ${year}`
-        
+
       case 'monthly':
         let monthIndex = now.getMonth() - 1
         let monthYear = now.getFullYear()
-        
+
         if (monthIndex < 0) {
           monthIndex = 11
           monthYear = monthYear - 1
         }
-        
+
         return `${monthNames[monthIndex]} ${monthYear}`
-        
+
       default:
         return `Ostatnie 12 miesięcy`
     }
@@ -756,75 +756,75 @@ const IncomeTab = ({ transactions }) => {
 
   return (
     <div className="income-tab">
-  {/* SELEKTOR OKRESU - NOWY UKŁAD */}
-  <div className="income-period-selector">
-    <div className="period-left-section">
-      <div className="period-header">
-        <h3>Przychody</h3>
-        <p className="period-label">{getPeriodLabel()}</p>
+      {/* SELEKTOR OKRESU - NOWY UKŁAD */}
+      <div className="income-period-selector">
+        <div className="period-left-section">
+          <div className="period-header">
+            <h3>Przychody</h3>
+            <p className="period-label">{getPeriodLabel()}</p>
+          </div>
+
+          <div className="period-buttons">
+            {periodOptions.map(option => (
+              <button
+                key={option.value}
+                onClick={() => setPeriod(option.value)}
+                className={`period-button ${period === option.value ? 'active' : ''}`}
+              >
+                <span className="period-icon">{option.icon}</span>
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="period-right-section">
+          {/* SEKCJA SORTOWANIA I FILTROWANIA */}
+          <div className="sort-filter-section">
+            <label>Sortowanie i filtrowanie:</label>
+
+            <select
+              className="control-select"
+              value={filterOption}
+              onChange={(e) => setFilterOption(e.target.value)}
+            >
+              <option value="all">Wszystkie kategorie</option>
+              {incomeCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="control-select"
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+            >
+              {sortOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowAddForm(true)}
+              disabled={loading}
+            >
+              + Dodaj przychód
+            </button>
+          </div>
+        </div>
       </div>
-      
-      <div className="period-buttons">
-        {periodOptions.map(option => (
-          <button
-            key={option.value}
-            onClick={() => setPeriod(option.value)}
-            className={`period-button ${period === option.value ? 'active' : ''}`}
-          >
-            <span className="period-icon">{option.icon}</span>
-            <span>{option.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-    
-    <div className="period-right-section">
-      {/* SEKCJA SORTOWANIA I FILTROWANIA */}
-      <div className="sort-filter-section">
-        <label>Sortowanie i filtrowanie:</label>
 
-        <select
-          className="control-select"
-          value={filterOption}
-          onChange={(e) => setFilterOption(e.target.value)}
-        >
-          <option value="all">Wszystkie kategorie</option>
-          {incomeCategories.map(cat => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="control-select"
-          value={sortOption}
-          onChange={(e) => setSortOption(e.target.value)}
-        >
-          {sortOptions.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowAddForm(true)}
-          disabled={loading}
-        >
-          + Dodaj przychód
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div className="total-summary">
-    Łączne przychody dla wybranego okresu: <strong>{formatCurrency(totalIncome)}</strong>
-    {filterOption !== 'all' && (
-      <span className="filter-info">
-        (Filtr: {filterOptions.find(f => f.value === filterOption)?.label})
-      </span>
+      <div className="total-summary">
+        Łączne przychody dla wybranego okresu: <strong>{formatCurrency(totalIncome)}</strong>
+        {filterOption !== 'all' && (
+          <span className="filter-info">
+            (Filtr: {filterOptions.find(f => f.value === filterOption)?.label})
+          </span>
         )}
       </div>
 
@@ -1182,7 +1182,11 @@ const IncomeTab = ({ transactions }) => {
             </thead>
             <tbody>
               {sortedTransactions.map(transaction => {
-                const categoryInfo = incomeCategories.find(cat => cat.id === transaction.category)
+                let categoryInfo = incomeCategories.find(cat => cat.id === transaction.category)
+                if (!categoryInfo && transaction.warehouseCategory) {
+                  categoryInfo = warehouseCategories.find(cat => cat.id === transaction.warehouseCategory)
+                }
+
                 return (
                   <tr key={transaction.id}>
                     <td>{getTransactionDate(transaction).toLocaleDateString('pl-PL')}</td>
@@ -1191,7 +1195,9 @@ const IncomeTab = ({ transactions }) => {
                         <span className="icon" style={{ color: categoryInfo?.color }}>
                           {categoryInfo?.icon || '💰'}
                         </span>
-                        {categoryInfo?.name || transaction.category}
+                        <span style={{ textTransform: 'capitalize' }}>
+                          {categoryInfo?.name || transaction.category}
+                        </span>
                       </span>
                     </td>
                     <td>{transaction.description}</td>

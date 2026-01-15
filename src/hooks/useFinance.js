@@ -28,7 +28,18 @@ export const useFinance = () => {
     { id: 'sprzedaz_zwierzat', name: 'Zwierzęta', icon: '🐄', color: '#8bc34a' },
     { id: 'sprzedaz_maszyn', name: 'Maszyny', icon: '🚜', color: '#607d8b' },
     { id: 'dotacje', name: 'Dotacje', icon: '💰', color: '#ffc107' },
-    { id: 'inne_przychody', name: 'Inne przychody', icon: '📈', color: '#9c27b0' }
+    { id: 'inne_przychody', name: 'Inne przychody', icon: '📈', color: '#9c27b0' },
+    {
+  id: 'warehouse_operations',
+  name: 'Operacje magazynowe',
+  type: 'both', // zarówno przychody jak i wydatki
+  color: '#4caf50',
+  subcategories: [
+    { id: 'warehouse_stock', name: 'Stan magazynowy', color: '#81c784' },
+    { id: 'warehouse_adjustment', name: 'Korekty magazynowe', color: '#a5d6a7' },
+    { id: 'warehouse_usage', name: 'Zużycie', color: '#ff9800' }
+  ]
+}
   ]
 
   const expenseCategories = [
@@ -169,62 +180,38 @@ export const useFinance = () => {
 
   // Dodawanie transakcji z automatycznym mapowaniem kategorii
   const addTransaction = async (transactionData) => {
-    try {
-      // Mapuj kategorię do budżetu
-      const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
+  try {
+    // Mapuj kategorię do budżetu
+    const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
 
-      const transactionToAdd = {
-        ...transactionData,
-        category: transactionData.category,
-        budgetCategory: mappedCategory,
-        date: Timestamp.fromDate(new Date(transactionData.date)),
-        createdAt: Timestamp.now(), 
-        amount: parseFloat(transactionData.amount),
-        // Dodaj dane magazynowe jeśli są
-        ...(transactionData.productId && {
-          productId: transactionData.productId,
-          productName: transactionData.productName,
-          quantity: transactionData.quantity,
-          unit: transactionData.unit,
-          unitPrice: transactionData.unitPrice,
-          source: 'warehouse'
-        })
-      }
-
-      const docRef = await addDoc(collection(db, 'finance_transactions'), transactionToAdd)
-
-      // AUTOMATYCZNA AKTUALIZACJA MAGAZYNU DLA SPRZEDAŻY PLONÓW
-      if (transactionData.type === 'income' &&
-        transactionData.category === 'sprzedaz_plonow' &&
-        transactionData.productId &&
-        transactionData.quantity) {
-
-        await updateWarehouseAfterSale(
-          transactionData.productId,
-          transactionData.quantity,
-          docRef.id,
-          transactionData.description
-        )
-      }
-
-      // AUTOMATYCZNE USUWANIE ZWIERZĘCIA DLA SPRZEDAŻY ZWIERZĄT
-      if (transactionData.type === 'income' &&
-        transactionData.category === 'sprzedaz_zwierzat' &&
-        transactionData.animalId) {
-
-        await deleteAnimalAfterSale(
-          transactionData.animalId,
-          docRef.id,
-          transactionData.description
-        )
-      }
+    // Dla transakcji z magazynu, ustaw odpowiednie pola
+    const transactionToAdd = {
+      ...transactionData,
+      category: transactionData.category,
+      budgetCategory: mappedCategory,
+      date: Timestamp.fromDate(new Date(transactionData.date)),
+      createdAt: Timestamp.now(), 
+      amount: parseFloat(transactionData.amount),
       
-      return { success: true, id: docRef.id }
-    } catch (error) {
-      console.error('Błąd przy dodawaniu transakcji:', error)
-      return { success: false, error: error.message }
+      // Dodaj pole sourceType dla lepszego rozróżnienia
+      sourceType: transactionData.source === 'warehouse' ? 'warehouse_add' : 'manual',
+      
+      // Jeśli to transakcja z magazynu, dodaj specjalne pola
+      ...(transactionData.source === 'warehouse' && {
+        warehouseProductId: transactionData.warehouseProductId,
+        warehouseCategory: transactionData.warehouseCategory,
+        isAutomatic: true
+      })
     }
+
+    const docRef = await addDoc(collection(db, 'finance_transactions'), transactionToAdd)
+    return { success: true, id: docRef.id }
+  } catch (error) {
+    console.error('Błąd przy dodawaniu transakcji:', error)
+    return { success: false, error: error.message }
   }
+}
+
   const updateMachineStatusAfterSale = async (machineId, transactionId, description) => {
   try {
     // Tu potrzebujesz garageService lub bezpośredniego Firestore

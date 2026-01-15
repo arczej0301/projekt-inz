@@ -1,6 +1,7 @@
 // components/pages/MagazinePage.jsx
 import { useState } from 'react'
 import { useWarehouse } from '../../hooks/useWarehouse'
+import { useWarehouseFinanceIntegration } from '../../hooks/useWarehouseFinanceIntegration'
 import ProductModal from './ProductModal'
 import './MagazinePage.css'
 
@@ -51,6 +52,8 @@ function MagazinePage() {
     updateProduct,
     deleteProduct
   } = useWarehouse()
+
+  const { addWarehouseTransaction, updateWarehouseTransaction } = useWarehouseFinanceIntegration()
 
   // Filtrowanie i sortowanie produktów
   const filteredItems = (warehouseData[activeCategory] || [])
@@ -120,24 +123,48 @@ function MagazinePage() {
   }
 
   const handleSaveProduct = async (productData) => {
-    if (editingProduct) {
-      const result = await updateProduct(editingProduct.id, productData)
-      if (result.success) {
-        setIsModalOpen(false)
-        setEditingProduct(null)
+    try {
+      if (editingProduct) {
+        // Edycja istniejącego produktu
+        const oldProduct = editingProduct
+        const result = await updateProduct(editingProduct.id, productData)
+        
+        if (result.success) {
+          // Aktualizuj transakcję finansową jeśli cena się zmieniła
+          await updateWarehouseTransaction(oldProduct, productData, editingProduct.id)
+          
+          setIsModalOpen(false)
+          setEditingProduct(null)
+        } else {
+          alert(`Błąd: ${result.error}`)
+        }
       } else {
-        alert(`Błąd: ${result.error}`)
+        // Dodawanie nowego produktu
+        const result = await addProduct({
+          ...productData,
+          category: activeCategory
+        })
+
+        if (result.success) {
+          // Znajdź obiekt kategorii do wyświetlenia
+          const currentCategoryObj = categories.find(cat => cat.id === activeCategory)
+
+          // Dodaj transakcję finansową z obiektem kategorii
+          await addWarehouseTransaction(
+            productData,
+            result.id,
+            'add',
+            currentCategoryObj // Przekaż cały obiekt kategorii (z name i icon)
+          )
+
+          setIsModalOpen(false)
+        } else {
+          alert(`Błąd: ${result.error}`)
+        }
       }
-    } else {
-      const result = await addProduct({
-        ...productData,
-        category: activeCategory
-      })
-      if (result.success) {
-        setIsModalOpen(false)
-      } else {
-        alert(`Błąd: ${result.error}`)
-      }
+    } catch (error) {
+      console.error('Error saving product:', error)
+      alert(`Błąd podczas zapisywania: ${error.message}`)
     }
   }
 
