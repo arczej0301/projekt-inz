@@ -13,11 +13,11 @@ import './AnimalsPage.css';
 function AnimalsPage() {
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal stan
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentAnimal, setCurrentAnimal] = useState(null);
-  
+
   // NOWOŚĆ: Przechowujemy oryginalne dane do porównania zmian w historii
   const [originalAnimal, setOriginalAnimal] = useState(null);
 
@@ -26,13 +26,13 @@ function AnimalsPage() {
   const [filterType, setFilterType] = useState('wszystkie');
   const [sortOrder, setSortOrder] = useState('name-asc');
   const [saveLoading, setSaveLoading] = useState(false);
-  
+
   // Custom Select states
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isHealthOpen, setIsHealthOpen] = useState(false);
   const [healthFilter, setHealthFilter] = useState('wszystkie');
-  
+
   // Confirm delete
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -190,8 +190,7 @@ function AnimalsPage() {
       } else {
         // NOWE ZWIERZĘ
         const newId = await addAnimal(animalData);
-        // Automatyczny wpis do historii przy rejestracji
-        await addAnimalHistory(newId, 'Rejestracja', 'Dodano zwierzę do systemu');
+        // Automatyczny wpis do historii już jest w serwisie
       }
 
       closeAnimalModal();
@@ -241,16 +240,16 @@ function AnimalsPage() {
   const handleAddHistoryEvent = async (e) => {
     if (e) e.preventDefault();
     if (!newHistoryDesc) return;
-    
+
     setHistorySubmitting(true);
     try {
       // Wywołanie serwisu
       await addAnimalHistory(currentAnimal.id, newHistoryType, newHistoryDesc);
-      
+
       // Odświeżenie listy po dodaniu
       const updatedHistory = await getAnimalHistory(currentAnimal.id);
       setAnimalHistory(updatedHistory);
-      
+
       // Reset pola
       setNewHistoryDesc('');
     } catch (error) {
@@ -394,7 +393,7 @@ function AnimalsPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="animal-list-actions">
                     <button className="animals-btn animals-btn-primary animals-btn-sm" onClick={() => openAnimalModal(animal)}>
                       <i className="fas fa-edit"></i> Edytuj
@@ -432,7 +431,7 @@ function AnimalsPage() {
           </div>
         </div>
       )}
-      
+
       {/* --- MODAL EDYCJI / DODAWANIA --- */}
       {isModalOpen && currentAnimal && (
         <div className="animals-modal-overlay" onClick={closeAnimalModal}>
@@ -442,37 +441,37 @@ function AnimalsPage() {
               <button className="animals-close-btn" onClick={closeAnimalModal}>&times;</button>
             </div>
             <div className="animals-modal-body">
-               <div className="animals-form-grid">
-                  <div className="animals-form-group">
-                    <label>Imię *</label>
-                    <input type="text" name="name" value={currentAnimal.name || ''} onChange={handleInputChange} required />
-                  </div>
-                  <div className="animals-form-group">
-                    <label>Typ zwierzęcia *</label>
-                    <div className="animals-custom-select">
-                      <div className={`animals-select-header ${isTypeOpen ? 'open' : ''}`} onClick={() => setIsTypeOpen(!isTypeOpen)}>
-                        {getCurrentTypeLabel()}<span className="arrow">▼</span>
-                      </div>
-                      {isTypeOpen && (
-                        <div className="animals-select-options">
-                          {animalTypes.map(t => (
-                            <div key={t.value} className={`animals-select-option ${currentAnimal.type === t.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('type', t.value)}>{t.label}</div>
-                          ))}
-                        </div>
-                      )}
+              <div className="animals-form-grid">
+                <div className="animals-form-group">
+                  <label>Imię *</label>
+                  <input type="text" name="name" value={currentAnimal.name || ''} onChange={handleInputChange} required />
+                </div>
+                <div className="animals-form-group">
+                  <label>Typ zwierzęcia *</label>
+                  <div className="animals-custom-select">
+                    <div className={`animals-select-header ${isTypeOpen ? 'open' : ''}`} onClick={() => setIsTypeOpen(!isTypeOpen)}>
+                      {getCurrentTypeLabel()}<span className="arrow">▼</span>
                     </div>
+                    {isTypeOpen && (
+                      <div className="animals-select-options">
+                        {animalTypes.map(t => (
+                          <div key={t.value} className={`animals-select-option ${currentAnimal.type === t.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('type', t.value)}>{t.label}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="form-group"><label>Rasa *</label><input type="text" name="breed" value={currentAnimal.breed || ''} onChange={handleInputChange} required /></div>
-                  <div className="form-group"><label>Numer kolczyka *</label><input type="text" name="earTag" value={currentAnimal.earTag || ''} onChange={handleInputChange} required /></div>
-                  <div className="form-group"><label>Data urodzenia</label><input type="date" name="birthDate" value={currentAnimal.birthDate || ''} onChange={handleInputChange} /></div>
-                  
-                  {/* POPRAWIONY INPUT WAGI: text/number bez parseFloat w onChange */}
-                  <div className="form-group"><label>Waga (kg)</label><input type="number" name="weight" value={currentAnimal.weight || ''} onChange={handleInputChange} step="0.1" /></div>
-                  
-                  <div className="form-group"><label>Status</label><div className="custom-select"><div className={`select-header ${isStatusOpen ? 'open' : ''}`} onClick={() => setIsStatusOpen(!isStatusOpen)}>{getCurrentStatusLabel()}<span className="arrow">▼</span></div>{isStatusOpen && (<div className="select-options">{animalStatuses.map(s => (<div key={s.value} className={`select-option ${currentAnimal.status === s.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('status', s.value)}>{s.label}</div>))}</div>)}</div></div>
-                  <div className="form-group"><label>Stan zdrowia</label><div className="custom-select"><div className={`select-header ${isHealthOpen ? 'open' : ''}`} onClick={() => setIsHealthOpen(!isHealthOpen)}>{getCurrentHealthLabel()}<span className="arrow">▼</span></div>{isHealthOpen && (<div className="select-options">{healthStatuses.map(h => (<div key={h.value} className={`select-option ${currentAnimal.health === h.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('health', h.value)}>{h.label}</div>))}</div>)}</div></div>
-                  <div className="form-group full-width"><label>Notatki</label><textarea name="notes" value={currentAnimal.notes || ''} onChange={handleInputChange} rows="3" /></div>
-               </div>
+                </div>
+                <div className="form-group"><label>Rasa *</label><input type="text" name="breed" value={currentAnimal.breed || ''} onChange={handleInputChange} required /></div>
+                <div className="form-group"><label>Numer kolczyka *</label><input type="text" name="earTag" value={currentAnimal.earTag || ''} onChange={handleInputChange} required /></div>
+                <div className="form-group"><label>Data urodzenia</label><input type="date" name="birthDate" value={currentAnimal.birthDate || ''} onChange={handleInputChange} /></div>
+
+                {/* POPRAWIONY INPUT WAGI: text/number bez parseFloat w onChange */}
+                <div className="form-group"><label>Waga (kg)</label><input type="number" name="weight" value={currentAnimal.weight || ''} onChange={handleInputChange} step="0.1" /></div>
+
+                <div className="form-group"><label>Status</label><div className="custom-select"><div className={`select-header ${isStatusOpen ? 'open' : ''}`} onClick={() => setIsStatusOpen(!isStatusOpen)}>{getCurrentStatusLabel()}<span className="arrow">▼</span></div>{isStatusOpen && (<div className="select-options">{animalStatuses.map(s => (<div key={s.value} className={`select-option ${currentAnimal.status === s.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('status', s.value)}>{s.label}</div>))}</div>)}</div></div>
+                <div className="form-group"><label>Stan zdrowia</label><div className="custom-select"><div className={`select-header ${isHealthOpen ? 'open' : ''}`} onClick={() => setIsHealthOpen(!isHealthOpen)}>{getCurrentHealthLabel()}<span className="arrow">▼</span></div>{isHealthOpen && (<div className="select-options">{healthStatuses.map(h => (<div key={h.value} className={`select-option ${currentAnimal.health === h.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('health', h.value)}>{h.label}</div>))}</div>)}</div></div>
+                <div className="form-group full-width"><label>Notatki</label><textarea name="notes" value={currentAnimal.notes || ''} onChange={handleInputChange} rows="3" /></div>
+              </div>
             </div>
             <div className="animals-modal-footer">
               <button className="animals-btn animals-btn-secondary" onClick={closeAnimalModal}>Anuluj</button>
@@ -493,7 +492,7 @@ function AnimalsPage() {
             <div className="animals-modal-body">
               {/* Formularz dodawania */}
               <div className="add-history-form" style={{ marginBottom: '20px', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
-                <h4 style={{marginTop: 0, marginBottom: '10px', fontSize: '14px'}}>Dodaj zdarzenie ręcznie</h4>
+                <h4 style={{ marginTop: 0, marginBottom: '10px', fontSize: '14px' }}>Dodaj zdarzenie ręcznie</h4>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <select value={newHistoryType} onChange={e => setNewHistoryType(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}>
                     <option value="Leczenie">Leczenie / Weterynarz</option>

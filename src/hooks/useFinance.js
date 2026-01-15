@@ -30,16 +30,16 @@ export const useFinance = () => {
     { id: 'dotacje', name: 'Dotacje', icon: '💰', color: '#ffc107' },
     { id: 'inne_przychody', name: 'Inne przychody', icon: '📈', color: '#9c27b0' },
     {
-  id: 'warehouse_operations',
-  name: 'Operacje magazynowe',
-  type: 'both', // zarówno przychody jak i wydatki
-  color: '#4caf50',
-  subcategories: [
-    { id: 'warehouse_stock', name: 'Stan magazynowy', color: '#81c784' },
-    { id: 'warehouse_adjustment', name: 'Korekty magazynowe', color: '#a5d6a7' },
-    { id: 'warehouse_usage', name: 'Zużycie', color: '#ff9800' }
-  ]
-}
+      id: 'warehouse_operations',
+      name: 'Operacje magazynowe',
+      type: 'both', // zarówno przychody jak i wydatki
+      color: '#4caf50',
+      subcategories: [
+        { id: 'warehouse_stock', name: 'Stan magazynowy', color: '#81c784' },
+        { id: 'warehouse_adjustment', name: 'Korekty magazynowe', color: '#a5d6a7' },
+        { id: 'warehouse_usage', name: 'Zużycie', color: '#ff9800' }
+      ]
+    }
   ]
 
   const expenseCategories = [
@@ -54,7 +54,7 @@ export const useFinance = () => {
     { id: 'inne_koszty', name: 'Inne koszty', icon: '📉', color: '#e91e63' }
   ]
 
-  
+
   // Mapowanie kategorii dla budżetów - ZAKTUALIZOWANE
   const categoryMapping = {
     // Transakcje wydatkowe → Kategorie budżetowe  
@@ -68,7 +68,7 @@ export const useFinance = () => {
     'naprawa_konserwacja': 'maintenance',
     'inne_koszty': 'other',
     'sprzedaz_maszyn': 'tools',
-    
+
     // Transakcje przychodowe (pozostają bez zmian)
     'sprzedaz_plonow': 'food',
     'sprzedaz_zwierzat': 'animals',
@@ -98,33 +98,33 @@ export const useFinance = () => {
 
   // Pobieranie transakcji w czasie rzeczywistym
   useEffect(() => {
-  const q = query(collection(db, 'finance_transactions'))
+    const q = query(collection(db, 'finance_transactions'))
 
-  const unsubscribe = onSnapshot(q,
-  (querySnapshot) => {
-    const transactionsData = []
-    querySnapshot.forEach((doc) => {
-      const data = doc.data()
-      transactionsData.push({
-        id: doc.id,
-        ...data,
-        date: data.date?.toDate?.() || data.date
-      })
-    })
+    const unsubscribe = onSnapshot(q,
+      (querySnapshot) => {
+        const transactionsData = []
+        querySnapshot.forEach((doc) => {
+          const data = doc.data()
+          transactionsData.push({
+            id: doc.id,
+            ...data,
+            date: data.date?.toDate?.() || data.date
+          })
+        })
 
-    // DODAJ sortowanie od najnowszych
-    const sortedTransactions = transactionsData.sort((a, b) => {
-      const getDate = (t) => {
-        if (t.date?.toDate) return t.date.toDate()
-        if (t.date instanceof Date) return t.date
-        return new Date(t.date || 0)
-      }
-      return getDate(b).getTime() - getDate(a).getTime()
-    })
-    
-    setTransactions(sortedTransactions)
-    setLoading(false)
-  },
+        // DODAJ sortowanie od najnowszych
+        const sortedTransactions = transactionsData.sort((a, b) => {
+          const getDate = (t) => {
+            if (t.date?.toDate) return t.date.toDate()
+            if (t.date instanceof Date) return t.date
+            return new Date(t.date || 0)
+          }
+          return getDate(b).getTime() - getDate(a).getTime()
+        })
+
+        setTransactions(sortedTransactions)
+        setLoading(false)
+      },
       (error) => {
         console.error('Błąd przy pobieraniu transakcji:', error)
         setError(`Błąd przy pobieraniu danych: ${error.message}`)
@@ -180,64 +180,64 @@ export const useFinance = () => {
 
   // Dodawanie transakcji z automatycznym mapowaniem kategorii
   const addTransaction = async (transactionData) => {
-  try {
-    // Mapuj kategorię do budżetu
-    const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
+    try {
+      // Mapuj kategorię do budżetu
+      const mappedCategory = getBudgetCategory(transactionData.category) || transactionData.category
 
-    // Dla transakcji z magazynu, ustaw odpowiednie pola
-    const transactionToAdd = {
-      ...transactionData,
-      category: transactionData.category,
-      budgetCategory: mappedCategory,
-      date: Timestamp.fromDate(new Date(transactionData.date)),
-      createdAt: Timestamp.now(), 
-      amount: parseFloat(transactionData.amount),
-      
-      // Dodaj pole sourceType dla lepszego rozróżnienia
-      sourceType: transactionData.source === 'warehouse' ? 'warehouse_add' : 'manual',
-      
-      // Jeśli to transakcja z magazynu, dodaj specjalne pola
-      ...(transactionData.source === 'warehouse' && {
-        warehouseProductId: transactionData.warehouseProductId,
-        warehouseCategory: transactionData.warehouseCategory,
-        isAutomatic: true
-      })
+      // Dla transakcji z magazynu, ustaw odpowiednie pola
+      const transactionToAdd = {
+        ...transactionData,
+        category: transactionData.category,
+        budgetCategory: mappedCategory,
+        date: Timestamp.fromDate(new Date(transactionData.date)),
+        createdAt: Timestamp.now(),
+        amount: parseFloat(transactionData.amount),
+
+        // Dodaj pole sourceType dla lepszego rozróżnienia
+        sourceType: transactionData.source === 'warehouse' ? 'warehouse_add' : 'manual',
+
+        // Jeśli to transakcja z magazynu, dodaj specjalne pola
+        ...(transactionData.source === 'warehouse' && {
+          warehouseProductId: transactionData.warehouseProductId,
+          warehouseCategory: transactionData.warehouseCategory,
+          isAutomatic: true
+        })
+      }
+
+      const docRef = await addDoc(collection(db, 'finance_transactions'), transactionToAdd)
+      return { success: true, id: docRef.id }
+    } catch (error) {
+      console.error('Błąd przy dodawaniu transakcji:', error)
+      return { success: false, error: error.message }
     }
-
-    const docRef = await addDoc(collection(db, 'finance_transactions'), transactionToAdd)
-    return { success: true, id: docRef.id }
-  } catch (error) {
-    console.error('Błąd przy dodawaniu transakcji:', error)
-    return { success: false, error: error.message }
   }
-}
 
   const updateMachineStatusAfterSale = async (machineId, transactionId, description) => {
-  try {
-    // Tu potrzebujesz garageService lub bezpośredniego Firestore
-    await updateDoc(doc(db, 'garage', machineId), {
-      status: 'sold',
-      soldDate: new Date(),
-      soldTransactionId: transactionId,
-      lastUpdate: new Date()
-    })
+    try {
+      // Tu potrzebujesz garageService lub bezpośredniego Firestore
+      await updateDoc(doc(db, 'garage', machineId), {
+        status: 'sold',
+        soldDate: new Date(),
+        soldTransactionId: transactionId,
+        lastUpdate: new Date()
+      })
 
-    // Możesz też dodać do historii
-    await addDoc(collection(db, 'garageHistory'), {
-      machineId: machineId,
-      operation: 'sale',
-      timestamp: new Date(),
-      transactionId: transactionId,
-      description: description || 'Sprzedaż maszyny'
-    })
+      // Możesz też dodać do historii
+      await addDoc(collection(db, 'garageHistory'), {
+        machineId: machineId,
+        operation: 'sale',
+        timestamp: new Date(),
+        transactionId: transactionId,
+        description: description || 'Sprzedaż maszyny'
+      })
 
-    console.log(`✅ Maszyna oznaczona jako sprzedana: ${machineId}`)
-    return { success: true }
-  } catch (error) {
-    console.error('Błąd przy aktualizacji statusu maszyny:', error)
-    return { success: false, error: error.message }
+      console.log(`✅ Maszyna oznaczona jako sprzedana: ${machineId}`)
+      return { success: true }
+    } catch (error) {
+      console.error('Błąd przy aktualizacji statusu maszyny:', error)
+      return { success: false, error: error.message }
+    }
   }
-}
   // DODAJ NOWĄ FUNKCJĘ DO ZMNIEJSZANIA STANU MAGAZYNOWEGO
   const updateWarehouseAfterSale = async (productId, soldQuantity, transactionId, description) => {
     try {
@@ -298,8 +298,7 @@ export const useFinance = () => {
         budgetCategory: mappedCategory,
         amount: parseFloat(data.amount),
 
-         description: `${data.machineName || ''}`,
-         operationType: `${data.operationType || ''}`,
+        description: data.description,
         source: data.source, // 'fields', 'animals', 'warehouse', 'garage'
         sourceId: data.sourceId,
         date: Timestamp.fromDate(new Date()),

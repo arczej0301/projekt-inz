@@ -67,62 +67,8 @@ const Header = () => {
       <div className="header-left">
         {/* Możesz dodać logo tutaj jeśli chcesz */}
       </div>
-      
+
       <div className="header-right">
-        <div className="notifications-container" ref={notificationsRef}>
-          <button 
-            className="notifications-button"
-            onClick={toggleNotifications}
-            aria-label="Powiadomienia"
-          >
-            <span className="bell-icon">🔔</span>
-            {unreadCount > 0 && (
-              <span className="notification-badge">{unreadCount}</span>
-            )}
-          </button>
-
-          {showNotifications && (
-            <div className="notifications-dropdown">
-              <div className="notifications-header">
-                <h3>Powiadomienia ({notifications.length})</h3>
-                {notifications.length > 0 && (
-                  <button 
-                    className="clear-all-btn"
-                    onClick={clearAllNotifications}
-                  >
-                    Wyczyść wszystkie
-                  </button>
-                )}
-              </div>
-
-              <div className="notifications-list">
-                {notifications.length === 0 ? (
-                  <div className="no-notifications">
-                    <p>Brak powiadomień</p>
-                  </div>
-                ) : (
-                  notifications.map(notification => (
-                    <div 
-                      key={notification.id}
-                      className={`notification-item ${!notification.read ? 'unread' : ''}`}
-                      onClick={() => markAsRead(notification.id)}
-                    >
-                      <div className="notification-content">
-                        <div className="notification-title">{notification.title}</div>
-                        <div className="notification-text">{notification.text}</div>
-                        <div className="notification-time">{notification.time}</div>
-                      </div>
-                      {!notification.read && (
-                        <div className="unread-dot"></div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="user-info">
           <div className="user-avatar">
             {user?.email?.charAt(0).toUpperCase()}
@@ -133,7 +79,7 @@ const Header = () => {
             </div>
             <div className="user-role">Użytkownik</div>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="logout-button"
             title="Zostaniesz automatycznie wylogowany po 1 minucie nieaktywności"

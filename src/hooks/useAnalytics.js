@@ -1,9 +1,9 @@
 // src/hooks/useAnalytics.js
 import { useState, useEffect, useMemo } from 'react'
 import {
-  collection, 
-  query, 
-  where, 
+  collection,
+  query,
+  where,
   getDocs,
   orderBy,
   Timestamp,
@@ -20,8 +20,9 @@ const COLLECTIONS = {
   FIELD_YIELDS: 'field_yields',
   FIELD_COSTS: 'field_costs',
   FIELD_STATUS: 'field_status',
-  REPAIRS: 'repairs', // DODANO KOLEKCJĘ NAPRAW
-  WAREHOUSE_HISTORY: 'warehouseHistory' // DODANO HISTORIĘ MAGAZYNU
+  REPAIRS: 'repairs',
+  WAREHOUSE_HISTORY: 'warehouseHistory',
+  TASKS: 'tasks' // DODANO ZADANIA
 }
 
 export const useAnalytics = () => {
@@ -54,12 +55,13 @@ export const useAnalytics = () => {
         results.forEach((result, index) => {
           // Mapowanie nazw kolekcji na klucze
           let key = Object.keys(COLLECTIONS).find(k => COLLECTIONS[k] === collections[index]).toLowerCase()
-          
+
           // Specyficzne mapowania kluczy dla wygody
           if (key === 'finance_transactions') key = 'transactions'
           if (key === 'field_status') key = 'field_status'
           if (key === 'warehouse_history') key = 'warehouseHistory'
           if (key === 'repairs') key = 'repairs'
+          if (key === 'tasks') key = 'tasks'
 
           if (result.status === 'fulfilled') {
             collectedData[key] = result.value
@@ -109,6 +111,18 @@ export const useAnalytics = () => {
     }
   }, [data.transactions])
 
+  const warehouseAnalytics = useMemo(() => {
+    const items = data.warehouse || []
+    const inventoryValue = items.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0)), 0)
+    const lowStock = items.filter(item => (parseFloat(item.quantity) || 0) < (parseFloat(item.minStock) || 0)).length
+
+    return {
+      inventoryValue,
+      stockLevels: { lowStock },
+      totalItems: items.length
+    }
+  }, [data.warehouse])
+
   const fieldAnalytics = useMemo(() => {
     const fields = data.fields || []
     const fieldYields = data.field_yields || []
@@ -117,8 +131,16 @@ export const useAnalytics = () => {
 
     // Logika Crop Performance
     const cropMap = {}
+    let utilizedArea = 0
+
     fields.forEach(field => {
       const cropName = field.crop || 'Nieprzypisane'
+      const area = parseFloat(field.area) || 0
+
+      if (field.crop) {
+        utilizedArea += area
+      }
+
       if (!cropMap[cropName]) {
         cropMap[cropName] = {
           name: cropName,
@@ -126,10 +148,10 @@ export const useAnalytics = () => {
           totalYield: 0,
           totalCost: 0,
           fieldCount: 0,
-          fields: [] 
+          fields: []
         }
       }
-      cropMap[cropName].totalArea += parseFloat(field.area) || 0
+      cropMap[cropName].totalArea += area
       cropMap[cropName].fieldCount += 1
       cropMap[cropName].fields.push(field.id)
     })
@@ -145,7 +167,7 @@ export const useAnalytics = () => {
     fieldCosts.forEach(costData => {
       const field = fields.find(f => f.id === costData.field_id)
       if (field && field.crop && cropMap[field.crop]) {
-         cropMap[field.crop].totalCost += parseFloat(costData.total_cost) || parseFloat(costData.amount) || 0
+        cropMap[field.crop].totalCost += parseFloat(costData.total_cost) || parseFloat(costData.amount) || 0
       }
     })
 
@@ -159,9 +181,13 @@ export const useAnalytics = () => {
       }))
       .sort((a, b) => b.totalArea - a.totalArea)
 
+    const totalArea = fields.reduce((sum, f) => sum + (parseFloat(f.area) || 0), 0)
+    const utilizationRate = totalArea > 0 ? (utilizedArea / totalArea) * 100 : 0
+
     return {
       totalFields: fields.length,
-      totalArea: fields.reduce((sum, f) => sum + (parseFloat(f.area) || 0), 0),
+      totalArea: totalArea,
+      fieldUtilization: { utilizationRate }, // Dodano utilizationRate
       productivity: analyzeFieldProductivity(fields, fieldYields, fieldStatuses),
       soilEfficiency: analyzeSoilEfficiency(fields),
       cropPerformance: cropPerformance
@@ -171,16 +197,16 @@ export const useAnalytics = () => {
   const animalAnalytics = useMemo(() => {
     const animals = data.animals || []
     const transactions = data.transactions || []
-    
+
     // Pobierz statystyki zdrowia ze zwierząt
-    let healthStats = { 
-      healthIndex: 100, 
-      commonIssues: [], 
+    let healthStats = {
+      healthIndex: 100,
+      commonIssues: [],
       healthDistribution: {},
       sickAnimals: 0,
       totalAnimals: 0
     };
-    
+
     // Jeśli mamy dane zwierząt, oblicz statystyki
     if (animals.length > 0) {
       // Zliczanie statusów zdrowia
@@ -192,10 +218,10 @@ export const useAnalytics = () => {
         'krytyczny': 0,
         'nieznany': 0
       };
-      
+
       animals.forEach(animal => {
         let healthStatus = (animal.health || 'nieznany').toLowerCase();
-        
+
         // Normalizacja statusów
         if (healthStatus.includes('zdrow')) healthDistribution['zdrowy']++;
         else if (healthStatus.includes('chor')) healthDistribution['chory']++;
@@ -204,7 +230,7 @@ export const useAnalytics = () => {
         else if (healthStatus.includes('krytycz')) healthDistribution['krytyczny']++;
         else healthDistribution['nieznany']++;
       });
-      
+
       // Oblicz wskaźnik zdrowia
       const weights = {
         'zdrowy': 100,
@@ -214,14 +240,14 @@ export const useAnalytics = () => {
         'krytyczny': 10,
         'nieznany': 50
       };
-      
+
       let weightedSum = 0;
       Object.entries(healthDistribution).forEach(([status, count]) => {
         weightedSum += count * weights[status];
       });
-      
+
       const healthIndex = animals.length > 0 ? Math.round(weightedSum / animals.length) : 100;
-      
+
       // Przygotuj listę problemów
       const commonIssues = [];
       if (healthDistribution['krytyczny'] > 0) {
@@ -238,19 +264,19 @@ export const useAnalytics = () => {
           severity: 'high'
         });
       }
-      
+
       healthStats = {
         healthIndex,
         commonIssues,
         healthDistribution,
-        sickAnimals: healthDistribution['chory'] + 
-                    healthDistribution['w leczeniu'] + 
-                    healthDistribution['w kwarantannie'] + 
-                    healthDistribution['krytyczny'],
+        sickAnimals: healthDistribution['chory'] +
+          healthDistribution['w leczeniu'] +
+          healthDistribution['w kwarantannie'] +
+          healthDistribution['krytyczny'],
         totalAnimals: animals.length
       };
     }
-    
+
     return {
       totalAnimals: animals.length,
       health: healthStats,
@@ -270,11 +296,100 @@ export const useAnalytics = () => {
 
   const alerts = useMemo(() => {
     const newAlerts = []
+
+    // 1. Alert finansowy (istniejący)
     if (financialAnalytics.kpis.netProfit < 0) {
       newAlerts.push({ type: 'danger', priority: 'critical', title: 'Strata finansowa', message: 'Wydatki przewyższają przychody.' })
     }
-    return newAlerts
-  }, [financialAnalytics])
+
+    // 2. Alerty Zwierzęta (Chore, W leczeniu, Kwarantanna, Krytyczny)
+    const animals = data.animals || []
+    const sickAnimals = animals.filter(a => ['chory', 'w leczeniu', 'w kwarantannie', 'krytyczny'].includes((a.health || '').toLowerCase()))
+
+    if (sickAnimals.length > 0) {
+      const criticalCount = sickAnimals.filter(a => (a.health || '').toLowerCase() === 'krytyczny').length
+      const message = criticalCount > 0
+        ? `${sickAnimals.length} zwierząt wymaga uwagi (w tym ${criticalCount} w stanie krytycznym)!`
+        : `${sickAnimals.length} zwierząt ma problemy zdrowotne.`
+
+      newAlerts.push({
+        type: criticalCount > 0 ? 'danger' : 'warning',
+        priority: 'high',
+        title: 'Problemy zdrowotne zwierząt',
+        message: message
+      })
+    }
+
+    // 3. Alerty Magazyn (Niski stan)
+    const warehouseItems = data.warehouse || []
+    const lowStockItems = warehouseItems.filter(item => {
+      const quantity = parseFloat(item.quantity) || 0
+      const minStock = parseFloat(item.minStock) || 0
+      return quantity < minStock
+    })
+
+    if (lowStockItems.length > 0) {
+      newAlerts.push({
+        type: 'warning',
+        priority: 'medium',
+        title: 'Niski stan magazynowy',
+        message: `${lowStockItems.length} produktów poniżej poziomu minimalnego.`
+      })
+    }
+
+    // 4. Alerty Garaż (Serwis/Przegląd)
+    const machines = data.garage || []
+    const serviceMachines = machines.filter(m => ['repair', 'maintenance', 'w naprawie', 'w konserwacji'].includes((m.status || '').toLowerCase()))
+
+    if (serviceMachines.length > 0) {
+      newAlerts.push({
+        type: 'warning', // lub info, user prosił o informację
+        priority: 'medium',
+        title: 'Maszyny w serwisie',
+        message: `${serviceMachines.length} maszyn wymaga naprawy lub przeglądu.`
+      })
+    }
+
+    // 5. Alerty Zadania (Zbliżające się do 14 dni)
+    const tasks = data.tasks || []
+    const now = new Date()
+    const fourteenDaysFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+
+    const upcomingTasks = tasks.filter(t => {
+      if (t.status === 'completed') return false
+      const dueDate = t.dueDate ? (t.dueDate.toDate ? t.dueDate.toDate() : new Date(t.dueDate)) : null
+      return dueDate && dueDate >= now && dueDate <= fourteenDaysFromNow
+    })
+
+    if (upcomingTasks.length > 0) {
+      newAlerts.push({
+        type: 'info',
+        priority: 'medium',
+        title: 'Nadchodzące zadania',
+        message: `${upcomingTasks.length} zadań do wykonania w ciągu 14 dni.`
+      })
+    }
+
+    // 6. Alerty Raporty (Niska wydajność pól < 5T/ha)
+    // Używamy fieldAnalytics.productivity które jest już obliczone
+    if (fieldAnalytics && fieldAnalytics.productivity) {
+      const lowYieldFields = fieldAnalytics.productivity.filter(f => f.lastYieldPerHectare > 0 && f.lastYieldPerHectare < 5)
+
+      if (lowYieldFields.length > 0) {
+        newAlerts.push({
+          type: 'warning',
+          priority: 'medium',
+          title: 'Niska wydajność pól',
+          message: `${lowYieldFields.length} pól ma wydajność poniżej 5t/ha.`
+        })
+      }
+    }
+
+    return newAlerts.sort((a, b) => {
+      const priorityMap = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 }
+      return priorityMap[a.priority] - priorityMap[b.priority]
+    })
+  }, [financialAnalytics, data.animals, data.warehouse, data.garage, data.tasks, fieldAnalytics])
 
   return {
     loading,
@@ -282,11 +397,11 @@ export const useAnalytics = () => {
     financialAnalytics,
     fieldAnalytics,
     animalAnalytics,
-    completeCostStructure, // DODANO TĘ LINIJKĘ
-    warehouseAnalytics: { stockLevels: { lowStock: 0 } },
+    completeCostStructure,
+    warehouseAnalytics, // Zmieniono na obliczoną wartość
     equipmentAnalytics: { maintenanceNeeded: 0 },
     alerts,
-    data 
+    data
   }
 }
 
@@ -296,21 +411,21 @@ const fetchCollectionData = async (collectionName) => {
   try {
     const q = query(collection(db, collectionName))
     const snapshot = await getDocs(q)
-    
+
     if (!snapshot || !snapshot.docs) return []
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data()
       // Proste formatowanie dat
       let formattedDate = null
-      
+
       // Sprawdzamy różne pola daty (date, date_created, createdAt)
       const dateField = data.date || data.date_created || data.createdAt
-      
+
       if (dateField) {
-         if (dateField instanceof Timestamp) formattedDate = dateField.toDate()
-         else if (dateField.toDate) formattedDate = dateField.toDate()
-         else formattedDate = new Date(dateField)
+        if (dateField instanceof Timestamp) formattedDate = dateField.toDate()
+        else if (dateField.toDate) formattedDate = dateField.toDate()
+        else formattedDate = new Date(dateField)
       }
 
       return {
@@ -328,10 +443,10 @@ const fetchCollectionData = async (collectionName) => {
 // Analizuj WSZYSTKIE koszty z różnych źródeł
 const analyzeCompleteCostStructure = (transactions = [], repairs = [], warehouseHistory = [], garageData = []) => {
   const allCosts = [];
-  
+
   // 1. Koszty z transakcji finansowych (expense)
   const expenseTransactions = transactions.filter(t => t.type === 'expense');
-  
+
   expenseTransactions.forEach(transaction => {
     allCosts.push({
       source: 'finance',
@@ -344,7 +459,7 @@ const analyzeCompleteCostStructure = (transactions = [], repairs = [], warehouse
       transactionId: transaction.id
     });
   });
-  
+
   // 2. Koszty napraw z modułu garażu
   if (repairs && repairs.length > 0) {
     repairs.forEach(repair => {
@@ -362,18 +477,18 @@ const analyzeCompleteCostStructure = (transactions = [], repairs = [], warehouse
       }
     });
   }
-  
+
   // 3. Koszty zakupu materiałów z magazynu
   if (warehouseHistory && warehouseHistory.length > 0) {
-    const purchaseHistory = warehouseHistory.filter(item => 
+    const purchaseHistory = warehouseHistory.filter(item =>
       item.operation === 'purchase' || item.source === 'warehouse_purchase'
     );
-    
+
     purchaseHistory.forEach(purchase => {
       const quantity = parseFloat(purchase.quantity) || 0;
       const unitPrice = parseFloat(purchase.unitPrice) || 0;
       const purchaseCost = quantity * unitPrice;
-      
+
       if (purchaseCost > 0) {
         allCosts.push({
           source: 'warehouse',
@@ -387,7 +502,7 @@ const analyzeCompleteCostStructure = (transactions = [], repairs = [], warehouse
       }
     });
   }
-  
+
   // 4. Koszty zakupu maszyn z garażu
   if (garageData && garageData.length > 0) {
     garageData.forEach(machine => {
@@ -419,11 +534,11 @@ const analyzeCompleteCostStructure = (transactions = [], repairs = [], warehouse
 
   // Grupowanie kosztów po kategorii
   const categoryTotals = {};
-  
+
   allCosts.forEach(cost => {
     const category = cost.category || 'Inne';
     const amount = cost.amount || 0;
-    
+
     if (!categoryTotals[category]) {
       categoryTotals[category] = {
         total: 0,
@@ -431,31 +546,31 @@ const analyzeCompleteCostStructure = (transactions = [], repairs = [], warehouse
         details: []
       };
     }
-    
+
     categoryTotals[category].total += amount;
-    
+
     // Grupowanie po źródle
     const source = cost.source || 'unknown';
     if (!categoryTotals[category].bySource[source]) {
       categoryTotals[category].bySource[source] = 0;
     }
     categoryTotals[category].bySource[source] += amount;
-    
+
     // Zbieranie szczegółów (maksymalnie 5)
     if (categoryTotals[category].details.length < 5) {
       categoryTotals[category].details.push(cost);
     }
   });
-  
+
   // Obliczanie procentów i przygotowanie danych do wykresu
   const totalExpenses = Object.values(categoryTotals)
     .reduce((sum, cat) => sum + cat.total, 0);
-  
+
   const summary = Object.entries(categoryTotals)
     .map(([name, data]) => ({
       name: formatCategoryName(name),
       value: parseFloat(data.total.toFixed(2)),
-      percentage: totalExpenses > 0 ? 
+      percentage: totalExpenses > 0 ?
         parseFloat(((data.total / totalExpenses) * 100).toFixed(1)) : 0,
       bySource: data.bySource,
       details: data.details,
@@ -466,7 +581,7 @@ const analyzeCompleteCostStructure = (transactions = [], repairs = [], warehouse
 
   // Grupowanie miesięczne
   const byMonth = groupCostsByMonth(allCosts);
-  
+
   // Grupowanie po źródle
   const bySource = groupCostsBySource(allCosts);
 
@@ -495,17 +610,17 @@ const formatCategoryName = (category) => {
     'sprzet_czesci': 'Narzędzia i części',
     'inne_koszty': 'Inne koszty'
   };
-  
+
   return nameMap[category] || category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' ');
 };
 
 // Grupowanie kosztów miesięcznie
 const groupCostsByMonth = (costs) => {
   const monthly = {};
-  
+
   costs.forEach(cost => {
     if (!cost.date) return;
-    
+
     let date;
     if (cost.date.toDate) {
       date = cost.date.toDate();
@@ -514,10 +629,10 @@ const groupCostsByMonth = (costs) => {
     } else {
       date = new Date(cost.date);
     }
-    
+
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     const monthName = date.toLocaleDateString('pl-PL', { month: 'short', year: 'numeric' });
-    
+
     if (!monthly[monthKey]) {
       monthly[monthKey] = {
         name: monthName,
@@ -525,26 +640,26 @@ const groupCostsByMonth = (costs) => {
         categories: {}
       };
     }
-    
+
     monthly[monthKey].total += cost.amount;
-    
+
     const category = cost.category || 'Inne';
     if (!monthly[monthKey].categories[category]) {
       monthly[monthKey].categories[category] = 0;
     }
     monthly[monthKey].categories[category] += cost.amount;
   });
-  
+
   return Object.keys(monthly)
     .sort()
     .slice(-12) // Ostatnie 12 miesięcy
     .map(key => ({
       ...monthly[key],
       categories: Object.entries(monthly[key].categories)
-        .map(([name, value]) => ({ 
-          name: formatCategoryName(name), 
+        .map(([name, value]) => ({
+          name: formatCategoryName(name),
           value,
-          rawName: name 
+          rawName: name
         }))
         .sort((a, b) => b.value - a.value)
     }));
@@ -553,7 +668,7 @@ const groupCostsByMonth = (costs) => {
 // Grupowanie kosztów po źródle
 const groupCostsBySource = (costs) => {
   const bySource = {};
-  
+
   costs.forEach(cost => {
     const source = cost.source || 'unknown';
     if (!bySource[source]) {
@@ -562,16 +677,16 @@ const groupCostsBySource = (costs) => {
         categories: {}
       };
     }
-    
+
     bySource[source].total += cost.amount;
-    
+
     const category = cost.category || 'Inne';
     if (!bySource[source].categories[category]) {
       bySource[source].categories[category] = 0;
     }
     bySource[source].categories[category] += cost.amount;
   });
-  
+
   return bySource;
 };
 
@@ -580,13 +695,13 @@ const analyzeFieldProductivity = (fields, yields, statuses) => {
     // a) Znajdź ostatni zbiór
     const fieldYields = yields.filter(y => y.field_id === f.id)
     const latestYield = fieldYields.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
-    
+
     // b) Znajdź ostatni status z kolekcji field_status
     const fieldStatuses = statuses.filter(s => s.field_id === f.id)
     const latestStatusObj = fieldStatuses.sort((a, b) => {
-        const dateA = new Date(a.date_created || a.date || 0)
-        const dateB = new Date(b.date_created || b.date || 0)
-        return dateB - dateA
+      const dateA = new Date(a.date_created || a.date || 0)
+      const dateB = new Date(b.date_created || b.date || 0)
+      return dateB - dateA
     })[0]
 
     // Priorytet: 1. Status z kolekcji field_status, 2. Status z dokumentu pola, 3. 'unknown'
@@ -605,7 +720,7 @@ const analyzeFieldProductivity = (fields, yields, statuses) => {
       lastYieldDate: latestYield ? latestYield.date : null,
       lastYieldTotal: amount,
       lastYieldPerHectare: (latestYield && area > 0) ? (amount / area) : 0,
-      efficiency: f.efficiency || 0 
+      efficiency: f.efficiency || 0
     }
   })
 }

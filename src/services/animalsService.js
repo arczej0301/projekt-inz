@@ -1,14 +1,15 @@
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDocs, 
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDocs,
   onSnapshot,
   query,
   orderBy,
-  where
+  where,
+  limit
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -44,7 +45,7 @@ export const getAnimals = async () => {
 
 export const subscribeToAnimals = (callback) => {
   const q = query(collection(db, ANIMALS_COLLECTION), orderBy('name'));
-  return onSnapshot(q, 
+  return onSnapshot(q,
     (querySnapshot) => {
       const animals = [];
       querySnapshot.forEach((doc) => {
@@ -65,6 +66,10 @@ export const addAnimal = async (animalData) => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
+
+    // Dodaj wpis do historii
+    await addAnimalHistory(docRef.id, 'Nowe zwierzę', `Dodano zwierzę: ${animalData.name || animalData.type || 'bez nazwy'}`);
+
     clearCache();
     return docRef.id;
   } catch (error) {
@@ -115,11 +120,16 @@ export const updateAnimal = async (animalId, animalData, oldAnimalData = null) =
       if (animalData.notes && animalData.notes !== oldAnimalData.notes) {
         await addAnimalHistory(animalId, 'Notatka', 'Zaktualizowano notatki');
       }
+      // Sprawdzenie zmiany danych identyfikacyjnych
+      if ((animalData.name && animalData.name !== oldAnimalData.name) ||
+        (animalData.earTag && animalData.earTag !== oldAnimalData.earTag)) {
+        await addAnimalHistory(animalId, 'Edycja danych', `Zmieniono dane identyfikacyjne zwierzęcia`);
+      }
     } else {
       // Fallback
       await addAnimalHistory(animalId, 'Edycja', 'Zaktualizowano dane zwierzęcia');
     }
-    
+
     clearCache();
   } catch (error) {
     console.error('Error updating animal:', error);
@@ -130,6 +140,8 @@ export const updateAnimal = async (animalId, animalData, oldAnimalData = null) =
 export const deleteAnimal = async (animalId) => {
   try {
     await deleteDoc(doc(db, ANIMALS_COLLECTION, animalId));
+    // Historia usuwania - uwaga: animalID jest zachowany w historii, mimo że dokument usunięty
+    await addAnimalHistory(animalId, 'Usunięcie', 'Zwierzę zostało usunięte z systemu');
     clearCache();
   } catch (error) {
     console.error('Error deleting animal:', error);
@@ -154,6 +166,45 @@ export const getAnimalHistory = async (animalId) => {
     console.error('Error getting history:', error);
     throw error;
   }
+};
+
+// --- NOWOŚĆ: Pobieranie globalnej historii zwierząt (dla Dashboardu) ---
+export const getAllAnimalLogs = async (limitCount = 20) => {
+  try {
+    const q = query(
+      collection(db, 'animal_history'),
+      orderBy('date', 'desc'),
+      limit(limitCount)
+    );
+    const querySnapshot = await getDocs(q);
+    const logs = [];
+    querySnapshot.forEach((doc) => {
+      logs.push({ id: doc.id, ...doc.data() });
+    });
+    return logs;
+  } catch (error) {
+    console.error('Błąd pobierania historii zwierząt:', error);
+    return [];
+  }
+};
+
+export const subscribeToAnimalLogs = (limitCount = 20, callback) => {
+  const q = query(
+    collection(db, 'animal_history'),
+    orderBy('date', 'desc'),
+    limit(limitCount)
+  );
+
+  return onSnapshot(q,
+    (querySnapshot) => {
+      const logs = [];
+      querySnapshot.forEach((doc) => {
+        logs.push({ id: doc.id, ...doc.data() });
+      });
+      callback(logs);
+    },
+    (error) => console.error('Error in animal logs subscription:', error)
+  );
 };
 
 export const clearAnimalsCache = () => clearCache();

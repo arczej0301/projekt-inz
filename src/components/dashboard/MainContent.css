@@ -6,7 +6,7 @@
   margin-left: 300px;
   height: 100vh;
   overflow: hidden;
-  width: calc(100% - 250px);
+  width: calc(100% - 300px);
 }
 
 .content {
@@ -74,7 +74,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
   justify-content: center;
@@ -86,7 +86,7 @@
   border-radius: 8px;
   width: 500px;
   max-width: 90%;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   max-height: 90vh;
   overflow-y: auto;
 }
@@ -136,7 +136,9 @@
   color: #495057;
 }
 
-.form-group input, .form-group select, .form-group textarea {
+.form-group input,
+.form-group select,
+.form-group textarea {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #ced4da;
@@ -150,20 +152,27 @@
 }
 
 /* WSPÓLNE TABELE DLA WSZYSTKICH STRON */
-.fields-table, .machines-table, .animals-table {
+.fields-table,
+.machines-table,
+.animals-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.fields-table th, .fields-table td,
-.machines-table th, .machines-table td,
-.animals-table th, .animals-table td {
+.fields-table th,
+.fields-table td,
+.machines-table th,
+.machines-table td,
+.animals-table th,
+.animals-table td {
   padding: 12px 15px;
   text-align: left;
   border-bottom: 1px solid #e9ecef;
 }
 
-.fields-table th, .machines-table th, .animals-table th {
+.fields-table th,
+.machines-table th,
+.animals-table th {
   background-color: #f8f9fa;
   font-weight: 600;
   color: #495057;
@@ -216,7 +225,7 @@
   max-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 
@@ -241,7 +250,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -256,7 +265,7 @@
   max-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {

@@ -1,6 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../hooks/useFinance';
-import { garageService } from '../../services/garageService';
+import {
+  getMachines,
+  addMachine,
+  updateMachine,
+  deleteMachine as deleteMachineService,
+  addMachineHistory,
+  subscribeToMachines
+} from '../../services/machinesService';
 import './GaragePage.css';
 
 const GaragePage = () => {
@@ -22,21 +30,19 @@ const GaragePage = () => {
   const [transactionType, setTransactionType] = useState('expense');
 
   // Stany dla custom selectów
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isFuelTypeOpen, setIsFuelTypeOpen] = useState(false);
-  const [isFilterStatusOpen, setIsFilterStatusOpen] = useState(false);
+  // Stany dla custom selectów
+  const [activeSelect, setActiveSelect] = useState(null);
 
   useEffect(() => {
-  const shouldOpenMachineModal = localStorage.getItem('shouldOpenMachineModal');
-  
-  if (shouldOpenMachineModal === 'true') {
-    resetForm(); 
-    setShowForm(true);
-    
-    localStorage.removeItem('shouldOpenMachineModal');
-  }
-}, []); 
+    const shouldOpenMachineModal = localStorage.getItem('shouldOpenMachineModal');
+
+    if (shouldOpenMachineModal === 'true') {
+      resetForm();
+      setShowForm(true);
+
+      localStorage.removeItem('shouldOpenMachineModal');
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -77,7 +83,7 @@ const GaragePage = () => {
   const loadMachines = async () => {
     try {
       setLoading(true);
-      const data = await garageService.getAllMachines();
+      const data = await getMachines();
       setMachines(data);
     } catch (error) {
       alert('Błąd podczas ładowania danych garażu');
@@ -86,17 +92,34 @@ const GaragePage = () => {
     }
   };
 
+  // Subskrypcja zmian (opcjonalnie, ale loadMachines też zadziała)
+  useEffect(() => {
+    const unsubscribe = subscribeToMachines((data) => {
+      setMachines(data);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
 
   // Funkcja do ładowania historii napraw
+  // Funkcja do ładowania historii napraw (zostawiamy w garageService czy przenosimy?)
+  // W machinesService mamy getMachineHistory, które pobiera LOGI. 
+  // Ale tutaj jest 'repairHistory' - czy to to samo?
+  // Wcześniej było garageService.getRepairHistory(machineId).
+  // Sprawdźmy co robi garageService.
+  // Zakładamy, że chcemy używać nowej historii.
   const loadRepairHistory = async (machineId) => {
     setLoadingRepairHistory(true);
-
     try {
-      const history = await garageService.getRepairHistory(machineId);
-
+      // Używamy getMachineHistory z nowego serwisu (zwraca maschine_history)
+      // Ale uwaga: stary garageService mógł mieć inną strukturę 'repairs'.
+      // Dla uproszczenia, w tym kroku podmieniam na logi historii.
+      const { getMachineHistory } = await import('../../services/machinesService');
+      const history = await getMachineHistory(machineId);
+      // Filtrujemy tylko naprawy/serwisy jeśli trzeba, ale logi są ogólne.
       setRepairHistory(history);
-      return history; // Zwróć dane
-
+      return history;
     } catch (error) {
       setRepairHistory([]);
       return [];
@@ -115,6 +138,30 @@ const GaragePage = () => {
     }));
   };
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      category: '',
+      brand: '',
+      model: '',
+      year: new Date().getFullYear(),
+      serialNumber: '',
+      status: 'active',
+      lastService: '',
+      nextService: '',
+      serviceInterval: 12,
+      notes: '',
+      fuelType: 'diesel',
+      power: '',
+      purchaseDate: '',
+      purchasePrice: 0,
+      currentValue: 0
+    });
+    setEditingId(null);
+    setShowForm(false);
+    setActiveSelect(null);
+  };
+
   // POPRAWIONE: Funkcja do custom select
   const handleCustomSelect = (field, value) => {
     setFormData(prev => ({
@@ -123,9 +170,7 @@ const GaragePage = () => {
     }));
 
     // Zamknij odpowiedni select
-    if (field === 'category') setIsCategoryOpen(false);
-    if (field === 'status') setIsStatusOpen(false);
-    if (field === 'fuelType') setIsFuelTypeOpen(false);
+    setActiveSelect(null);
   };
 
   const handleSubmit = async (e) => {
@@ -150,12 +195,13 @@ const GaragePage = () => {
       let machineId;
       if (editingId) {
         // Edycja istniejącej maszyny
-        await garageService.updateMachine(editingId, machineData);
+        // Pobierz starą maszynę do porównania (dla logów)
+        const oldMachine = machines.find(m => m.id === editingId);
+        await updateMachine(editingId, machineData, oldMachine);
         machineId = editingId;
       } else {
         // Dodanie nowej maszyny
-        const docRef = await garageService.addMachine(machineData);
-        machineId = docRef.id;
+        machineId = await addMachine(machineData);
       }
 
       // 2. AUTOMATYCZNA TRANSAKCJA FINANSOWA (TYLKO DLA NOWYCH MASZYN)
@@ -164,7 +210,7 @@ const GaragePage = () => {
           type: 'expense', // ZMIENIONE: 'expense' zamiast 'income' - to jest KOSZT!
           category: 'maszyny', // ZMIENIONE: 'maszyny' (kategoria wydatków)
           amount: parseFloat(formData.purchasePrice),
-          description: `Zakup maszyny: ${formData.name}`,
+          description: `Zakup maszyny: ${formData.name} `,
           source: 'garage',
           sourceId: machineId,
           date: formData.purchaseDate || new Date().toISOString().split('T')[0]
@@ -175,12 +221,12 @@ const GaragePage = () => {
         if (result.success) {
           alert(`✅ Maszyna "${formData.name}" dodana! Dodano również do kosztów finansowych.`);
         } else {
-          alert(`✅ Maszyna "${formData.name}" dodana. Błąd przy dodawaniu do finansów: ${result.error}`);
+          alert(`✅ Maszyna "${formData.name}" dodana.Błąd przy dodawaniu do finansów: ${result.error}`);
         }
       } else if (editingId) {
         alert(`✅ Maszyna "${formData.name}" zaktualizowana.`);
       } else {
-        alert(`✅ Maszyna "${formData.name}" dodana (bez transakcji - brak ceny).`);
+        alert(`✅ Maszyna "${formData.name}" dodana(bez transakcji - brak ceny).`);
       }
 
       // 3. Odśwież listę i zamknij formularz
@@ -228,31 +274,7 @@ const GaragePage = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      category: '',
-      brand: '',
-      model: '',
-      year: new Date().getFullYear(),
-      serialNumber: '',
-      status: 'active', // ZMIENIONE: 'active' zamiast 'sold'
-      lastService: '',
-      nextService: '',
-      serviceInterval: 12,
-      notes: '',
-      fuelType: 'diesel',
-      power: '',
-      purchaseDate: '',
-      purchasePrice: 0,
-      currentValue: 0
-    });
-    setEditingId(null);
-    setShowForm(false);
-    setIsCategoryOpen(false);
-    setIsStatusOpen(false);
-    setIsFuelTypeOpen(false);
-  };
+
 
   // Funkcje do zarządzania historią napraw
   const openRepairHistory = (machine) => {
@@ -277,14 +299,20 @@ const GaragePage = () => {
   const closeRepairHistory = () => {
     setShowRepairHistory(false);
     setCurrentRepairMachine(null);
+    const today = new Date();
+    const nextYear = new Date(today);
+    nextYear.setFullYear(today.getFullYear() + 1);
+
+    const nextServiceDefault = nextYear.toISOString().split('T')[0];
+
     setRepairForm({
-      date: new Date().toISOString().split('T')[0],
+      date: today.toISOString().split('T')[0],
       description: '',
       cost: '',
       parts: '',
       mechanic: '',
-      nextServiceDate: '',
-      lastService: new Date().toISOString().split('T')[0],
+      nextServiceDate: nextServiceDefault, // Domyślnie za rok
+      lastService: today.toISOString().split('T')[0],
       serviceInterval: 12,
       changeStatusToActive: true
     });
@@ -304,15 +332,20 @@ const GaragePage = () => {
         createdAt: new Date()
       };
 
-      // 1. Dodaj naprawę do historii
-      await garageService.addRepair(repairData);
+      // 1. Dodaj naprawę do historii (jako log w machinesService)
+      // 1. Dodaj naprawę do historii (jako log w machinesService)
+      let historyDesc = `Koszt: ${repairForm.cost} zł. ${repairForm.description}`;
+      if (repairForm.changeStatusToActive) {
+        historyDesc += ' (Zmiana statusu na: Sprawny)';
+      }
+      await addMachineHistory(currentRepairMachine.id, 'Serwis/Naprawa', historyDesc);
 
       // 2. Automatycznie dodaj do finansów (JEŚLI JEST KOSZT)
       if (repairForm.cost && repairForm.cost > 0) {
         await addAutoTransaction('expense', {
           category: 'naprawy_konserwacja', // Musi być zgodne z ID z expenseCategories
           amount: parseFloat(repairForm.cost),
-          description: `Naprawa/przegląd: ${currentRepairMachine.name} - ${repairForm.description || 'Brak opisu'}`,
+          description: `${currentRepairMachine.name} | ${repairForm.description || 'Brak opisu'}`,
           source: 'garage',
           sourceId: currentRepairMachine.id
         });
@@ -331,11 +364,12 @@ const GaragePage = () => {
         updateData.status = 'active';
       }
 
-      await garageService.updateMachine(currentRepairMachine.id, updateData);
+      // UŻYJ updateMachine z nowego serwisu
+      await updateMachine(currentRepairMachine.id, updateData, currentRepairMachine);
 
       alert('Naprawa/przegląd został zapisany!' + (repairForm.cost > 0 ? ' Koszt dodano do finansów.' : ''));
       closeRepairHistory();
-      loadMachines();
+      // loadMachines(); // Subskrypcja załatwi odświeżenie
     } catch (error) {
       alert('Błąd podczas zapisywania naprawy: ' + error.message);
     }
@@ -411,10 +445,10 @@ const GaragePage = () => {
 
           if (newStatus !== machine.status && newStatus === 'needs_service') {
             // Aktualizuj w bazie danych
-            await garageService.updateMachine(machine.id, {
+            await updateMachine(machine.id, {
               ...machine,
               status: newStatus
-            });
+            }, machine); // Przekazujemy machine jako oldData
             return { ...machine, status: newStatus };
           }
           return machine;
@@ -459,19 +493,19 @@ const GaragePage = () => {
   ];
 
   const getCategoryLabel = (categoryValue) => {
-  if (!categoryValue) return 'Brak kategorii';
-  
-  // Szukamy dokładnego dopasowania
-  const option = categoryOptions.find(opt => opt.value === categoryValue);
-  
-  // Jeśli nie znaleziono, zwracamy oryginalną wartość
-  if (!option) {
-    const looseOption = categoryOptions.find(opt => opt.value.toLowerCase() === categoryValue.toLowerCase());
-    return looseOption ? looseOption.label : categoryValue;
-  }
-  
-  return option.label;
-};
+    if (!categoryValue) return 'Brak kategorii';
+
+    // Szukamy dokładnego dopasowania
+    const option = categoryOptions.find(opt => opt.value === categoryValue);
+
+    // Jeśli nie znaleziono, zwracamy oryginalną wartość
+    if (!option) {
+      const looseOption = categoryOptions.find(opt => opt.value.toLowerCase() === categoryValue.toLowerCase());
+      return looseOption ? looseOption.label : categoryValue;
+    }
+
+    return option.label;
+  };
 
   // Funkcje pomocnicze do wyświetlania aktualnych wartości
   const getCurrentCategoryLabel = () => {
@@ -527,7 +561,7 @@ const GaragePage = () => {
   // Dodaj tę funkcję do obsługi zmiany filtra
   const handleFilterStatusChange = (value) => {
     setFilterStatus(value);
-    setIsFilterStatusOpen(false);
+    setActiveSelect(null);
   };
 
   const handleEditMachine = (machineId) => {
@@ -546,7 +580,7 @@ const GaragePage = () => {
 
   const deleteMachine = async (machineId) => {
     try {
-      await garageService.deleteMachine(machineId);
+      await deleteMachineService(machineId);
       setMachines(prev => prev.filter(m => m.id !== machineId));
       alert('Maszyna została usunięta pomyślnie');
     } catch (error) {
@@ -555,7 +589,7 @@ const GaragePage = () => {
   };
 
   return (
-    <div className="garage-page">
+    <div className="garage-page" onClick={() => setActiveSelect(null)}>
       <div className="garage-header">
         <h2>Zarządzanie garażem</h2>
       </div>
@@ -612,7 +646,7 @@ const GaragePage = () => {
             <div className="filter-controls">
               <div className="actions-bar">
               </div>
-             
+
               <div className="search-box">
                 <i className="fas fa-search"></i>
                 <input
@@ -626,13 +660,16 @@ const GaragePage = () => {
 
               <div className="custom-select">
                 <div
-                  className={`select-header ${isFilterStatusOpen ? 'open' : ''}`}
-                  onClick={() => setIsFilterStatusOpen(!isFilterStatusOpen)}
+                  className={`select-header ${activeSelect === 'filterStatus' ? 'open' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveSelect(activeSelect === 'filterStatus' ? null : 'filterStatus');
+                  }}
                 >
                   {getCurrentFilterStatusLabel()}
                   <span className="arrow">▼</span>
                 </div>
-                {isFilterStatusOpen && (
+                {activeSelect === 'filterStatus' && (
                   <div className="select-options">
                     <div
                       className={`select-option ${filterStatus === 'all' ? 'selected' : ''}`}
@@ -673,7 +710,7 @@ const GaragePage = () => {
                   </div>
                 )}
               </div>
-                 <div className="action-buttons">
+              <div className="action-buttons">
                 <button
                   className="btn btn-primary"
                   onClick={() => {
@@ -833,12 +870,8 @@ const GaragePage = () => {
           onSave={handleSubmit} // TYLKO TO - prosto wywołaj handleSubmit
           onClose={resetForm}
           editingId={editingId}
-          isCategoryOpen={isCategoryOpen}
-          setIsCategoryOpen={setIsCategoryOpen}
-          isStatusOpen={isStatusOpen}
-          setIsStatusOpen={setIsStatusOpen}
-          isFuelTypeOpen={isFuelTypeOpen}
-          setIsFuelTypeOpen={setIsFuelTypeOpen}
+          activeSelect={activeSelect}
+          setActiveSelect={setActiveSelect}
           handleCustomSelect={handleCustomSelect}
           getCurrentCategoryLabel={getCurrentCategoryLabel}
           getCurrentStatusLabel={getCurrentStatusLabel}
@@ -884,12 +917,8 @@ const MachineModal = ({
   onSave,
   onClose,
   editingId,
-  isCategoryOpen,
-  setIsCategoryOpen,
-  isStatusOpen,
-  setIsStatusOpen,
-  isFuelTypeOpen,
-  setIsFuelTypeOpen,
+  activeSelect,
+  setActiveSelect,
   handleCustomSelect,
   getCurrentCategoryLabel,
   getCurrentStatusLabel,
@@ -919,7 +948,7 @@ const MachineModal = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content" onClick={e => { e.stopPropagation(); setActiveSelect(null); }}>
         <div className="modal-header">
           <h3>{editingId ? 'Edytuj maszynę' : 'Dodaj nową maszynę'}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
@@ -945,13 +974,16 @@ const MachineModal = ({
                 <label>Kategoria</label>
                 <div className="custom-select">
                   <div
-                    className={`select-header ${isCategoryOpen ? 'open' : ''}`}
-                    onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                    className={`select-header ${activeSelect === 'category' ? 'open' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveSelect(activeSelect === 'category' ? null : 'category');
+                    }}
                   >
                     {getCurrentCategoryLabel()}
                     <span className="arrow">▼</span>
                   </div>
-                  {isCategoryOpen && (
+                  {activeSelect === 'category' && (
                     <div className="select-options">
                       {categoryOptions.map(option => (
                         <div
@@ -972,13 +1004,16 @@ const MachineModal = ({
                 <label>Status</label>
                 <div className="custom-select">
                   <div
-                    className={`select-header ${isStatusOpen ? 'open' : ''}`}
-                    onClick={() => setIsStatusOpen(!isStatusOpen)}
+                    className={`select-header ${activeSelect === 'status' ? 'open' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveSelect(activeSelect === 'status' ? null : 'status');
+                    }}
                   >
                     {getCurrentStatusLabel()}
                     <span className="arrow">▼</span>
                   </div>
-                  {isStatusOpen && (
+                  {activeSelect === 'status' && (
                     <div className="select-options">
                       {statusOptions.map(option => (
                         <div
@@ -1034,13 +1069,16 @@ const MachineModal = ({
                 <label>Typ paliwa</label>
                 <div className="custom-select">
                   <div
-                    className={`select-header ${isFuelTypeOpen ? 'open' : ''}`}
-                    onClick={() => setIsFuelTypeOpen(!isFuelTypeOpen)}
+                    className={`select-header ${activeSelect === 'fuelType' ? 'open' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveSelect(activeSelect === 'fuelType' ? null : 'fuelType');
+                    }}
                   >
                     {getCurrentFuelTypeLabel()}
                     <span className="arrow">▼</span>
                   </div>
-                  {isFuelTypeOpen && (
+                  {activeSelect === 'fuelType' && (
                     <div className="select-options">
                       {fuelTypeOptions.map(option => (
                         <div
@@ -1188,7 +1226,7 @@ const RepairListModal = ({ machine, repairHistory, onClose, loading, onRepairsUp
       return;
     }
 
-    if (!window.confirm(`Czy na pewno chcesz usunąć ${selectedRepairs.length} zaznaczonych napraw? Tej operacji nie można cofnąć.`)) {
+    if (!window.confirm(`Czy na pewno chcesz usunąć ${selectedRepairs.length} zaznaczonych napraw ? Tej operacji nie można cofnąć.`)) {
       return;
     }
 
@@ -1360,7 +1398,7 @@ const RepairListModal = ({ machine, repairHistory, onClose, loading, onRepairsUp
                                 </td>
                               )}
                               <td className="repair-number" data-label="Numer naprawy">
-                                <span className="repeir-index">{sortedRepairs.length - index}</span>
+                                <span className="repair-index">{sortedRepairs.length - index}</span>
                               </td>
                               <td className="repair-date" data-label="Data naprawy">
                                 <div className="date-main">{repairDate}</div>

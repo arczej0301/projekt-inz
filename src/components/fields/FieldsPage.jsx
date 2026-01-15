@@ -20,21 +20,21 @@ const FieldsPage = () => {
   const [fields, setFields] = useState([]);
   const [fieldStatuses, setFieldStatuses] = useState({});
   const [loading, setLoading] = useState(true);
-  
+
   // Modale
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isHarvestModalOpen, setIsHarvestModalOpen] = useState(false); // NOWY MODAL
-  
+
   const [currentField, setCurrentField] = useState(null);
   const [currentStatus, setCurrentStatus] = useState(null);
   const [fieldHistory, setFieldHistory] = useState({ yields: [], costs: [], statuses: [] });
-  
+
   // Rysowanie
   const [isDrawing, setIsDrawing] = useState(false);
   const [tempPolygon, setTempPolygon] = useState([]);
-  
+
   // UI
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState(null);
@@ -423,7 +423,7 @@ const FieldsPage = () => {
   };
 
   const openHistoryModal = async (field) => {
-    setSelectedField(field); 
+    setSelectedField(field);
     setIsHistoryModalOpen(true);
     setFieldHistory({ yields: [], costs: [], statuses: [] });
     setLoading(true);
@@ -453,142 +453,142 @@ const FieldsPage = () => {
     setCurrentField(null);
   };
 
-const handleSaveHarvest = async (yieldData) => {
-  try {
-    setSaveLoading(true);
+  const handleSaveHarvest = async (yieldData) => {
+    try {
+      setSaveLoading(true);
 
-    // 1. Dodaj zbiór do tabeli plonów
-    await addFieldYield(yieldData);
+      // 1. Dodaj zbiór do tabeli plonów
+      await addFieldYield(yieldData);
 
-    // 2. Utwórz nowy status 'harvested' (Zebrane)
-    // To też musi być NOWY wpis, żeby nie nadpisać poprzedniego stanu (np. "Dojrzewanie")
-    const newStatus = {
-      field_id: currentField.id,
-      status: 'harvested',
-      crop: yieldData.crop,
-      yield_amount: yieldData.amount,       // Zapisujemy plon w historii
-      yield_moisture: yieldData.moisture,   // Zapisujemy wilgotność w historii
-      notes: `Zbiór automatyczny: ${yieldData.amount}t`,
-      date_created: new Date().toISOString()
-    };
-    
-    // 3. Dodaj do historii (ADD, nie UPDATE)
-    const newDocId = await addFieldStatus(newStatus);
+      // 2. Utwórz nowy status 'harvested' (Zebrane)
+      // To też musi być NOWY wpis, żeby nie nadpisać poprzedniego stanu (np. "Dojrzewanie")
+      const newStatus = {
+        field_id: currentField.id,
+        status: 'harvested',
+        crop: yieldData.crop,
+        yield_amount: yieldData.amount,       // Zapisujemy plon w historii
+        yield_moisture: yieldData.moisture,   // Zapisujemy wilgotność w historii
+        notes: `Zbiór automatyczny: ${yieldData.amount}t`,
+        date_created: new Date().toISOString()
+      };
 
-    // 4. Aktualizacja głównego pola (żeby w tabeli była dobra uprawa)
-    await updateField(currentField.id, {
-      crop: yieldData.crop 
-    });
+      // 3. Dodaj do historii (ADD, nie UPDATE)
+      const newDocId = await addFieldStatus(newStatus);
 
-    // 5. Aktualizacja UI
-    setFieldStatuses(prev => ({
-      ...prev,
-      [currentField.id]: { ...newStatus, id: newDocId }
-    }));
-
-    setFields(prevFields => prevFields.map(f => 
-      f.id === currentField.id 
-        ? { ...f, crop: yieldData.crop }
-        : f
-    ));
-
-    closeHarvestModal();
-  } catch (error) {
-    console.error('Błąd zapisu zbioru:', error);
-    alert('Wystąpił błąd podczas zapisywania zbioru: ' + error.message);
-  } finally {
-    setSaveLoading(false);
-  }
-};
-  // --- OPERACJE NA POLACH ---
-
-// Podmień funkcję saveField na tę wersję:
-const saveField = async () => {
-  if (!currentField?.name || !currentField?.area || !currentField?.soil) {
-    alert('Proszę wypełnić wszystkie wymagane pola!');
-    return;
-  }
-
-  try {
-    setSaveLoading(true);
-
-    // TWORZYMY OBIEKT BEZ POLA 'CROP'
-    // Uprawa jest teraz zarządzana WYŁĄCZNIE przez status
-    const fieldData = {
-      name: currentField.name.trim(),
-      area: parseFloat(currentField.area),
-      soil: currentField.soil,
-      notes: currentField.notes || '',
-      coordinates: currentField.coordinates
-      // Usunięto: crop: currentField.crop || '' 
-    };
-
-    if (currentField.id) {
-      await updateField(currentField.id, fieldData);
-    } else {
-      // Przy nowym polu dodajemy pustą uprawę, bo jeszcze nie ma statusu
-      await addField({ ...fieldData, crop: '' });
-    }
-
-    closeFieldModal();
-  } catch (error) {
-    console.error('Error saving field:', error);
-    alert('Błąd podczas zapisywania pola: ' + error.message);
-    setSaveLoading(false);
-  }
-};
-
-  // Podmień funkcję saveFieldStatus na tę wersję:
-const saveFieldStatus = async () => {
-  if (!currentStatus?.status) {
-    alert('Proszę wybrać stan pola!');
-    return;
-  }
-
-  try {
-    setSaveLoading(true);
-
-    // TWORZYMY NOWY OBIEKT STATUSU (bez ID)
-    // Dzięki temu Firebase potraktuje to jako NOWY wpis, a nie edycję starego
-    const statusPayload = {
-      field_id: currentStatus.field_id,
-      status: currentStatus.status,
-      crop: currentStatus.crop || '',
-      notes: currentStatus.notes || '',
-      date_created: new Date().toISOString() // Zawsze nowa data
-      // Ważne: Nie przesyłamy tutaj 'id', żeby wymusić utworzenie nowego dokumentu
-    };
-
-    // 1. Zawsze używamy addFieldStatus (DODAJ), nigdy update
-    const newDocId = await addFieldStatus(statusPayload);
-
-    // 2. Aktualizuj uprawę w głównym dokumencie pola (dla mapy i tabeli)
-    if (currentStatus.field_id) {
-      await updateField(currentStatus.field_id, {
-        crop: currentStatus.crop || '' 
+      // 4. Aktualizacja głównego pola (żeby w tabeli była dobra uprawa)
+      await updateField(currentField.id, {
+        crop: yieldData.crop
       });
-      
-      // Aktualizacja tabeli na żywo
-      setFields(prevFields => prevFields.map(f => 
-        f.id === currentStatus.field_id 
-          ? { ...f, crop: currentStatus.crop || '' }
+
+      // 5. Aktualizacja UI
+      setFieldStatuses(prev => ({
+        ...prev,
+        [currentField.id]: { ...newStatus, id: newDocId }
+      }));
+
+      setFields(prevFields => prevFields.map(f =>
+        f.id === currentField.id
+          ? { ...f, crop: yieldData.crop }
           : f
       ));
+
+      closeHarvestModal();
+    } catch (error) {
+      console.error('Błąd zapisu zbioru:', error);
+      alert('Wystąpił błąd podczas zapisywania zbioru: ' + error.message);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+  // --- OPERACJE NA POLACH ---
+
+  // Podmień funkcję saveField na tę wersję:
+  const saveField = async () => {
+    if (!currentField?.name || !currentField?.area || !currentField?.soil) {
+      alert('Proszę wypełnić wszystkie wymagane pola!');
+      return;
     }
 
-    // 3. Aktualizuj lokalny stan statusów (dla kolorów w tabeli)
-    setFieldStatuses(prev => ({
-      ...prev,
-      [currentStatus.field_id]: { ...statusPayload, id: newDocId }
-    }));
+    try {
+      setSaveLoading(true);
 
-    closeStatusModal();
-  } catch (error) {
-    console.error('Error saving field status:', error);
-    alert('Błąd podczas zapisywania stanu pola: ' + error.message);
-    setSaveLoading(false);
-  }
-};
+      // TWORZYMY OBIEKT BEZ POLA 'CROP'
+      // Uprawa jest teraz zarządzana WYŁĄCZNIE przez status
+      const fieldData = {
+        name: currentField.name.trim(),
+        area: parseFloat(currentField.area),
+        soil: currentField.soil,
+        notes: currentField.notes || '',
+        coordinates: currentField.coordinates
+        // Usunięto: crop: currentField.crop || '' 
+      };
+
+      if (currentField.id) {
+        await updateField(currentField.id, fieldData);
+      } else {
+        // Przy nowym polu dodajemy pustą uprawę, bo jeszcze nie ma statusu
+        await addField({ ...fieldData, crop: '' });
+      }
+
+      closeFieldModal();
+    } catch (error) {
+      console.error('Error saving field:', error);
+      alert('Błąd podczas zapisywania pola: ' + error.message);
+      setSaveLoading(false);
+    }
+  };
+
+  // Podmień funkcję saveFieldStatus na tę wersję:
+  const saveFieldStatus = async () => {
+    if (!currentStatus?.status) {
+      alert('Proszę wybrać stan pola!');
+      return;
+    }
+
+    try {
+      setSaveLoading(true);
+
+      // TWORZYMY NOWY OBIEKT STATUSU (bez ID)
+      // Dzięki temu Firebase potraktuje to jako NOWY wpis, a nie edycję starego
+      const statusPayload = {
+        field_id: currentStatus.field_id,
+        status: currentStatus.status,
+        crop: currentStatus.crop || '',
+        notes: currentStatus.notes || '',
+        date_created: new Date().toISOString() // Zawsze nowa data
+        // Ważne: Nie przesyłamy tutaj 'id', żeby wymusić utworzenie nowego dokumentu
+      };
+
+      // 1. Zawsze używamy addFieldStatus (DODAJ), nigdy update
+      const newDocId = await addFieldStatus(statusPayload);
+
+      // 2. Aktualizuj uprawę w głównym dokumencie pola (dla mapy i tabeli)
+      if (currentStatus.field_id) {
+        await updateField(currentStatus.field_id, {
+          crop: currentStatus.crop || ''
+        });
+
+        // Aktualizacja tabeli na żywo
+        setFields(prevFields => prevFields.map(f =>
+          f.id === currentStatus.field_id
+            ? { ...f, crop: currentStatus.crop || '' }
+            : f
+        ));
+      }
+
+      // 3. Aktualizuj lokalny stan statusów (dla kolorów w tabeli)
+      setFieldStatuses(prev => ({
+        ...prev,
+        [currentStatus.field_id]: { ...statusPayload, id: newDocId }
+      }));
+
+      closeStatusModal();
+    } catch (error) {
+      console.error('Error saving field status:', error);
+      alert('Błąd podczas zapisywania stanu pola: ' + error.message);
+      setSaveLoading(false);
+    }
+  };
 
   const handleDeleteField = async (id) => {
     try {
@@ -626,6 +626,39 @@ const saveFieldStatus = async () => {
 
   const hoverFieldFromList = (field) => setHoveredField(field);
   const leaveFieldFromList = () => setHoveredField(null);
+
+  // Dopasowanie mapy do pól
+  const fitMapToFields = () => {
+    if (!mapRef.current || fields.length === 0 || !window.google) return;
+
+    const bounds = new window.google.maps.LatLngBounds();
+    let hasValidCoords = false;
+
+    fields.forEach(field => {
+      if (field.coordinates && field.coordinates.length > 0) {
+        field.coordinates.forEach(coord => {
+          bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
+          hasValidCoords = true;
+        });
+      }
+    });
+
+    if (hasValidCoords) {
+      mapRef.current.fitBounds(bounds);
+      // Opcjonalnie: lekkie oddalenie jeśli fitBounds jest zbyt ciasny (zależy od API, zazwyczaj OK)
+    }
+  };
+
+  // Automatyczne dopasowanie po załadowaniu pól (tylko raz lub na żądanie)
+  useEffect(() => {
+    if (!loading && fields.length > 0 && mapRef.current) {
+      // Małe opóźnienie żeby upewnić się że mapa jest gotowa
+      const timer = setTimeout(() => {
+        fitMapToFields();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, mapRef.current]); // Zależności: loading się zmienia po fetchu
 
   const getStatusDisplay = (fieldId) => {
     const status = fieldStatuses[fieldId];
@@ -678,6 +711,10 @@ const saveFieldStatus = async () => {
                 <i className="fas fa-check"></i> Zakończ rysowanie
               </button>
             )}
+
+            <button className="btn btn-info" onClick={fitMapToFields} title="Dopasuj widok do wszystkich pól">
+              <i className="fas fa-compress-arrows-alt"></i> Centruj mapę
+            </button>
           </div>
         </div>
       </div>
@@ -719,7 +756,7 @@ const saveFieldStatus = async () => {
             {fields.map(field => (
               <Polygon
                 key={field.id}
-                paths={field.coordinates}
+                paths={field.coordinates ? field.coordinates.map(c => ({ lat: parseFloat(c.lat), lng: parseFloat(c.lng) })) : []}
                 options={
                   selectedField?.id === field.id
                     ? selectedPolygonOptions
@@ -827,7 +864,7 @@ const saveFieldStatus = async () => {
                   // Sprawdzenie statusu dla każdego wiersza
                   const currentStatus = fieldStatuses[field.id];
                   const isSown = currentStatus && currentStatus.status === 'sown';
-                  
+
                   return (
                     <tr
                       key={field.id}
@@ -864,9 +901,9 @@ const saveFieldStatus = async () => {
 
                         {/* PRZYCISK DODAJ ZBIÓR - TYLKO GDY ZASIANE */}
                         {isSown && (
-                          <button 
-                            className="action-btn" 
-                            style={{ backgroundColor: '#2ecc71', color: 'white' }} 
+                          <button
+                            className="action-btn"
+                            style={{ backgroundColor: '#2ecc71', color: 'white' }}
                             onClick={(e) => { e.stopPropagation(); openHarvestModal(field); }}
                             title="Dodaj zbiór (zmieni status na Zebrane)"
                           >
@@ -992,7 +1029,7 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
   ];
 
   // getCurrentCropLabel usunięte
-  
+
   const getCurrentSoilLabel = () => soilOptions.find(opt => opt.value === (field?.soil || ''))?.label || 'Wybierz typ gleby';
 
   return (
@@ -1012,7 +1049,7 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
               <label htmlFor="fieldArea">Powierzchnia (ha) *</label>
               <input type="number" id="fieldArea" name="area" value={field?.area || ''} onChange={handleInputChange} step="0.01" required />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="fieldSoil">Typ gleby *</label>
               <div className="custom-select">
@@ -1037,7 +1074,7 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
               <label htmlFor="fieldNotes">Notatki</label>
               <textarea id="fieldNotes" name="notes" value={field?.notes || ''} onChange={handleInputChange} rows="3" placeholder="Dodatkowe informacje o polu..." />
             </div>
-            
+
             {field?.coordinates && field.coordinates.length > 0 && (
               <div className="form-group">
                 <label>Informacje o narysowanym polu:</label>
@@ -1190,57 +1227,57 @@ const HarvestModal = ({ field, currentStatus, onSave, onClose, saveLoading }) =>
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" style={{maxWidth: '500px'}} onClick={e => e.stopPropagation()}>
+      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3><i className="fas fa-tractor" style={{color: '#27ae60'}}></i> Dodaj zbiór: {field.name}</h3>
+          <h3><i className="fas fa-tractor" style={{ color: '#27ae60' }}></i> Dodaj zbiór: {field.name}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
-          <div className="info-box" style={{background: '#e9f7ef', padding: '10px', borderRadius: '5px', marginBottom: '15px', border: '1px solid #c3e6cb', color: '#155724'}}>
+          <div className="info-box" style={{ background: '#e9f7ef', padding: '10px', borderRadius: '5px', marginBottom: '15px', border: '1px solid #c3e6cb', color: '#155724' }}>
             <i className="fas fa-info-circle"></i> Zapisanie zbioru automatycznie zmieni status pola na <strong>Zebrane</strong>.
           </div>
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Data zbioru</label>
-              <input 
-                type="date" 
-                value={harvestData.date_created} 
-                onChange={e => setHarvestData({...harvestData, date_created: e.target.value})}
+              <input
+                type="date"
+                value={harvestData.date_created}
+                onChange={e => setHarvestData({ ...harvestData, date_created: e.target.value })}
                 required
               />
             </div>
             <div className="form-group">
               <label>Uprawa (zbierana roślina)</label>
-              <input 
-                type="text" 
-                value={harvestData.crop} 
-                onChange={e => setHarvestData({...harvestData, crop: e.target.value})}
+              <input
+                type="text"
+                value={harvestData.crop}
+                onChange={e => setHarvestData({ ...harvestData, crop: e.target.value })}
                 required
               />
             </div>
             <div className="form-group">
               <label>Ilość łącznie (tony) *</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 step="0.01"
-                value={harvestData.amount} 
-                onChange={e => setHarvestData({...harvestData, amount: e.target.value})}
+                value={harvestData.amount}
+                onChange={e => setHarvestData({ ...harvestData, amount: e.target.value })}
                 placeholder="np. 45.5"
                 required
               />
             </div>
             <div className="form-group">
               <label>Wilgotność (%)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 step="0.1"
-                value={harvestData.moisture} 
-                onChange={e => setHarvestData({...harvestData, moisture: e.target.value})}
+                value={harvestData.moisture}
+                onChange={e => setHarvestData({ ...harvestData, moisture: e.target.value })}
                 placeholder="np. 14.5"
               />
             </div>
-            
-            <div className="modal-footer" style={{padding: '15px 0 0 0'}}>
+
+            <div className="modal-footer" style={{ padding: '15px 0 0 0' }}>
               <button type="button" className="btn btn-secondary" onClick={onClose}>Anuluj</button>
               <button type="submit" className="btn btn-success" disabled={saveLoading}>
                 {saveLoading ? 'Zapisywanie...' : 'Zapisz zbiór i zmień status'}
@@ -1256,11 +1293,11 @@ const HarvestModal = ({ field, currentStatus, onSave, onClose, saveLoading }) =>
 // === ZMODYFIKOWANY MODAL HISTORII (Bez dodawania) ===
 const FieldHistoryModal = ({ field, historyData, onClose, onRefresh }) => {
   const [activeTab, setActiveTab] = useState('timeline');
-  
+
   // Funkcja łącząca dane do osi czasu (Timeline)
   const getTimelineEvents = () => {
     const events = [];
-    
+
     // Zbiory
     historyData.yields.forEach(y => {
       events.push({ type: 'yield', date: y.date_created, data: y });
@@ -1282,7 +1319,7 @@ const FieldHistoryModal = ({ field, historyData, onClose, onRefresh }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content history-modal" onClick={e => e.stopPropagation()} style={{maxWidth: '700px'}}>
+      <div className="modal-content history-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
         <div className="modal-header">
           <h3>Historia pola: {field.name}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
@@ -1309,7 +1346,7 @@ const FieldHistoryModal = ({ field, historyData, onClose, onRefresh }) => {
               {getTimelineEvents().map((event, idx) => (
                 <div key={idx} className={`timeline-item ${event.type}`}>
                   <div className="timeline-date">
-                    {new Date(event.date).toLocaleDateString()} {new Date(event.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    {new Date(event.date).toLocaleDateString()} {new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                   <div className="timeline-content">
                     {event.type === 'yield' && (
@@ -1329,10 +1366,10 @@ const FieldHistoryModal = ({ field, historyData, onClose, onRefresh }) => {
                       <>
                         <strong><i className="fas fa-exchange-alt"></i> Zmiana statusu</strong>
                         <p>Status: {
-                            event.data.status === 'sown' ? 'Zasiane' :
+                          event.data.status === 'sown' ? 'Zasiane' :
                             event.data.status === 'harvested' ? 'Zebrane' :
-                            event.data.status === 'ready_for_sowing' ? 'Do siewu' :
-                            event.data.status
+                              event.data.status === 'ready_for_sowing' ? 'Do siewu' :
+                                event.data.status
                         }</p>
                         {event.data.crop && <p>Uprawa: {event.data.crop}</p>}
                         {event.data.notes && <p><em>"{event.data.notes}"</em></p>}
@@ -1359,7 +1396,7 @@ const FieldHistoryModal = ({ field, historyData, onClose, onRefresh }) => {
                 </thead>
                 <tbody>
                   {historyData.yields.length === 0 && (
-                    <tr><td colSpan="5" style={{textAlign:'center'}}>Brak zarejestrowanych zbiorów</td></tr>
+                    <tr><td colSpan="5" style={{ textAlign: 'center' }}>Brak zarejestrowanych zbiorów</td></tr>
                   )}
                   {historyData.yields.map(y => (
                     <tr key={y.id}>

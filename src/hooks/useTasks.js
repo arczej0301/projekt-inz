@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDocs, 
-  query, 
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
   orderBy,
   where,
   Timestamp,
@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from './useAuth';
+import { addTaskLog } from '../services/tasksHistoryService';
 
 export const useTasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -57,6 +58,11 @@ export const useTasks = () => {
     { value: 'critical', label: 'Krytyczny' }
   ];
 
+  const translateStatus = (status) => {
+    const found = TASK_STATUS.find(s => s.value === status);
+    return found ? found.label : status;
+  };
+
   // Pobierz wszystkie dane powiązane - POPRAWIONE: Z CIĄGNIKAMI
   const fetchRelatedData = async () => {
     if (!user || !db) {
@@ -64,7 +70,7 @@ export const useTasks = () => {
     }
 
     try {
-      
+
       // Pobierz pola
       try {
         const fieldsQuery = query(collection(db, 'fields'));
@@ -94,33 +100,33 @@ export const useTasks = () => {
           const type = machine.type?.toLowerCase() || '';
           const name = machine.name?.toLowerCase() || '';
           const model = machine.model?.toLowerCase() || '';
-          
-          return category.includes('ciągnik') || 
-                 category.includes('tractor') ||
-                 category.includes('kombajn') || 
-                 category.includes('combine') ||
-                 type.includes('ciągnik') ||
-                 type.includes('tractor') ||
-                 type.includes('kombajn') ||
-                 type.includes('combine') ||
-                 name.includes('ciągnik') ||
-                 name.includes('tractor') ||
-                 name.includes('kombajn') ||
-                 name.includes('combine') ||
-                 model.includes('ciągnik') ||
-                 model.includes('tractor') ||
-                 model.includes('kombajn') ||
-                 model.includes('combine');
+
+          return category.includes('ciągnik') ||
+            category.includes('tractor') ||
+            category.includes('kombajn') ||
+            category.includes('combine') ||
+            type.includes('ciągnik') ||
+            type.includes('tractor') ||
+            type.includes('kombajn') ||
+            type.includes('combine') ||
+            name.includes('ciągnik') ||
+            name.includes('tractor') ||
+            name.includes('kombajn') ||
+            name.includes('combine') ||
+            model.includes('ciągnik') ||
+            model.includes('tractor') ||
+            model.includes('kombajn') ||
+            model.includes('combine');
         });
 
         // Pozostałe maszyny (bez ciągników i kombajnów)
-        const otherMachines = allMachines.filter(machine => 
+        const otherMachines = allMachines.filter(machine =>
           !tractorsData.some(tractor => tractor.id === machine.id)
         );
 
         setTractors(tractorsData);
         setMachines(otherMachines);
-        
+
       } catch (err) {
         console.warn('Brak kolekcji garage:', err);
         setTractors([]);
@@ -155,10 +161,10 @@ export const useTasks = () => {
     if (!user || !db) {
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const q = query(collection(db, 'tasks'), orderBy('dueDate', 'asc'));
       const querySnapshot = await getDocs(q);
@@ -166,21 +172,21 @@ export const useTasks = () => {
         id: doc.id,
         ...doc.data()
       }));
-      
+
       if (filters.status && filters.status !== '') {
         tasksData = tasksData.filter(task => task.status === filters.status);
       }
-      
+
       if (filters.type && filters.type !== '') {
         tasksData = tasksData.filter(task => task.type === filters.type);
       }
-      
+
       if (filters.priority && filters.priority !== '') {
         tasksData = tasksData.filter(task => task.priority === filters.priority);
       }
-      
+
       if (filters.assignedTo && filters.assignedTo !== '') {
-        tasksData = tasksData.filter(task => 
+        tasksData = tasksData.filter(task =>
           task.assignedTo && task.assignedTo.toLowerCase().includes(filters.assignedTo.toLowerCase())
         );
       }
@@ -190,7 +196,7 @@ export const useTasks = () => {
       }
 
       setTasks(tasksData);
-      
+
     } catch (err) {
       console.error('Error fetching tasks:', err);
       setError('Błąd podczas pobierania zadań: ' + err.message);
@@ -202,10 +208,10 @@ export const useTasks = () => {
   const filterTasksByDateRange = (tasks, dateRange) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
+
     return tasks.filter(task => {
       if (!task.dueDate) return false;
-      
+
       try {
         let taskDate;
         if (task.dueDate && task.dueDate.toDate) {
@@ -250,12 +256,12 @@ export const useTasks = () => {
   };
 
 
-   // NOWA FUNKCJA: Aktualizuj stan magazynu przy użyciu produktów
-  const updateWarehouseStock = async (materials, operation = 'use', taskId = null, rollback = false) => {
+  // NOWA FUNKCJA: Aktualizuj stan magazynu przy użyciu produktów
+  const updateWarehouseStock = async (materials, operation = 'use', taskId = null, taskTitle = null, rollback = false) => {
     if (!materials || materials.length === 0) return;
-    
+
     const updates = [];
-    
+
     try {
       for (const material of materials) {
         if (!material.productId || !material.quantity || parseFloat(material.quantity) <= 0) {
@@ -264,7 +270,7 @@ export const useTasks = () => {
 
         const productRef = doc(db, 'warehouse', material.productId);
         const productDoc = await getDoc(productRef);
-        
+
         if (!productDoc.exists()) {
           console.warn(`Produkt ${material.productId} nie istnieje w magazynie`);
           continue;
@@ -273,7 +279,7 @@ export const useTasks = () => {
         const product = productDoc.data();
         const currentQuantity = parseFloat(product.quantity || 0);
         const requestedQuantity = parseFloat(material.quantity);
-        
+
         // Sprawdź czy wystarczająca ilość (tylko przy użyciu)
         if (operation === 'use' && requestedQuantity > currentQuantity && !rollback) {
           throw new Error(`Niewystarczająca ilość produktu "${product.name}". Dostępne: ${currentQuantity} ${product.unit}, Wymagane: ${requestedQuantity} ${material.unit || product.unit}`);
@@ -283,12 +289,12 @@ export const useTasks = () => {
         let newQuantity;
         if (rollback) {
           // Przywracanie stanu (np. przy usuwaniu zadania)
-          newQuantity = operation === 'use' 
+          newQuantity = operation === 'use'
             ? currentQuantity + requestedQuantity  // Dodaj z powrotem
             : currentQuantity - requestedQuantity; // Odejmij z powrotem
         } else {
           // Normalna operacja
-          newQuantity = operation === 'use' 
+          newQuantity = operation === 'use'
             ? currentQuantity - requestedQuantity  // Odejmij przy użyciu
             : currentQuantity + requestedQuantity; // Dodaj przy zwrocie
         }
@@ -305,8 +311,9 @@ export const useTasks = () => {
           newQuantity,
           previousQuantity: currentQuantity,
           quantityChange: rollback ? requestedQuantity : -requestedQuantity,
-          operation,
-          taskId
+          operation: rollback ? 'add' : 'delete', // 'add' przy zwrocie, 'delete' przy użyciu
+          taskId,
+          unit: product.unit || '' // Dodajemy jednostkę
         });
       }
 
@@ -331,13 +338,16 @@ export const useTasks = () => {
           source: 'task',
           taskId: taskId,
           userId: user?.uid,
-          description: `Zużycie z zadania: ${taskId || 'nowe zadanie'}`
+          unit: update.unit,
+          description: rollback
+            ? `Zwrot z zadania: ${taskTitle || taskId || 'zadanie'}`
+            : `Zużycie z zadania: ${taskTitle || taskId || 'nowe zadanie'}`
         });
       }
 
       console.log(`Zaktualizowano ${updates.length} produktów w magazynie`);
       return updates;
-      
+
     } catch (err) {
       console.error('Błąd podczas aktualizacji magazynu:', err);
       throw err;
@@ -345,57 +355,62 @@ export const useTasks = () => {
   };
 
   // ZMODYFIKOWANA FUNKCJA addTask: teraz aktualizuje magazyn
- const addTask = async (taskData) => {
-  if (!user || !db) throw new Error('Użytkownik nie jest zalogowany lub baza nie jest dostępna');
+  const addTask = async (taskData) => {
+    if (!user || !db) throw new Error('Użytkownik nie jest zalogowany lub baza nie jest dostępna');
 
-  try {
-    // Przygotuj dane zadania
-    const taskWithMetadata = {
-      ...taskData,
-      createdBy: user.uid,
-      createdAt: Timestamp.now(),
-      status: taskData.status || 'pending',
-      materialsUsed: taskData.materials || []
-    };
+    try {
+      // Przygotuj dane zadania
+      const taskWithMetadata = {
+        ...taskData,
+        createdBy: user.uid,
+        createdAt: Timestamp.now(),
+        status: taskData.status || 'pending',
+        materialsUsed: taskData.materials || []
+      };
 
-    // Konwertuj datę
-    if (taskWithMetadata.dueDate) {
-      taskWithMetadata.dueDate = Timestamp.fromDate(new Date(taskWithMetadata.dueDate));
+      // Konwertuj datę
+      if (taskWithMetadata.dueDate) {
+        taskWithMetadata.dueDate = Timestamp.fromDate(new Date(taskWithMetadata.dueDate));
+      }
+
+      // Oczyść pola
+      taskWithMetadata.fieldId = taskWithMetadata.fieldId || null;
+      taskWithMetadata.tractorId = taskWithMetadata.tractorId || null;
+      taskWithMetadata.machineId = taskWithMetadata.machineId || null;
+      taskWithMetadata.materialId = taskWithMetadata.materialId || null;
+
+      // KROK 1: Zaktualizuj magazyn (ta funkcja sama doda historię)
+      if (taskWithMetadata.materialsUsed.length > 0) {
+        // Należy użyć operation='use', bo chcemy POBRAĆ z magazynu
+        // Wcześniej było null, co powodowało dodawanie zamiast odejmowania
+        await updateWarehouseStock(taskWithMetadata.materialsUsed, 'use', null, taskWithMetadata.title, false);
+      }
+
+      // KROK 2: Dodaj zadanie
+      const docRef = await addDoc(collection(db, 'tasks'), taskWithMetadata);
+      const newTaskId = docRef.id;
+
+      // Aktualizuj stan lokalny
+      const newTask = {
+        id: newTaskId,
+        ...taskWithMetadata
+      };
+
+      setTasks(prev => [...prev, newTask]);
+
+      // Logowanie historii (async, nie blokujemy)
+      addTaskLog(newTaskId, 'create', 'Utworzono nowe zadanie', taskWithMetadata.title);
+
+      return newTaskId;
+
+    } catch (err) {
+      setError('Błąd podczas dodawania zadania: ' + err.message);
+      console.error('Error adding task:', err);
+      throw err;
     }
+  };
 
-    // Oczyść pola
-    taskWithMetadata.fieldId = taskWithMetadata.fieldId || null;
-    taskWithMetadata.tractorId = taskWithMetadata.tractorId || null;
-    taskWithMetadata.machineId = taskWithMetadata.machineId || null;
-    taskWithMetadata.materialId = taskWithMetadata.materialId || null;
-
-    // KROK 1: Zaktualizuj magazyn (ta funkcja sama doda historię)
-    if (taskWithMetadata.materialsUsed.length > 0) {
-      await updateWarehouseStock(taskWithMetadata.materialsUsed, null, false);
-    }
-
-    // KROK 2: Dodaj zadanie
-    const docRef = await addDoc(collection(db, 'tasks'), taskWithMetadata);
-    const newTaskId = docRef.id;
-
-    // Aktualizuj stan lokalny
-    const newTask = {
-      id: newTaskId,
-      ...taskWithMetadata
-    };
-    
-    setTasks(prev => [...prev, newTask]);
-    
-    return newTaskId;
-    
-  } catch (err) {
-    setError('Błąd podczas dodawania zadania: ' + err.message);
-    console.error('Error adding task:', err);
-    throw err;
-  }
-};
-
-  // ZMODYFIKOWANA FUNKCJA updateTask: obsługa zmiany materiałów
+  // ZMODYFIKOWANA FUNKCJA updateTask: obsługa zmiany materiałów i statusu
   const updateTask = async (taskId, updates) => {
     if (!db) throw new Error('Baza danych nie jest dostępna');
 
@@ -404,7 +419,7 @@ export const useTasks = () => {
       const taskRef = doc(db, 'tasks', taskId);
       const taskDoc = await getDoc(taskRef);
       const oldTask = taskDoc.exists() ? taskDoc.data() : null;
-      
+
       if (!oldTask) {
         throw new Error('Zadanie nie istnieje');
       }
@@ -413,44 +428,76 @@ export const useTasks = () => {
       if (processedUpdates.dueDate) {
         processedUpdates.dueDate = Timestamp.fromDate(new Date(processedUpdates.dueDate));
       }
-      
+
       if (processedUpdates.status === 'completed' && !updates.completedAt) {
         processedUpdates.completedAt = Timestamp.now();
       }
 
-      processedUpdates.fieldId = processedUpdates.fieldId || null;
-      processedUpdates.tractorId = processedUpdates.tractorId || null;
-      processedUpdates.machineId = processedUpdates.machineId || null;
-      processedUpdates.materialId = processedUpdates.materialId || null;
+      processedUpdates.fieldId = processedUpdates.fieldId || oldTask.fieldId || null;
+      processedUpdates.tractorId = processedUpdates.tractorId || oldTask.tractorId || null;
+      processedUpdates.machineId = processedUpdates.machineId || oldTask.machineId || null;
+      processedUpdates.materialId = processedUpdates.materialId || oldTask.materialId || null;
 
-      // KROK 1: Obsługa materiałów - porównanie starej i nowej listy
+      // Obsługa materiałów i statusów
       const oldMaterials = oldTask.materialsUsed || [];
-      const newMaterials = processedUpdates.materials || [];
-      
-      // Jeśli zmieniły się materiały, zaktualizuj magazyn
-      if (JSON.stringify(oldMaterials) !== JSON.stringify(newMaterials)) {
-        // 1a. Przywróć stare materiały (cofnij ich użycie)
+      // Jeśli updates nie zawiera materials, użyj starych (fix dla częściowych aktualizacji)
+      const newMaterials = processedUpdates.materials !== undefined ? (processedUpdates.materials || []) : oldMaterials;
+
+      const oldStatus = oldTask.status || 'pending';
+      const newStatus = processedUpdates.status || oldStatus;
+
+      // Scenariusz 1: Anulowanie zadania (dowolny -> cancelled)
+      if (newStatus === 'cancelled' && oldStatus !== 'cancelled') {
+        // Przywróć materiały (jeśli były użyte)
         if (oldMaterials.length > 0) {
-          await updateWarehouseStock(oldMaterials, 'use', taskId, true); // rollback = true
+          await updateWarehouseStock(oldMaterials, 'use', taskId, oldTask.title, true); // rollback = true
         }
-        
-        // 1b. Odciągnij nowe materiały
+        // Save new materials logic is handled by updateDoc below, but we don't deduct new items if cancelled
+      }
+      // Scenariusz 2: Przywrócenie zadania (cancelled -> dowolny inny)
+      else if (oldStatus === 'cancelled' && newStatus !== 'cancelled') {
+        // Pobierz materiały (te które mają być w zadaniu)
         if (newMaterials.length > 0) {
-          await updateWarehouseStock(newMaterials, 'use', taskId, false);
+          await updateWarehouseStock(newMaterials, 'use', taskId, oldTask.title, false); // rollback = false (deduct)
         }
-        
+      }
+      // Scenariusz 3: Zadanie aktywne (nie anulowane), zmiana materiałów
+      else if (newStatus !== 'cancelled') {
+        if (JSON.stringify(oldMaterials) !== JSON.stringify(newMaterials)) {
+          // 1. Przywróć stare
+          if (oldMaterials.length > 0) {
+            await updateWarehouseStock(oldMaterials, 'use', taskId, oldTask.title, true);
+          }
+          // 2. Pobierz nowe
+          if (newMaterials.length > 0) {
+            await updateWarehouseStock(newMaterials, 'use', taskId, oldTask.title, false);
+          }
+        }
+      }
+
+      // Zawsze aktualizuj listę materiałów w obiekcie updates (jeśli została zmieniona)
+      if (JSON.stringify(oldMaterials) !== JSON.stringify(newMaterials)) {
         processedUpdates.materialsUsed = newMaterials;
       }
+      // Usuń pole 'materials' z updates jeśli istnieje, bo używamy 'materialsUsed' w bazie
+      delete processedUpdates.materials;
 
       // KROK 2: Aktualizuj zadanie
       await updateDoc(taskRef, processedUpdates);
-      
-      setTasks(prev => prev.map(task => 
-        task.id === taskId 
+
+      setTasks(prev => prev.map(task =>
+        task.id === taskId
           ? { ...task, ...processedUpdates, materialsUsed: newMaterials }
           : task
       ));
-      
+
+      // Logowanie historii
+      if (newStatus !== oldStatus) {
+        addTaskLog(taskId, 'status_change', `Zmiana statusu z "${translateStatus(oldStatus)}" na "${translateStatus(newStatus)}"`, oldTask.title);
+      } else {
+        addTaskLog(taskId, 'update', 'Zaktualizowano dane zadania', oldTask.title);
+      }
+
     } catch (err) {
       setError('Błąd podczas aktualizacji zadania: ' + err.message);
       console.error('Error updating task:', err);
@@ -466,20 +513,24 @@ export const useTasks = () => {
       // Pobierz zadanie aby sprawdzić użyte materiały
       const taskRef = doc(db, 'tasks', taskId);
       const taskDoc = await getDoc(taskRef);
-      
+
       if (taskDoc.exists()) {
         const task = taskDoc.data();
-        
-        // Przywróć materiały do magazynu
-        if (task.materialsUsed && task.materialsUsed.length > 0) {
-          await updateWarehouseStock(task.materialsUsed, 'use', taskId, true); // rollback = true
+
+        // Przywróć materiały do magazynu TYLKO jeśli zadanie NIE było anulowane
+        // (bo anulowane zadania już zwróciły materiały przy zmianie statusu)
+        if (task.status !== 'cancelled' && task.materialsUsed && task.materialsUsed.length > 0) {
+          await updateWarehouseStock(task.materialsUsed, 'use', taskId, task.title, true); // rollback = true
         }
       }
+
+      // Logowanie historii przed usunięciem
+      await addTaskLog(taskId, 'delete', `Usunięto zadanie`, task.title);
 
       // Usuń zadanie
       await deleteDoc(taskRef);
       setTasks(prev => prev.filter(task => task.id !== taskId));
-      
+
     } catch (err) {
       setError('Błąd podczas usuwania zadania: ' + err.message);
       console.error('Error deleting task:', err);
@@ -522,17 +573,17 @@ export const useTasks = () => {
       const taskRef = doc(db, 'tasks', taskId);
       const currentTask = tasks.find(t => t.id === taskId);
       const updatedComments = [...(currentTask?.comments || []), comment];
-      
+
       await updateDoc(taskRef, {
         comments: updatedComments
       });
 
-      setTasks(prev => prev.map(task => 
-        task.id === taskId 
+      setTasks(prev => prev.map(task =>
+        task.id === taskId
           ? { ...task, comments: updatedComments }
           : task
       ));
-      
+
     } catch (err) {
       setError('Błąd podczas dodawania komentarza: ' + err.message);
       console.error('Error adding comment:', err);
@@ -548,7 +599,7 @@ export const useTasks = () => {
     setError(null);
   };
 
-   useEffect(() => {
+  useEffect(() => {
     if (user && db) {
       fetchTasks();
       fetchRelatedData();
