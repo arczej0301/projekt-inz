@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../hooks/useAuth';
+import { useFields } from '../../hooks/useFields';
 import CustomSelect from '../common/CustomSelect';
 import './TaskModal.css';
 
 const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
   const { addTask, updateTask, fields, tractors, machines, warehouseItems, refreshWarehouseItems } = useTasks();
   const { user } = useAuth();
+  const { fieldStatuses } = useFields();
   
   const [formData, setFormData] = useState({
     title: '',
@@ -25,17 +27,117 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [productAvailability, setProductAvailability] = useState({}); // Nowy stan dla dostępności
+  const [productAvailability, setProductAvailability] = useState({});
 
+  // Funkcja do tłumaczenia statusów z angielskiego na polski
+  const translateFieldStatus = (status) => {
+    const statusMap = {
+      'sown': 'Zasiane',
+      'harvested': 'Zebrane',
+      'ready_for_sowing': 'Przygotowane do siewu',
+      'fallow': 'Ugór',
+      'pasture': 'Pastwisko/Łąka',
+      // Domyślne wartości
+      'Brak statusu': 'Brak statusu'
+    };
+    
+    if (!status) return 'Brak statusu';
+    
+    // Sprawdź czy status jest już po polsku (zaczyna się od dużej litery)
+    if (status.charAt(0) === status.charAt(0).toUpperCase() && status.charAt(0) !== status.charAt(0).toLowerCase()) {
+      return status; // Już jest po polsku
+    }
+    
+    const lowerStatus = status.toLowerCase();
+    
+    // Przekształć podkreślenia na spacje i zrób pierwszą literę dużą
+    if (statusMap[lowerStatus]) {
+      return statusMap[lowerStatus];
+    }
+    
+    // Jeśli nie ma w mapie, spróbuj sformatować
+    const formatted = status
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    return formatted || 'Brak statusu';
+  };
+
+  // Funkcja do formatowania nazwy uprawy
+  const formatCropName = (crop) => {
+    if (!crop) return 'Brak uprawy';
+    
+    // Jeśli uprawa jest już po polsku (z dużej litery), zostaw jak jest
+    if (crop.charAt(0) === crop.charAt(0).toUpperCase() && crop.charAt(0) !== crop.charAt(0).toLowerCase()) {
+      return crop;
+    }
+    
+    // Tłumaczenie popularnych upraw z angielskiego na polski
+    const cropTranslations = {
+      'wheat': 'Pszenica',
+      'corn': 'Kukurydza',
+      'barley': 'Jęczmień',
+      'rye': 'Żyto',
+      'oats': 'Owies',
+      'rapeseed': 'Rzepak',
+      'sunflower': 'Słonecznik',
+      'potato': 'Ziemniak',
+      'sugar_beet': 'Burak cukrowy',
+      'grass': 'Trawa',
+      'clover': 'Koniczyna',
+      'alfalfa': 'Lucerna'
+    };
+    
+    const lowerCrop = crop.toLowerCase();
+    if (cropTranslations[lowerCrop]) {
+      return cropTranslations[lowerCrop];
+    }
+    
+    // Dla innych upraw - zrób pierwszą literę dużą
+    return crop.charAt(0).toUpperCase() + crop.slice(1);
+  };
+
+  // Funkcja do sortowania pól alfabetycznie
+  const sortFieldsAlphabetically = (fieldsArray) => {
+    return [...fieldsArray].sort((a, b) => {
+      // Pobierz nazwy pól (domyślnie pusty string jeśli brak)
+      const nameA = (a.name || '').toLowerCase();
+      const nameB = (b.name || '').toLowerCase();
+      
+      // Sortuj alfabetycznie
+      if (nameA < nameB) return -1;
+      if (nameA > nameB) return 1;
+      return 0;
+    });
+  };
+
+  // Posortuj pola alfabetycznie
+  const sortedFields = sortFieldsAlphabetically(fields);
+
+  // ZMIENIONO: Użyj posortowanych pól i dodaj uprawę zamiast "Stan"
   const FIELD_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
-    ...fields.map(field => ({
-      value: field.id,
-      label: `${field.name || 'Pole'} ${field.area ? `(${field.area} ha)` : ''}`
-    }))
+    ...sortedFields.map(field => {
+      // Znajdź status dla tego pola
+      const status = fieldStatuses[field.id];
+      const rawStatus = status?.status || 'Brak statusu';
+      const translatedStatus = translateFieldStatus(rawStatus);
+      
+      // Pobierz uprawę z pola (zakładając, że pole ma pole 'crop')
+      const crop = field.crop || 'Brak uprawy';
+      const formattedCrop = formatCropName(crop);
+      
+      return {
+        value: field.id,
+        label: `${field.name || 'Pole'} ${field.area ? `(${field.area} ha)` : ''} - ${formattedCrop}: ${translatedStatus}`
+      };
+    })
   ];
 
-  // POPRAWIONE: Używa name zamiast model
+  // ... reszta kodu pozostaje bez zmian
   const TRACTOR_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
     ...tractors.map(tractor => ({
@@ -44,7 +146,6 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     }))
   ];
 
-  // POPRAWIONE: Używa name zamiast model
   const MACHINE_OPTIONS = [
     { value: '', label: 'Brak powiązania' },
     ...machines.map(machine => ({
@@ -76,6 +177,16 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     { value: 'opak', label: 'opak' },
     { value: 'ha', label: 'ha' }
   ];
+
+  // DODAJ FUNKCJĘ removeMaterial
+  const removeMaterial = (index) => {
+    const updatedMaterials = [...formData.materials];
+    updatedMaterials.splice(index, 1);
+    setFormData(prev => ({
+      ...prev,
+      materials: updatedMaterials
+    }));
+  };
 
   useEffect(() => {
     if (task) {
@@ -122,7 +233,6 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     }));
   };
 
-  // NOWA FUNKCJA: Sprawdź dostępność produktów
   const checkProductAvailability = () => {
     const availability = {};
     
@@ -149,7 +259,6 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     return Object.values(availability).every(item => item.isAvailable);
   };
 
-  // ZMODYFIKOWANA FUNKCJA: Sprawdzaj dostępność przy każdej zmianie materiałów
   const handleMaterialChange = (index, field, value) => {
     const updatedMaterials = [...formData.materials];
     updatedMaterials[index] = {
@@ -162,15 +271,12 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
       materials: updatedMaterials
     }));
     
-    // Sprawdź dostępność po krótkim opóźnieniu
     setTimeout(() => {
       checkProductAvailability();
     }, 100);
   };
 
-  // ZMODYFIKOWANA FUNKCJA: Przy dodawaniu materiału odśwież magazyn
   const addMaterial = async () => {
-    // Odśwież listę produktów przed dodaniem nowego materiału
     await refreshWarehouseItems();
     
     setFormData(prev => ({
@@ -179,19 +285,16 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
     }));
   };
 
-  // ZMODYFIKOWANA FUNKCJA handleSubmit: dodaj walidację magazynu
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Walidacja podstawowa
       if (!formData.title.trim()) {
         throw new Error('Tytuł jest wymagany');
       }
 
-      // Walidacja dostępności materiałów
       const isAvailable = checkProductAvailability();
       if (!isAvailable) {
         const unavailableItems = Object.entries(productAvailability)
@@ -202,14 +305,13 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
         throw new Error(`Niewystarczająca ilość produktów: ${unavailableItems}`);
       }
 
-      // Przygotuj dane zadania
       const taskData = {
         ...formData,
         fieldId: formData.fieldId || null,
         tractorId: formData.tractorId || null,
         machineId: formData.machineId || null,
         materialId: formData.materialId || null,
-        materials: formData.materials.filter(m => m.productId && m.quantity) // Filtruj puste
+        materials: formData.materials.filter(m => m.productId && m.quantity)
       };
 
       if (task) {
@@ -327,6 +429,7 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
                 />
                 <div className="select-info">
                   {fields.length === 0 && 'Brak pól w bazie danych'}
+                  {fields.length > 0 && `Pola posortowane alfabetycznie (${fields.length} dostępnych)`}
                 </div>
               </div>
 
@@ -355,64 +458,61 @@ const TaskModal = ({ task, onClose, TASK_TYPES, TASK_STATUS, PRIORITIES }) => {
                   {machines.length === 0 ? 'Brak maszyn w garażu' : `${machines.length} maszyn dostępnych`}
                 </div>
               </div>
-
-              
             </div>
           </div>
 
           <div className="form-section">
-          <div className="section-header">
-            <h3>Nasiona i nawozy do zużycia</h3>
-            <button type="button" onClick={addMaterial} className="btn-secondary">
-              + Dodaj produkt
-            </button>
-          </div>
-          
-          {formData.materials.map((material, index, info) => {
-            const product = warehouseItems.find(item => item.id === material.productId);
-            const availableQty = product ? parseFloat(product.quantity || 0) : 0;
+            <div className="section-header">
+              <h3>Nasiona i nawozy do zużycia</h3>
+              <button type="button" onClick={addMaterial} className="btn-secondary">
+                + Dodaj produkt
+              </button>
+            </div>
             
-            return (
-              <div key={index} className="material-row">
-                <div className="material-select-wrapper">
-                  <CustomSelect
-                    value={material.productId}
-                    onChange={(value) => handleMaterialChange(index, 'productId', value)}
-                    options={PRODUCT_OPTIONS}
-                    className="material-select"
+            {formData.materials.map((material, index) => {
+              const product = warehouseItems.find(item => item.id === material.productId);
+              const availableQty = product ? parseFloat(product.quantity || 0) : 0;
+              
+              return (
+                <div key={index} className="material-row">
+                  <div className="material-select-wrapper">
+                    <CustomSelect
+                      value={material.productId}
+                      onChange={(value) => handleMaterialChange(index, 'productId', value)}
+                      options={PRODUCT_OPTIONS}
+                      className="material-select"
+                    />
+                  </div>
+                  
+                  <input
+                    type="number"
+                    value={material.quantity}
+                    onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
+                    placeholder="Ilość"
+                    className="material-quantity"
+                    min="0"
+                    step="1"
+                    max={availableQty}
                   />
                   
+                  <CustomSelect
+                    value={material.unit}
+                    onChange={(value) => handleMaterialChange(index, 'unit', value)}
+                    options={UNIT_OPTIONS}
+                    className="material-unit"
+                  />
+                  
+                  <button 
+                    type="button" 
+                    onClick={() => removeMaterial(index)}
+                    className="remove-button"
+                  >
+                    ×
+                  </button>
                 </div>
-                
-                <input
-                  type="number"
-                  value={material.quantity}
-                  onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
-                  placeholder="Ilość"
-                  className="material-quantity"
-                  min="0"
-                  step="1"
-                  max={availableQty}
-                />
-                
-                <CustomSelect
-                  value={material.unit}
-                  onChange={(value) => handleMaterialChange(index, 'unit', value)}
-                  options={UNIT_OPTIONS}
-                  className="material-unit"
-                />
-                
-                <button 
-                  type="button" 
-                  onClick={() => removeMaterial(index)}
-                  className="remove-button"
-                >
-                  ×
-                </button>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
           <div className="form-actions">
             <button 

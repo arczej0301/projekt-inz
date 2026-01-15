@@ -11,41 +11,54 @@ const FinancialAnalysis = ({ transactions, summary }) => {
 
   // 2. HOOKI useMemo/useCallback
   const filteredTransactions = useMemo(() => {
-    const now = new Date()
-    let startDate
+  const now = new Date()
+  let startDate
 
-    switch (period) {
-      case 'week':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        break
-      case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-        break
-      case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1)
-        break
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+  switch (period) {
+    case 'week':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      break
+    case 'month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+      break
+    case 'year':
+      startDate = new Date(now.getFullYear(), 0, 1)
+      break
+    case 'lastYear': // DODANE
+      startDate = new Date(now.getFullYear() - 1, 0, 1)
+      break
+    default:
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+  }
+
+  // Dla "ostatni rok" potrzebujemy też daty końcowej
+  let endDate = new Date()
+  if (period === 'lastYear') {
+    endDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59)
+  }
+
+  return transactions.filter(transaction => {
+    let transactionDate
+    try {
+      if (transaction.date?.toDate) {
+        transactionDate = transaction.date.toDate()
+      } else if (transaction.date instanceof Date) {
+        transactionDate = transaction.date
+      } else {
+        transactionDate = new Date(transaction.date)
+      }
+    } catch (error) {
+      console.error('Błąd parsowania daty:', error)
+      transactionDate = new Date() // wartość domyślna
     }
 
-    return transactions.filter(transaction => {
-      let transactionDate
-      try {
-        if (transaction.date?.toDate) {
-          transactionDate = transaction.date.toDate()
-        } else if (transaction.date instanceof Date) {
-          transactionDate = transaction.date
-        } else {
-          transactionDate = new Date(transaction.date)
-        }
-      } catch (error) {
-        console.error('Błąd parsowania daty:', error)
-        transactionDate = new Date() // wartość domyślna
-      }
-
+    if (period === 'lastYear') {
+      return transactionDate >= startDate && transactionDate <= endDate
+    } else {
       return transactionDate >= startDate && transactionDate <= new Date()
-    })
-  }, [transactions, period])
+    }
+  })
+}, [transactions, period])
 
   const chartData = useMemo(() => {
     const data = {}
@@ -133,7 +146,8 @@ const FinancialAnalysis = ({ transactions, summary }) => {
   const periodTitles = {
     week: 'ostatni tydzień',
     month: 'ten miesiąc',
-    year: 'ten rok'
+    year: 'ten rok',
+    lastYear: 'ostatni rok'
   }
 
   // Tytuły raportów
@@ -144,7 +158,6 @@ const FinancialAnalysis = ({ transactions, summary }) => {
 
   return (
     <div className="financial-analysis">
-      {/* ... cały JSX z ReportsTab pozostaje bez zmian ... */}
       <div className="tab-header">
         <h3>Analiza Finansowa</h3>
         <div className="report-controls">
@@ -156,6 +169,7 @@ const FinancialAnalysis = ({ transactions, summary }) => {
             <option value="week">Ostatni tydzień</option>
             <option value="month">Ten miesiąc</option>
             <option value="year">Ten rok</option>
+            <option value="lastYear">Ostatni rok</option>
           </select>
 
           <select
