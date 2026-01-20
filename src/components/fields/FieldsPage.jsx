@@ -61,6 +61,8 @@ const FieldsPage = () => {
   const mapRef = useRef();
   const googleRef = useRef();
   const contentRef = useRef();
+  const [validationError, setValidationError] = useState(null);
+  const [previousStatus, setPreviousStatus] = useState(null); // Przechowywanie poprzedniego statusu
 
   const mapContainerStyle = {
     width: '100%',
@@ -348,6 +350,7 @@ const FieldsPage = () => {
     });
     setIsDrawing(false);
     setTempPolygon([]);
+    setValidationError(null); // Reset błędu przy otwarciu po rysowaniu
     setIsModalOpen(true);
   };
 
@@ -365,6 +368,7 @@ const FieldsPage = () => {
   // --- OBSŁUGA MODALI ---
 
   const openFieldModal = (field = null) => {
+    setValidationError(null); // Reset błędu przy otwarciu
     if (field) setCurrentField(field);
     else setCurrentField({ name: '', area: '', soil: '', crop: '', notes: '', coordinates: [] });
     setIsModalOpen(true);
@@ -374,6 +378,7 @@ const FieldsPage = () => {
   const closeFieldModal = () => {
     setIsModalOpen(false);
     setCurrentField(null);
+    setValidationError(null); // Reset błędu przy zamknięciu
     setSaveLoading(false);
   };
 
@@ -381,6 +386,7 @@ const FieldsPage = () => {
     if (field) {
       setCurrentField(field);
       const existingStatus = fieldStatuses[field.id];
+      setPreviousStatus(existingStatus || null); // Zapamiętaj stan przed edycją
       setCurrentStatus(existingStatus || {
         field_id: field.id,
         status: '',
@@ -390,6 +396,7 @@ const FieldsPage = () => {
       });
     } else {
       setCurrentField(null);
+      setPreviousStatus(null);
       setCurrentStatus({ field_id: '', status: '', crop: '', notes: '', date_created: new Date().toISOString() });
     }
     setIsStatusModalOpen(true);
@@ -509,6 +516,17 @@ const FieldsPage = () => {
       return;
     }
 
+    // Walidacja unikalności nazwy
+    const isDuplicate = fields.some(f =>
+      f.name.trim().toLowerCase() === currentField.name.trim().toLowerCase() &&
+      f.id !== currentField.id
+    );
+
+    if (isDuplicate) {
+      setValidationError('Pole o tej nazwie jest już w bazie danych');
+      return;
+    }
+
     try {
       setSaveLoading(true);
 
@@ -553,6 +571,8 @@ const FieldsPage = () => {
       const statusPayload = {
         field_id: currentStatus.field_id,
         status: currentStatus.status,
+        previous_status: previousStatus?.status || 'unknown', // Dodaj poprzedni status
+        previous_crop: previousStatus?.crop || '', // Dodaj poprzednią uprawę
         crop: currentStatus.crop || '',
         notes: currentStatus.notes || '',
         date_created: new Date().toISOString() // Zawsze nowa data
@@ -936,10 +956,14 @@ const FieldsPage = () => {
       {isModalOpen && currentField && (
         <FieldModal
           field={currentField}
-          onFieldChange={setCurrentField}
+          onFieldChange={(val) => {
+            setCurrentField(val);
+            if (validationError) setValidationError(null);
+          }}
           onSave={saveField}
           onClose={closeFieldModal}
           saveLoading={saveLoading}
+          validationError={validationError}
         />
       )}
 
@@ -1003,7 +1027,7 @@ const FieldsPage = () => {
 
 // --- KOMPONENTY MODALI ---
 
-const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
+const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading, validationError }) => {
   // Usunąłem isCropOpen, zostaje tylko soil
   const [isSoilOpen, setIsSoilOpen] = useState(false);
 
@@ -1043,11 +1067,25 @@ const FieldModal = ({ field, onFieldChange, onSave, onClose, saveLoading }) => {
           <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
             <div className="form-group">
               <label htmlFor="fieldName">Nazwa pola *</label>
-              <input type="text" id="fieldName" name="name" value={field?.name || ''} onChange={handleInputChange} required />
+              <input
+                type="text"
+                id="fieldName"
+                name="name"
+                value={field?.name || ''}
+                onChange={handleInputChange}
+                required
+                className={validationError ? 'input-error' : ''}
+              />
+              {validationError && (
+                <div className="error-message">
+                  <i className="fas fa-exclamation-circle"></i>
+                  {validationError}
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label htmlFor="fieldArea">Powierzchnia (ha) *</label>
-              <input type="number" id="fieldArea" name="area" value={field?.area || ''} onChange={handleInputChange} step="0.01" required />
+              <input type="number" id="fieldArea" name="area" value={field?.area || ''} onChange={handleInputChange} step="0.5" required />
             </div>
 
             <div className="form-group">
@@ -1259,7 +1297,7 @@ const HarvestModal = ({ field, currentStatus, onSave, onClose, saveLoading }) =>
               <label>Ilość łącznie (tony) *</label>
               <input
                 type="number"
-                step="0.01"
+                step="0.5"
                 value={harvestData.amount}
                 onChange={e => setHarvestData({ ...harvestData, amount: e.target.value })}
                 placeholder="np. 45.5"
@@ -1270,7 +1308,7 @@ const HarvestModal = ({ field, currentStatus, onSave, onClose, saveLoading }) =>
               <label>Wilgotność (%)</label>
               <input
                 type="number"
-                step="0.1"
+                step="0.5"
                 value={harvestData.moisture}
                 onChange={e => setHarvestData({ ...harvestData, moisture: e.target.value })}
                 placeholder="np. 14.5"

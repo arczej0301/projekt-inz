@@ -55,6 +55,18 @@ function MagazinePage() {
 
   const { addWarehouseTransaction, updateWarehouseTransaction } = useWarehouseFinanceIntegration()
 
+  // Helper do bezpiecznego pobierania daty
+  const getDate = (item) => {
+    const val = item.createdAt || item.lastUpdate;
+    if (!val) return 0;
+    // Obsługa Firestore Timestamp
+    if (val.toDate && typeof val.toDate === 'function') {
+      return val.toDate().getTime();
+    }
+    // Obsługa zwykłej daty/stringa
+    return new Date(val).getTime();
+  }
+
   // Filtrowanie i sortowanie produktów
   const filteredItems = (warehouseData[activeCategory] || [])
     .filter(item =>
@@ -67,13 +79,9 @@ function MagazinePage() {
         case 'name-desc':
           return b.name.localeCompare(a.name)
         case 'date-desc':
-          const dateA = a.createdAt || a.lastUpdate || new Date(0)
-          const dateB = b.createdAt || b.lastUpdate || new Date(0)
-          return new Date(dateB) - new Date(dateA)
+          return getDate(b) - getDate(a)
         case 'date-asc':
-          const dateA2 = a.createdAt || a.lastUpdate || new Date(0)
-          const dateB2 = b.createdAt || b.lastUpdate || new Date(0)
-          return new Date(dateA2) - new Date(dateB2)
+          return getDate(a) - getDate(b)
         case 'quantity-asc':
           return a.quantity - b.quantity
         case 'quantity-desc':
@@ -128,11 +136,11 @@ function MagazinePage() {
         // Edycja istniejącego produktu
         const oldProduct = editingProduct
         const result = await updateProduct(editingProduct.id, productData)
-        
+
         if (result.success) {
           // Aktualizuj transakcję finansową jeśli cena się zmieniła
           await updateWarehouseTransaction(oldProduct, productData, editingProduct.id)
-          
+
           setIsModalOpen(false)
           setEditingProduct(null)
         } else {

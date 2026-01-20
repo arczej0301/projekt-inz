@@ -284,7 +284,7 @@ const GaragePage = () => {
     setRepairForm({
       date: new Date().toISOString().split('T')[0],
       description: '',
-      cost: '',
+      cost: '0',
       parts: '',
       mechanic: '',
       nextServiceDate: machine.nextService || '',
@@ -308,7 +308,7 @@ const GaragePage = () => {
     setRepairForm({
       date: today.toISOString().split('T')[0],
       description: '',
-      cost: '',
+      cost: '0',
       parts: '',
       mechanic: '',
       nextServiceDate: nextServiceDefault, // Domyślnie za rok
@@ -334,7 +334,7 @@ const GaragePage = () => {
 
       // 1. Dodaj naprawę do historii (jako log w machinesService)
       // 1. Dodaj naprawę do historii (jako log w machinesService)
-      let historyDesc = `Koszt: ${repairForm.cost} zł. ${repairForm.description}`;
+      let historyDesc = `Koszt: ${repairForm.cost || '0'} zł. ${repairForm.description}`;
       if (repairForm.changeStatusToActive) {
         historyDesc += ' (Zmiana statusu na: Sprawny)';
       }
@@ -531,7 +531,7 @@ const GaragePage = () => {
     const matchesStatus = filterStatus === 'all' || machine.status === filterStatus;
 
     return matchesSearch && matchesStatus;
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name));
 
   const machinesNeedingService = machines.filter(machine => {
     return machine.status === 'needs_service';
@@ -1134,7 +1134,7 @@ const MachineModal = ({
                   type="number"
                   id="purchasePrice"
                   name="purchasePrice"
-                  step="0.01"
+                  step="1"
                   min="0"
                   value={formData?.purchasePrice || ''}
                   onChange={handleInputChange}
@@ -1147,7 +1147,7 @@ const MachineModal = ({
                   type="number"
                   id="currentValue"
                   name="currentValue"
-                  step="0.01"
+                  step="1"
                   min="0"
                   value={formData?.currentValue || ''}
                   onChange={handleInputChange}
@@ -1488,7 +1488,7 @@ const RepairHistoryModal = ({ machine, repairForm, onRepairFormChange, onSave, o
                   type="number"
                   id="repairCost"
                   name="cost"
-                  step="0.01"
+                  step="1"
                   value={repairForm.cost}
                   onChange={handleInputChange}
                 />

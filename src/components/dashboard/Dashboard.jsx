@@ -25,11 +25,15 @@ const getCategoryName = (categoryId) => {
     'inne_przychody': 'Inne przychody',
     'zwierzeta': 'Zwierzęta',
     'maszyny': 'Maszyny',
-    'zboza': 'Nasiona/Sadzonki',
-    'nawozy_nasiona': 'Nawozy i nasiona',
+    // Kategorie magazynowe (zgodne z useWarehouse)
+    'zboza': 'Zboża',
+    'nawozy': 'Nawozy',
     'pasze': 'Pasze',
-    'paliwo': 'Paliwo',
-    'sprzet_czesci': 'Części i narzędzia',
+    'paliwo': 'Paliwa i oleje',
+    'narzedzia': 'Narzędzia i części',
+    // Mapowanie starych/innych ID dla kompatybilności
+    'nawozy_nasiona': 'Nawozy',
+    'sprzet_czesci': 'Narzędzia i części',
     'naprawy_konserwacja': 'Naprawy i serwis',
     'inne_koszty': 'Inne koszty',
     'warehouse_stock': 'Stan magazynowy',
@@ -98,19 +102,20 @@ function Dashboard({ farmData, onTabChange }) {
           const fieldNames = {}
           fields.forEach(f => fieldNames[f.id] = f.name)
 
-          // A. Przetwarzanie zbiorów (zawsze z bazy)
-          if (yields && yields.length > 0) {
-            yields.forEach(item => {
-              newFieldActivities.push({
-                id: `yield_${item.id}`,
-                title: `Zbiór: ${item.crop}`,
-                description: `Pole: ${fieldNames[item.field_id] || 'Nieznane'} - Zebrano: ${item.amount}t`,
-                time: item.date_created,
-                timestamp: new Date(item.date_created).getTime(),
-                icon: '🚜'
-              });
-            });
-          }
+
+
+          // Helper do tłumaczenia statusów
+          const getStatusLabel = (status) => {
+            const labels = {
+              'sown': 'zasiane',
+              'harvested': 'zebrane',
+              'ready_for_sowing': 'gotowe do siewu',
+              'fallow': 'ugór',
+              'pasture': 'pastwisko',
+              'ploughed': 'zaorane'
+            };
+            return labels[status] || status;
+          };
 
           // B. Przetwarzanie historii statusów (zawsze z bazy)
           if (statusHistoryLog && statusHistoryLog.length > 0) {
@@ -124,47 +129,116 @@ function Dashboard({ farmData, onTabChange }) {
               let activityDesc = `Pole: ${fieldNames[item.field_id] || 'Nieznane'} ${item.crop ? `(${item.crop})` : ''}`
 
               // Logika wyświetlania tytułów
-              switch (item.status) {
-                case 'harvested':
-                  activityTitle = 'Zbiór upraw'
-                  activityIcon = '🚜'
-                  // Jeśli w historii zapisano dane o plonie, wyświetl je
-                  if (item.yield_amount) {
-                    activityDesc += ` - Plon: ${item.yield_amount}t`
+              // Logika wyświetlania tytułów
+              // LOGIKA WYŚWIETLANIA TYTUŁÓW I OPISÓW
+
+              const itemStatus = item.status;
+              const activitiesFromThisLog = [];
+              const name = item.field_name || (fieldNames[item.field_id] || 'Nieznane');
+
+              // 1. Zbiór (Harvest) - jeśli jest płon, to jest zbiór.
+              if (itemStatus === 'harvested' && item.yield_amount) {
+                let desc = `${name} - zebrano ${item.crop || 'nieznana uprawa'} - Plon: ${item.yield_amount}t`;
+                if (item.yield_moisture && parseFloat(item.yield_moisture) > 0) {
+                  desc += `, Wilgotność: ${item.yield_moisture}%`;
+                }
+                activitiesFromThisLog.push({
+                  title: 'Pola uprawne: Zbiór upraw',
+                  icon: '🚜',
+                  description: desc
+                });
+              } else {
+                // Jeśli to nie zbiór, to sprawdzamy inne zmiany niezależnie
+
+                // 2. Zmiana uprawy (Crop Change)
+                const prevCrop = item.previous_crop || '';
+                const currCrop = item.crop || '';
+                if (prevCrop !== currCrop) {
+                  activitiesFromThisLog.push({
+                    title: 'Pola uprawne: Zmiana uprawy',
+                    icon: '🌱',
+                    description: `${name} zmieniono uprawę z "${prevCrop}" na "${currCrop}"`
+                  });
+                }
+
+                // 3. Zmiana statusu
+                if (item.previous_status && item.previous_status !== itemStatus) {
+                  if (itemStatus === 'sown') {
+                    activitiesFromThisLog.push({
+                      title: 'Pola uprawne: Zasiano pole',
+                      icon: '🌱',
+                      description: `Na polu ${name} zasiano ${item.crop || 'nieznaną uprawę'}`
+                    });
+                  } else {
+                    const oldLabel = getStatusLabel(item.previous_status);
+                    const newLabel = getStatusLabel(itemStatus);
+                    activitiesFromThisLog.push({
+                      title: 'Pola uprawne: Zmiana stanu pola',
+                      icon: '🔄',
+                      description: `${name} zmieniono stan pola z "${oldLabel}" na "${newLabel}"`
+                    });
                   }
-                  if (item.yield_moisture && parseFloat(item.yield_moisture) > 0) {
-                    activityDesc += `, Wilgotność: ${item.yield_moisture}%`
+                }
+
+                // 4. Edycja pola
+                if (itemStatus === 'field_edited') {
+                  activitiesFromThisLog.push({
+                    title: 'Pola uprawne: Edycja pola',
+                    icon: '✏️',
+                    description: `${name} - ${item.change_details}`
+                  });
+                }
+
+                // 5. Fallback - jeśli nic nie wykryto
+                if (activitiesFromThisLog.length === 0) {
+                  if (itemStatus === 'field_added') {
+                    const area = item.area ? `${item.area} ha` : '';
+                    activitiesFromThisLog.push({
+                      title: 'Pola uprawne: Dodano pole',
+                      icon: '🆕',
+                      description: `${name} zostało dodane ${area ? `- ${area}` : ''}`
+                    });
+                  } else if (itemStatus === 'field_deleted') {
+                    const area = item.area ? `${item.area} ha` : '';
+                    activitiesFromThisLog.push({
+                      title: 'Pola uprawne: Usunięto pole',
+                      icon: '🗑️',
+                      description: `${name} zostało usunięte ${area ? `- ${area}` : ''}`
+                    });
+                  } else {
+                    // Standardowy fallback
+                    let activityTitle = '', activityIcon = '🌾';
+                    switch (itemStatus) {
+                      case 'harvested': activityTitle = 'Zmiana stanu: Zebrane'; activityIcon = '🌾'; break;
+                      case 'sown': activityTitle = 'Zasiano pole'; activityIcon = '�'; break;
+                      case 'ready_for_sowing': activityTitle = 'Zmiana stanu: Gotowe do siewu'; break;
+                      case 'fallow': activityTitle = 'Zmiana stanu: Ugór'; break;
+                      case 'pasture': activityTitle = 'Zmiana stanu: Pastwisko'; activityIcon = '🐄'; break;
+                      case 'ploughed': activityTitle = 'Zmiana stanu: Zaorane'; activityIcon = '�'; break;
+                      default:
+                        const label = itemStatus.charAt(0).toUpperCase() + itemStatus.slice(1).replace(/_/g, ' ');
+                        activityTitle = `Zmiana stanu: ${label}`;
+                    }
+                    activitiesFromThisLog.push({
+                      title: activityTitle,
+                      icon: activityIcon,
+                      description: `Pole: ${name} ${item.crop ? `(${item.crop})` : ''}`
+                    });
                   }
-                  break
-                case 'sown':
-                  activityTitle = 'Zasiano pole'
-                  activityIcon = '🌱'
-                  break
-                case 'ready_for_sowing':
-                  activityTitle = 'Pole gotowe do siewu'
-                  break
-                case 'fallow':
-                  activityTitle = 'Pole ugorowane'
-                  break
-                case 'pasture':
-                  activityTitle = 'Przekształcenie w pastwisko'
-                  activityIcon = '🐄'
-                  break
-                default:
-                  // Jeśli status jest inny, sformatuj go ładnie (pierwsza litera duża)
-                  const label = item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/_/g, ' ')
-                  activityTitle = `Zmiana stanu: ${label}`
+                }
               }
 
-              newFieldActivities.push({
-                id: `status_${item.id}`,
-                title: activityTitle,
-                description: activityDesc,
-                time: date,
-                timestamp: new Date(date).getTime(),
-                icon: activityIcon
+              activitiesFromThisLog.forEach((act, index) => {
+                newFieldActivities.push({
+                  id: `status_${item.id}_${index}`,
+                  title: act.title,
+                  description: act.description,
+                  time: date,
+                  timestamp: new Date(date).getTime(),
+                  icon: act.icon
+                })
               })
-            })
+            });
           }
 
           // Zapisz historię do stanu
@@ -242,15 +316,27 @@ function Dashboard({ farmData, onTabChange }) {
     const prepareMap = async () => {
       try {
         const animalsData = await getAnimals();
-        animalsData.forEach(a => animalMap[a.id] = a.name || a.type + ' ' + a.earTag)
+        animalsData.forEach(a => animalMap[a.id] = a) // Store full object
       } catch (e) { console.error(e) }
     }
     prepareMap();
 
-    const unsubscribe = subscribeToAnimalLogs(20, (logs) => {
+    const unsubscribe = subscribeToAnimalLogs(20, async (logs) => {
       console.log('Animal subscription received logs:', logs);
+
+      // Sprawdź czy mamy wszystkie te zwierzęta w mapie, jeśli nie to odśwież
+      const missingIds = logs.some(log => log.animalId && !animalMap[log.animalId]);
+      if (missingIds) {
+        try {
+          console.log('Refreshing animal map for new logs...');
+          const animalsData = await getAnimals();
+          animalsData.forEach(a => animalMap[a.id] = a); // Store full object
+        } catch (e) { console.error('Error refreshing animals:', e); }
+      }
       const newActivities = logs.map(log => {
-        const animalName = animalMap[log.animalId] || 'Zwierzę ' + (log.animalId ? log.animalId.substring(0, 4) : 'nieznane');
+        const animalObj = animalMap[log.animalId];
+        const animalName = animalObj?.name || (animalObj?.type ? `${animalObj.type} ${animalObj.earTag || ''}` : 'Zwierzę ' + (log.animalId ? log.animalId.substring(0, 4) : 'nieznane'));
+
         // Fallback jeśli mapa jeszcze nie gotowa - nazwy mogą się nie zgadzać przez chwilę, 
         // ale odświeżenie dashboardu to naprawi. W idealnym świecie subskrypcja zwierząt też by tu była.
 
@@ -259,13 +345,44 @@ function Dashboard({ farmData, onTabChange }) {
         else if (log.type === 'Ważenie') icon = '⚖️'
         else if (log.type === 'Usunięcie') icon = '❌'
         else if (log.type === 'Nowe zwierzę') icon = '✨'
+        else if (log.type === 'Edycja danych') icon = '✏️'
 
         const date = log.date?.toDate ? log.date.toDate() : new Date(log.date)
 
+        let title = `${log.type}: ${animalName}`;
+        let description = log.description;
+
+        if (log.type === 'Nowe zwierzę') {
+          title = 'Zwierzęta: Dodano zwierzę';
+          // Używamy opisu z loga, który zawiera nazwę zapisaną w momencie utworzenia.
+          description = log.description;
+
+          // Wsteczna kompatybilność
+          if (description && description.startsWith('Dodano zwierzę: ')) {
+            const extractedName = description.replace('Dodano zwierzę: ', '');
+            description = `${extractedName} zostało dodane do listy zwierząt`;
+          }
+        } else if (log.type === 'Usunięcie') {
+          title = 'Zwierzęta: Usunięto zwierzę';
+          description = log.description;
+        } else if (log.type === 'Edycja danych') {
+          title = 'Zwierzęta: Edycja danych';
+          description = log.description;
+          // Wsteczna kompatybilność
+          if (description === 'Zmieniono dane identyfikacyjne zwierzęcia') {
+            description = `Zmieniono dane identyfikacyjne zwierzęcia ${animalName}`;
+          }
+        } else if (log.type === 'Leczenie') {
+          title = 'Zwierzęta: Leczenie';
+          // Format: [name zwierzecia] ([nr kolczyka]) - [opis zdarzenia]
+          const earTagPart = animalObj?.earTag ? `(${animalObj.earTag})` : '';
+          description = `${animalName} ${earTagPart} - Opis: ${log.description}`;
+        }
+
         return {
           id: `animal_log_${log.id}`,
-          title: `${log.type}: ${animalName}`,
-          description: log.description,
+          title: title,
+          description: description,
           time: date,
           timestamp: date.getTime(),
           icon: icon
@@ -282,11 +399,13 @@ function Dashboard({ farmData, onTabChange }) {
   // SUBSKRYPCJA LOGÓW MAGAZYNU
   useEffect(() => {
     const unsubscribe = subscribeToWarehouseLogs(20, (logs) => {
-      const newActivities = logs.map(log => {
+      // Filtrujemy 'add', bo jest już obsługiwane przez logi transakcji (żeby nie dublować)
+      const filteredLogs = logs.filter(log => log.operation !== 'add');
+
+      const newActivities = filteredLogs.map(log => {
         const date = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp)
         let icon = '📦'
         if (log.operation === 'delete') icon = '🗑️'
-        else if (log.operation === 'add') icon = '📥'
 
         return {
           id: `warehouse_log_${log.id}`,
@@ -330,6 +449,46 @@ function Dashboard({ farmData, onTabChange }) {
     return () => unsubscribe();
   }, []);
 
+  // SUBSKRYPCJA LOGÓW MASZYN
+  useEffect(() => {
+    const unsubscribe = subscribeToMachineLogs(20, (logs) => {
+      const newActivities = logs.map(log => {
+        const date = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+        let icon = '🚜';
+        let title = 'Maszyna';
+        let description = log.description;
+
+        if (log.type === 'Nowa maszyna') {
+          title = 'Garaż: Dodano maszynę';
+          icon = '🚜';
+          // Usuń prefix 'Dodano maszynę: ' jeśli istnieje, aby zostawić samo [Nazwa] [Marka] [Model]
+          if (description && description.startsWith('Dodano maszynę: ')) {
+            description = description.replace('Dodano maszynę: ', '');
+          }
+        } else if (log.type === 'Usunięcie') {
+          title = 'Garaż: Usunięto maszynę';
+          icon = '🗑️';
+        } else if (log.type === 'Zmiana statusu') {
+          title = 'Garaż: Zmiana statusu maszyny';
+          icon = '🔄';
+        } else {
+          title = `Garaż: ${log.type}`;
+        }
+
+        return {
+          id: `machine_log_${log.id}`,
+          title: title,
+          description: description,
+          time: date,
+          timestamp: date.getTime(),
+          icon: icon
+        }
+      });
+      setMachineActivities(newActivities);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // GENEROWANIE LISTY AKTYWNOŚCI (MERGE)
   useEffect(() => {
     const generateActivities = () => {
@@ -360,8 +519,8 @@ function Dashboard({ farmData, onTabChange }) {
           // Dla transakcji z magazynu (dodawanie produktu)
           if (transaction.source === 'warehouse' && transaction.productName) {
             const categoryName = getCategoryName(transaction.warehouseCategory || transaction.category);
-            activityTitle = `Magazyn: ${transaction.productName} (${transaction.quantity} ${transaction.unit})`
-            activityDesc = `Dodano ${categoryName} do magazynu - ${amount.toLocaleString('pl-PL')} zł`
+            activityTitle = `Magazyn: Dodano produkt`;
+            activityDesc = `${transaction.productName} (${transaction.quantity} ${transaction.unit}) - ${amount.toLocaleString('pl-PL')} zł`;
           }
 
           activities.push({
@@ -437,7 +596,7 @@ function Dashboard({ farmData, onTabChange }) {
       })
 
       console.log('Final merged activities:', uniqueActivities);
-      return uniqueActivities.slice(0, 20) // Zwiększone do 20
+      return uniqueActivities.slice(0, 10) // Zwiększone do 20
     }
 
     console.log('Final activities:', generateActivities());
@@ -616,10 +775,10 @@ function Dashboard({ farmData, onTabChange }) {
 
       {alerts && alerts.length > 0 && (
         <div className="dashboard-alerts">
-          <h3 className="section-title">⚠️ Alerty i powiadomienia</h3>
+          <h3 className="section-title">⚠️ Alerty i Rekomendacje</h3>
           <div className="alerts-grid">
-            {alerts.slice(0, 3).map((alert, index) => (
-              <div key={index} className={`alert-card ${alert.type}`}>
+            {alerts.map((alert, index) => (
+              <div key={index} className={`alert-card ${alert.type} ${alert.priority}`}>
                 <div className="alert-icon">
                   {alert.type === 'danger' ? '⚠️' :
                     alert.type === 'warning' ? '🔔' : 'ℹ️'}
@@ -754,17 +913,6 @@ function Dashboard({ farmData, onTabChange }) {
             <p>Kondycja stada: {animalAnalytics?.health?.healthIndex?.toFixed(1) || 0}%</p>
           </div>
         </div>
-      </div>
-
-      <div className="dashboard-footer">
-        <p>
-          <strong>Dane aktualne:</strong> {new Date().toLocaleString('pl-PL')} |
-          <strong> Liczba transakcji:</strong> {transactions?.length || 0} |
-          <strong> Liczba zadań:</strong> {tasks?.length || 0}
-        </p>
-        <p className="footer-note">
-          Aktualizacja danych w czasie rzeczywistym. Wszystkie kwoty w PLN.
-        </p>
       </div>
     </div>
   )

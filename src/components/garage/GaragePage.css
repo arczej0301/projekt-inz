@@ -12,7 +12,7 @@
 .garage-page .garage-header {
   background-color: white;
   padding: 15px 30px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
   border-radius: 8px;
   display: flex;
@@ -53,7 +53,7 @@
   background-color: white;
   border-radius: 5px;
   padding: 5px 15px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   border: 1px solid #ddd;
 }
 
@@ -80,7 +80,7 @@
   background: white;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   gap: 15px;
@@ -147,7 +147,7 @@
 .garage-page .machines-list {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   flex: 1;
 }
@@ -245,6 +245,8 @@
   border-radius: 15px;
   font-size: 12px;
   font-weight: 600;
+  color: red;
+  background-color: rgb(253, 227, 227);
   text-transform: uppercase;
   display: inline-block;
 }
@@ -389,7 +391,7 @@
   max-height: 200px;
   overflow-y: auto;
   z-index: 10001;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-top: 2px;
 }
 
@@ -439,12 +441,17 @@
   border: 1px solid #ced4da;
   border-radius: 4px;
   z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* STYLE SPECYFICZNE DLA MODALI I FORMULARZY NAPRAW */
@@ -715,66 +722,66 @@
   .garage-page {
     padding: 15px;
   }
-  
+
   .garage-page .garage-content {
     padding: 0;
   }
-  
+
   .garage-page .actions-bar {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .garage-page .search-box {
     width: 100%;
   }
-  
+
   .garage-page .search-box input {
     width: 100%;
   }
-  
+
   .garage-page .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .garage-page .machines-table {
     font-size: 14px;
   }
-  
+
   .garage-page .machines-table th,
   .garage-page .machines-table td {
     padding: 8px 10px;
   }
-  
+
   .garage-page .action-buttons {
     flex-direction: column;
     gap: 3px;
   }
-  
+
   .garage-page .action-btn {
     font-size: 11px;
     padding: 4px 6px;
     justify-content: center;
   }
-  
+
   .garage-page .form-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .garage-page .filter-controls .custom-select {
     width: 100%;
   }
-  
+
   /* Responsywność dla modali napraw */
   .repair-service-modal .modal-content {
     margin: 10px;
     max-height: 90vh;
   }
-  
+
   .repair-service-modal .form-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .repair-stats {
     flex-direction: column;
     gap: 10px;
@@ -786,7 +793,7 @@
     min-width: 700px;
     font-size: 13px;
   }
-  
+
   .repairs-table th,
   .repairs-table td {
     padding: 14px 10px;
@@ -797,13 +804,13 @@
   .repairs-table {
     min-width: 600px;
   }
-  
+
   .repairs-table th:nth-child(4),
   .repairs-table td.repair-parts {
     width: 180px;
     min-width: 180px;
   }
-  
+
   .repairs-table th:nth-child(5),
   .repairs-table td.repair-description {
     min-width: 250px;
@@ -815,77 +822,77 @@
   .garage-page .garage-header {
     padding: 10px 15px;
   }
-  
+
   .garage-page .garage-header h2 {
     font-size: 1.4rem;
   }
-  
+
   .garage-page .stat-card {
     padding: 15px;
   }
-  
+
   .garage-page .stat-icon {
     width: 50px;
     height: 50px;
     font-size: 20px;
   }
-  
+
   .garage-page .list-header {
     flex-direction: column;
     gap: 10px;
     align-items: stretch;
   }
-  
+
   .garage-page .filter-controls {
     justify-content: stretch;
   }
-  
+
   .garage-page .filter-select {
     width: 100%;
   }
-  
+
   /* Tabela napraw na mobile */
   .repairs-table-container {
     border: none;
     overflow-x: visible;
   }
-  
+
   .repairs-table {
     min-width: auto;
     display: block;
   }
-  
+
   .repairs-table thead {
     display: none;
   }
-  
+
   .repairs-table tbody,
   .repairs-table tr,
   .repairs-table td {
     display: block;
     width: 100%;
   }
-  
+
   .repairs-table tr {
     margin-bottom: 20px;
     border: 1px solid #e9ecef;
     border-radius: 8px;
     padding: 16px;
     background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
-  
+
   .repairs-table td {
     padding: 12px 0;
     border: none;
     border-bottom: 1px solid #f0f0f0;
     text-align: left !important;
   }
-  
+
   .repairs-table td:last-child {
     border-bottom: none;
   }
-  
+
   .repairs-table td:before {
     content: attr(data-label);
     display: block;
@@ -895,18 +902,18 @@
     margin-bottom: 6px;
     text-transform: uppercase;
   }
-  
+
   .repair-number {
     border-bottom: 2px solid #e9ecef !important;
     padding-bottom: 15px !important;
     margin-bottom: 10px;
   }
-  
+
   .repair-index {
     float: right;
     margin-top: -5px;
   }
-  
+
   .repair-cost .cost-value {
     display: inline-block;
   }
@@ -1009,22 +1016,22 @@
     gap: 10px;
     width: 100%;
   }
-  
+
   .editing-controls {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .editing-controls .btn {
     width: 100%;
   }
-  
+
   .repair-select-column,
   .repair-select-cell {
     width: 40px;
     padding: 8px 5px !important;
   }
-  
+
   .repair-checkbox input[type="checkbox"] {
     width: 16px;
     height: 16px;
@@ -1037,15 +1044,15 @@
     align-items: flex-start;
     gap: 15px;
   }
-  
+
   .header-actions {
     width: 100%;
   }
-  
+
   .select-all-checkbox {
     font-size: 13px;
   }
-  
+
   /* Układ checkboxa na mobile */
   .repairs-table td.repair-select-cell:before {
     content: "Zaznacz";
@@ -1055,7 +1062,7 @@
     margin-bottom: 6px;
     text-transform: uppercase;
   }
-  
+
   .repair-checkbox {
     justify-content: flex-start;
   }
@@ -1155,7 +1162,7 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .preview-header {
@@ -1233,12 +1240,12 @@
   .finance-section {
     padding: 12px;
   }
-  
+
   .preview-row {
     flex-direction: column;
     gap: 5px;
   }
-  
+
   .preview-row .value {
     text-align: left;
     padding-left: 0;

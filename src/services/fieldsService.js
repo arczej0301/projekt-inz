@@ -1,15 +1,16 @@
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDocs, 
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDocs,
   onSnapshot,
   query,
   orderBy,
   where,
-  limit
+  limit,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -39,10 +40,10 @@ export const getFields = async () => {
     querySnapshot.forEach((doc) => {
       fields.push({ id: doc.id, ...doc.data() });
     });
-    
+
     fieldsCache = fields;
     lastFetchTime = Date.now();
-    
+
     return fields;
   } catch (error) {
     console.error('Error getting fields:', error);
@@ -52,17 +53,17 @@ export const getFields = async () => {
 
 export const subscribeToFields = (callback) => {
   const q = query(collection(db, FIELDS_COLLECTION), orderBy('name'));
-  
-  return onSnapshot(q, 
+
+  return onSnapshot(q,
     (querySnapshot) => {
       const fields = [];
       querySnapshot.forEach((doc) => {
         fields.push({ id: doc.id, ...doc.data() });
       });
-      
+
       fieldsCache = fields;
       lastFetchTime = Date.now();
-      
+
       callback(fields);
     },
     (error) => {
@@ -78,7 +79,16 @@ export const addField = async (fieldData) => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
-    
+
+    // Logowanie dodania pola w historii statusów
+    await addDoc(collection(db, FIELD_STATUS_COLLECTION), {
+      field_id: docRef.id,
+      status: 'field_added',
+      field_name: fieldData.name, // Zapisujemy nazwę 'na sztywno' żeby przetrwała usunięcie pola
+      area: fieldData.area,       // Podobnie z powierzchnią
+      date_created: new Date().toISOString()
+    });
+
     clearCache();
     return docRef.id;
   } catch (error) {
@@ -90,11 +100,36 @@ export const addField = async (fieldData) => {
 export const updateField = async (fieldId, fieldData) => {
   try {
     const fieldRef = doc(db, FIELDS_COLLECTION, fieldId);
+
+    // 1. Pobierz stare dane przed aktualizacją (do porównania zmian)
+    const fieldSnap = await getDoc(fieldRef);
+    const oldExample = fieldSnap.exists() ? fieldSnap.data() : {};
+
+    // 2. Wykonaj aktualizację
     await updateDoc(fieldRef, {
       ...fieldData,
       updatedAt: new Date()
     });
-    
+
+    // 3. Sprawdź co się zmieniło i zaloguj
+    const changes = [];
+    if (oldExample.name && fieldData.name && oldExample.name !== fieldData.name) {
+      changes.push(`zmiana nazwy z "${oldExample.name}" na "${fieldData.name}"`);
+    }
+    if (oldExample.soil && fieldData.soil && oldExample.soil !== fieldData.soil) {
+      changes.push(`zmiana typu gleby z "${oldExample.soil}" na "${fieldData.soil}"`);
+    }
+
+    if (changes.length > 0) {
+      await addDoc(collection(db, FIELD_STATUS_COLLECTION), {
+        field_id: fieldId,
+        status: 'field_edited',
+        field_name: fieldData.name || oldExample.name,
+        change_details: changes.join(', '),
+        date_created: new Date().toISOString()
+      });
+    }
+
     clearCache();
   } catch (error) {
     console.error('Error updating field:', error);
@@ -104,7 +139,34 @@ export const updateField = async (fieldId, fieldData) => {
 
 export const deleteField = async (fieldId) => {
   try {
+    // 1. Pobierz dane pola przed usunięciem (żeby mieć nazwę do logów)
+    let fieldName = 'Usunięte pole';
+    let fieldArea = 0;
+
+    try {
+      const fieldRef = doc(db, FIELDS_COLLECTION, fieldId);
+      const fieldSnap = await getDoc(fieldRef);
+      if (fieldSnap.exists()) {
+        const data = fieldSnap.data();
+        fieldName = data.name || fieldName;
+        fieldArea = data.area || fieldArea;
+      }
+    } catch (e) {
+      console.warn('Could not fetch field before deletion', e);
+    }
+
+    // 2. Usuń pole
     await deleteDoc(doc(db, FIELDS_COLLECTION, fieldId));
+
+    // 3. Loguj usunięcie
+    await addDoc(collection(db, FIELD_STATUS_COLLECTION), {
+      field_id: fieldId, // Zachowujemy ID chociaż pole nie istnieje
+      status: 'field_deleted',
+      field_name: fieldName,
+      area: fieldArea,
+      date_created: new Date().toISOString()
+    });
+
     clearCache();
   } catch (error) {
     console.error('Error deleting field:', error);
@@ -145,16 +207,16 @@ export const getAllFieldStatuses = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, FIELD_STATUS_COLLECTION));
     const statuses = {};
-    
+
     querySnapshot.forEach((doc) => {
       const statusData = doc.data();
       const fieldId = statusData.field_id;
-      
+
       if (fieldId) {
         const currentStatus = statuses[fieldId];
         const currentDate = currentStatus ? new Date(currentStatus.date_created || currentStatus.date_updated) : null;
         const newDate = new Date(statusData.date_created || statusData.date_updated);
-        
+
         if (!currentDate || newDate > currentDate) {
           statuses[fieldId] = {
             id: doc.id,
@@ -163,7 +225,7 @@ export const getAllFieldStatuses = async () => {
         }
       }
     });
-    
+
     return statuses;
   } catch (error) {
     console.error('Error getting all field statuses:', error);
@@ -218,13 +280,13 @@ export const getFieldYields = async (fieldId) => {
       where("field_id", "==", fieldId),
       orderBy("date_created", "desc")
     );
-    
+
     const querySnapshot = await getDocs(q);
     const yields = [];
     querySnapshot.forEach((doc) => {
       yields.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return yields;
   } catch (error) {
     console.error('Error getting field yields:', error);
@@ -240,7 +302,7 @@ export const getLatestFieldYield = async (fieldId) => {
       orderBy("date_created", "desc"),
       limit(1)
     );
-    
+
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
       const doc = querySnapshot.docs[0];
@@ -259,13 +321,13 @@ export const getAllFieldYields = async () => {
       collection(db, FIELD_YIELDS_COLLECTION),
       orderBy("date_created", "desc")
     );
-    
+
     const querySnapshot = await getDocs(q);
     const yields = [];
     querySnapshot.forEach((doc) => {
       yields.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return yields;
   } catch (error) {
     console.error('Error getting all field yields:', error);
@@ -295,13 +357,13 @@ export const getFieldCosts = async (fieldId) => {
       where("field_id", "==", fieldId),
       orderBy("date_created", "desc")
     );
-    
+
     const querySnapshot = await getDocs(q);
     const costs = [];
     querySnapshot.forEach((doc) => {
       costs.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return costs;
   } catch (error) {
     console.error('Error getting field costs:', error);
@@ -315,14 +377,14 @@ export const getFieldTotalCost = async (fieldId) => {
       collection(db, FIELD_COSTS_COLLECTION),
       where("field_id", "==", fieldId)
     );
-    
+
     const querySnapshot = await getDocs(q);
     let total = 0;
     querySnapshot.forEach((doc) => {
       const costData = doc.data();
       total += parseFloat(costData.total_cost) || 0;
     });
-    
+
     return total;
   } catch (error) {
     console.error('Error calculating total cost:', error);
@@ -336,13 +398,13 @@ export const getAllFieldCosts = async () => {
       collection(db, FIELD_COSTS_COLLECTION),
       orderBy("date_created", "desc")
     );
-    
+
     const querySnapshot = await getDocs(q);
     const costs = [];
     querySnapshot.forEach((doc) => {
       costs.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return costs;
   } catch (error) {
     console.error('Error getting all field costs:', error);
@@ -352,19 +414,19 @@ export const getAllFieldCosts = async () => {
 
 // Subskrybuj zmiany w statusach
 export const subscribeToFieldStatus = (callback) => {
-  return onSnapshot(collection(db, FIELD_STATUS_COLLECTION), 
+  return onSnapshot(collection(db, FIELD_STATUS_COLLECTION),
     (querySnapshot) => {
       const statuses = {};
-      
+
       querySnapshot.forEach((doc) => {
         const statusData = doc.data();
         const fieldId = statusData.field_id;
-        
+
         if (fieldId) {
           const currentStatus = statuses[fieldId];
           const currentDate = currentStatus ? new Date(currentStatus.date_created || currentStatus.date_updated) : null;
           const newDate = new Date(statusData.date_created || statusData.date_updated);
-          
+
           if (!currentDate || newDate > currentDate) {
             statuses[fieldId] = {
               id: doc.id,
@@ -373,7 +435,7 @@ export const subscribeToFieldStatus = (callback) => {
           }
         }
       });
-      
+
       callback(statuses);
     },
     (error) => {
@@ -384,7 +446,7 @@ export const subscribeToFieldStatus = (callback) => {
 
 // Subskrybuj zmiany w zbiorach
 export const subscribeToFieldYields = (callback) => {
-  return onSnapshot(collection(db, FIELD_YIELDS_COLLECTION), 
+  return onSnapshot(collection(db, FIELD_YIELDS_COLLECTION),
     (querySnapshot) => {
       const yields = [];
       querySnapshot.forEach((doc) => {
@@ -400,7 +462,7 @@ export const subscribeToFieldYields = (callback) => {
 
 // Subskrybuj zmiany w kosztach
 export const subscribeToFieldCosts = (callback) => {
-  return onSnapshot(collection(db, FIELD_COSTS_COLLECTION), 
+  return onSnapshot(collection(db, FIELD_COSTS_COLLECTION),
     (querySnapshot) => {
       const costs = [];
       querySnapshot.forEach((doc) => {
@@ -422,13 +484,13 @@ export const getFieldStatusHistory = async (fieldId) => {
       where("field_id", "==", fieldId),
       orderBy("date_created", "desc")
     );
-    
+
     const querySnapshot = await getDocs(q);
     const statuses = [];
     querySnapshot.forEach((doc) => {
       statuses.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return statuses;
   } catch (error) {
     console.error('Error getting field status history:', error);
@@ -444,13 +506,13 @@ export const getFieldStatusLogs = async (limitCount = 20) => {
       orderBy("date_created", "desc"), // Sortowanie od najnowszych
       limit(limitCount)
     );
-    
+
     const querySnapshot = await getDocs(q);
     const logs = [];
     querySnapshot.forEach((doc) => {
       logs.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return logs;
   } catch (error) {
     console.error('Error getting field status logs:', error);
@@ -465,13 +527,13 @@ export const getCropPerformance = async () => {
   try {
     // 1. Pobierz wszystkie zbiory
     const yields = await getAllFieldYields();
-    
+
     // 2. Pobierz wszystkie pola (dla powierzchni)
     const fields = await getFields();
-    
+
     // 3. Grupuj dane według uprawy
     const cropMap = {};
-    
+
     // Inicjalizacja dla każdej uprawy
     yields.forEach(yieldData => {
       const crop = yieldData.crop;
@@ -486,11 +548,11 @@ export const getCropPerformance = async () => {
           yields: []
         };
       }
-      
+
       cropMap[crop].totalYield += parseFloat(yieldData.amount) || 0;
       cropMap[crop].yields.push(yieldData);
     });
-    
+
     // 4. Oblicz powierzchnię dla każdej uprawy
     fields.forEach(field => {
       const crop = field.crop;
@@ -499,7 +561,7 @@ export const getCropPerformance = async () => {
         cropMap[crop].fields.push(field.id);
       }
     });
-    
+
     // 5. Oblicz średnią wydajność
     Object.keys(cropMap).forEach(crop => {
       const cropData = cropMap[crop];
@@ -508,14 +570,14 @@ export const getCropPerformance = async () => {
       }
       cropData.yieldCount = cropData.yields.length;
     });
-    
+
     // 6. Przekształć na tablicę i posortuj
     const cropPerformance = Object.values(cropMap)
       .filter(crop => crop.totalArea > 0) // Tylko uprawy z przypisanymi polami
       .sort((a, b) => b.totalYield - a.totalYield); // Sortuj malejąco według plonu
-    
+
     return cropPerformance;
-    
+
   } catch (error) {
     console.error('Error calculating crop performance:', error);
     return [];
@@ -532,19 +594,19 @@ export const getFieldDetailedAnalytics = async (fieldId) => {
       getFieldCosts(fieldId),
       getFieldStatusHistory(fieldId)
     ]);
-    
+
     const field = fieldData || {};
-    
+
     // Oblicz kluczowe wskaźniki
     const totalYield = yields.reduce((sum, y) => sum + (parseFloat(y.amount) || 0), 0);
     const totalCost = costs.reduce((sum, c) => sum + (parseFloat(c.total_cost) || 0), 0);
     const totalArea = parseFloat(field.area) || 1; // unikaj dzielenia przez 0
-    
+
     // Znajdź ostatni zbiór
-    const lastYield = yields.length > 0 
+    const lastYield = yields.length > 0
       ? yields.sort((a, b) => new Date(b.date_created) - new Date(a.date_created))[0]
       : null;
-    
+
     return {
       fieldInfo: {
         id: field.id,
@@ -578,7 +640,7 @@ export const getFieldDetailedAnalytics = async (fieldId) => {
         statusHistory: statusHistory.slice(0, 10) // Ostatnie 10 zmian statusu
       }
     };
-    
+
   } catch (error) {
     console.error('Error getting field analytics:', error);
     throw error;

@@ -15,7 +15,7 @@
   background: white;
   border-radius: 8px;
   padding: 20px 25px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .reports-header h3 {
@@ -55,14 +55,14 @@
   border-radius: 10px;
   padding: 20px;
   text-align: center;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
   border-top: 4px solid #27ae60;
 }
 
 .production-summary .summary-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
 .production-summary .summary-value {
@@ -70,7 +70,7 @@
   font-weight: 800;
   color: #2c3e50;
   margin-bottom: 8px;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .production-summary .summary-label {
@@ -92,7 +92,7 @@
   border-radius: 8px;
   padding: 20px 25px;
   margin-bottom: 15px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 100%;
 }
 
@@ -156,14 +156,14 @@
   border: 1px solid #dee2e6;
   border-radius: 10px;
   padding: 18px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   border-left: 4px solid #3498db;
 }
 
 .crop-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
 }
 
 .crop-header {
@@ -226,7 +226,7 @@
 .fields-table-container {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   padding: 0;
   margin-bottom: 30px;
@@ -319,7 +319,7 @@
 
 /* Status badges */
 .status-badge {
-  color: white;
+
   padding: 6px 12px;
   border-radius: 15px;
   font-size: 13px;
@@ -328,7 +328,7 @@
   min-width: 185px;
   text-align: center;
   white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   border: 1px solid transparent;
   text-transform: capitalize;
@@ -336,7 +336,7 @@
 
 .status-badge:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Efficiency Analysis */
@@ -394,7 +394,7 @@
 .efficiency-stats {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   padding: 25px;
   margin-top: 20px;
   border: 1px solid #f0f2f5;
@@ -411,7 +411,7 @@
 
 .efficiency-stats .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
 }
 
 .efficiency-stats .stat-card h5 {
@@ -522,38 +522,38 @@
     align-items: flex-start;
     gap: 15px;
   }
-  
+
   .section-header-flex {
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
     padding-right: 20px;
   }
-  
+
   .sort-controls {
     width: 100%;
   }
-  
+
   .sort-select,
   .crop-cards-grid {
     width: 100%;
     min-width: 100%;
     max-width: 100%;
   }
-  
+
   .crop-cards-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .fields-table {
     font-size: 13px;
   }
-  
+
   .fields-table th,
   .fields-table td {
     padding: 10px 12px;
   }
-  
+
   .status-badge {
     min-width: 110px;
     font-size: 11px;

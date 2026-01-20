@@ -56,12 +56,24 @@ export const addMachine = async (machineData) => {
         });
 
         // Log history
-        await addMachineHistory(docRef.id, 'Nowa maszyna', `Dodano maszynę: ${machineData.name}`);
+        await addMachineHistory(docRef.id, 'Nowa maszyna', `Dodano maszynę: ${machineData.name} ${machineData.brand} ${machineData.model}`);
 
         return docRef.id;
     } catch (error) {
         console.error('Error adding machine:', error);
         throw error;
+    }
+};
+
+// Helper do tłumaczenia statusów
+const translateStatus = (status) => {
+    switch (status) {
+        case 'active': return 'Sprawny';
+        case 'maintenance': return 'W serwisie';
+        case 'broken': return 'Awaria';
+        case 'sold': return 'Sprzedany';
+        case 'needs_service': return 'Wymaga przeglądu';
+        default: return status;
     }
 };
 
@@ -76,7 +88,9 @@ export const updateMachine = async (machineId, machineData, oldMachineData = nul
         // Log history based on changes
         if (oldMachineData) {
             if (machineData.status && machineData.status !== oldMachineData.status) {
-                await addMachineHistory(machineId, 'Zmiana statusu', `Status: ${oldMachineData.status} -> ${machineData.status}`);
+                const oldStatusPL = translateStatus(oldMachineData.status);
+                const newStatusPL = translateStatus(machineData.status);
+                await addMachineHistory(machineId, 'Zmiana statusu', `Status: ${oldStatusPL} -> ${newStatusPL}`);
             }
             if (machineData.nextService && machineData.nextService !== oldMachineData.nextService) {
                 await addMachineHistory(machineId, 'Zaplanowano serwis', `Termin: ${machineData.nextService}`);

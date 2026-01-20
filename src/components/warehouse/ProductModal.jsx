@@ -127,7 +127,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
                 value={formData.quantity}
                 onChange={handleChange}
                 min="0"
-                step="0.01"
+                step="1"
                 required
               />
             </div>
@@ -135,7 +135,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
             <div className="form-group">
               <label>Jednostka *</label>
               <div className="custom-select" ref={unitSelectRef}>
-                <div 
+                <div
                   className={`select-header ${formData.unit ? 'has-value' : ''}`}
                   onClick={() => setIsUnitSelectOpen(!isUnitSelectOpen)}
                 >
@@ -144,7 +144,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
                     ▼
                   </span>
                 </div>
-                
+
                 {isUnitSelectOpen && (
                   <div className="select-dropdown">
                     {units.map(unit => (
@@ -171,7 +171,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
                 value={formData.price}
                 onChange={handleChange}
                 min="0"
-                step="0.01"
+                step="1"
                 placeholder="0.00"
               />
             </div>
@@ -184,7 +184,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
                 value={formData.minStock}
                 onChange={handleChange}
                 min="0"
-                step="0.01"
+                step="1"
                 required
               />
             </div>
@@ -193,7 +193,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
           <div className="form-group">
             <label>Kategoria *</label>
             <div className="custom-select" ref={categorySelectRef}>
-              <div 
+              <div
                 className={`select-header ${category ? 'has-value' : ''}`}
                 onClick={() => setIsCategorySelectOpen(!isCategorySelectOpen)}
               >
@@ -202,7 +202,7 @@ function ProductModal({ product, category, categories, onCategoryChange, onSave,
                   ▼
                 </span>
               </div>
-              
+
               {isCategorySelectOpen && (
                 <div className="select-dropdown">
                   {categories.map(cat => (

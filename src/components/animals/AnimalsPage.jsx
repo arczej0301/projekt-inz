@@ -466,7 +466,7 @@ function AnimalsPage() {
                 <div className="form-group"><label>Data urodzenia</label><input type="date" name="birthDate" value={currentAnimal.birthDate || ''} onChange={handleInputChange} /></div>
 
                 {/* POPRAWIONY INPUT WAGI: text/number bez parseFloat w onChange */}
-                <div className="form-group"><label>Waga (kg)</label><input type="number" name="weight" value={currentAnimal.weight || ''} onChange={handleInputChange} step="0.1" /></div>
+                <div className="form-group"><label>Waga (kg)</label><input type="number" name="weight" value={currentAnimal.weight || ''} onChange={handleInputChange} step="0.5" /></div>
 
                 <div className="form-group"><label>Status</label><div className="custom-select"><div className={`select-header ${isStatusOpen ? 'open' : ''}`} onClick={() => setIsStatusOpen(!isStatusOpen)}>{getCurrentStatusLabel()}<span className="arrow">▼</span></div>{isStatusOpen && (<div className="select-options">{animalStatuses.map(s => (<div key={s.value} className={`select-option ${currentAnimal.status === s.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('status', s.value)}>{s.label}</div>))}</div>)}</div></div>
                 <div className="form-group"><label>Stan zdrowia</label><div className="custom-select"><div className={`select-header ${isHealthOpen ? 'open' : ''}`} onClick={() => setIsHealthOpen(!isHealthOpen)}>{getCurrentHealthLabel()}<span className="arrow">▼</span></div>{isHealthOpen && (<div className="select-options">{healthStatuses.map(h => (<div key={h.value} className={`select-option ${currentAnimal.health === h.value ? 'selected' : ''}`} onClick={() => handleCustomSelect('health', h.value)}>{h.label}</div>))}</div>)}</div></div>

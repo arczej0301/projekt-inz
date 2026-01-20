@@ -23,8 +23,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .dashboard-header {
@@ -59,8 +64,8 @@
   padding: 15px;
   border-radius: 8px;
   border-left: 4px solid;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-  margin-bottom: 0; 
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  margin-bottom: 0;
 }
 
 .alert-card.danger {
@@ -76,6 +81,18 @@
 .alert-card.info {
   background-color: #e8f4fd;
   border-left-color: #2196f3;
+}
+
+.alert-card.high {
+  border-left-width: 6px;
+}
+
+.alert-card.medium {
+  border-left-width: 4px;
+}
+
+.alert-card.low {
+  border-left-width: 2px;
 }
 
 .alert-icon {
@@ -110,7 +127,7 @@
   padding: 20px 15px;
   border-radius: 8px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: default;
   display: flex;
@@ -122,7 +139,7 @@
 
 .dashboard-stat-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .dashboard-stat-icon {
@@ -193,7 +210,7 @@
   padding: 15px 10px;
   border-radius: 8px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: default;
   display: flex;
@@ -206,7 +223,7 @@
 
 .stats-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .stats-content {
@@ -274,7 +291,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  justify-content: flex-start; 
+  justify-content: flex-start;
 }
 
 .action-card {
@@ -282,7 +299,7 @@
   padding: 15px 10px;
   border-radius: 8px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
   display: flex;
@@ -291,13 +308,13 @@
   justify-content: center;
   min-height: 90px;
   width: 100px;
-  flex: 1 0 100px; 
-  max-width: 120px; 
+  flex: 1 0 100px;
+  max-width: 120px;
 }
 
 .action-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .action-icon {
@@ -327,7 +344,7 @@
 .activities-list {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -348,16 +365,16 @@
 }
 
 .activity-icon {
-  font-size: 20px; 
+  font-size: 20px;
   margin-right: 15px;
-  width: 40px;     
-  height: 40px;   
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background-color: #f1f2f6;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0; 
+  flex-shrink: 0;
 }
 
 .activity-content {
@@ -376,9 +393,9 @@
 .activity-desc {
   font-size: 13px;
   color: #7f8c8d;
-  white-space: nowrap;    
-  overflow: hidden; 
-  text-overflow: ellipsis;  
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .activity-time {
@@ -398,7 +415,7 @@
   background: white;
   padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .analytics-card h4 {
@@ -419,7 +436,7 @@
   .stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+
   .actions-grid {
     grid-template-columns: repeat(3, 100px);
     justify-content: center;
@@ -430,44 +447,44 @@
   .dashboard {
     padding: 10px;
   }
-  
+
   .dashboard-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .actions-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+
   .action-card {
     width: auto;
     min-height: 80px;
   }
-  
+
   .alerts-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .analytics-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .dashboard-header h2 {
     font-size: 20px;
   }
-  
+
   .section-title {
     font-size: 16px;
   }
-  
+
   .stats-card {
     min-height: 160px;
   }
-  
+
   .stats-value {
     font-size: 24px;
   }
@@ -477,20 +494,20 @@
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .actions-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .stats-card {
     min-height: 150px;
     padding: 12px 8px;
   }
-  
+
   .stats-value {
     font-size: 22px;
   }
-  
+
   .stats-title {
     font-size: 11px;
   }

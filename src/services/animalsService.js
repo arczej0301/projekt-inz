@@ -9,7 +9,8 @@ import {
   query,
   orderBy,
   where,
-  limit
+  limit,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -68,7 +69,8 @@ export const addAnimal = async (animalData) => {
     });
 
     // Dodaj wpis do historii
-    await addAnimalHistory(docRef.id, 'Nowe zwierzę', `Dodano zwierzę: ${animalData.name || animalData.type || 'bez nazwy'}`);
+    const animalName = animalData.name || animalData.type || 'bez nazwy';
+    await addAnimalHistory(docRef.id, 'Nowe zwierzę', `${animalName} zostało dodane do listy zwierząt`);
 
     clearCache();
     return docRef.id;
@@ -123,7 +125,8 @@ export const updateAnimal = async (animalId, animalData, oldAnimalData = null) =
       // Sprawdzenie zmiany danych identyfikacyjnych
       if ((animalData.name && animalData.name !== oldAnimalData.name) ||
         (animalData.earTag && animalData.earTag !== oldAnimalData.earTag)) {
-        await addAnimalHistory(animalId, 'Edycja danych', `Zmieniono dane identyfikacyjne zwierzęcia`);
+        const name = animalData.name || oldAnimalData.name || 'Zwierzę';
+        await addAnimalHistory(animalId, 'Edycja danych', `Zmieniono dane identyfikacyjne zwierzęcia ${name}`);
       }
     } else {
       // Fallback
@@ -139,9 +142,18 @@ export const updateAnimal = async (animalId, animalData, oldAnimalData = null) =
 
 export const deleteAnimal = async (animalId) => {
   try {
-    await deleteDoc(doc(db, ANIMALS_COLLECTION, animalId));
-    // Historia usuwania - uwaga: animalID jest zachowany w historii, mimo że dokument usunięty
-    await addAnimalHistory(animalId, 'Usunięcie', 'Zwierzę zostało usunięte z systemu');
+    const animalRef = doc(db, ANIMALS_COLLECTION, animalId);
+    const animalSnap = await getDoc(animalRef);
+    let animalName = 'Zwierzę';
+
+    if (animalSnap.exists()) {
+      const data = animalSnap.data();
+      animalName = data.name || (data.type ? `${data.type} ${data.earTag || ''}` : 'Zwierzę');
+    }
+
+    await deleteDoc(animalRef);
+    // Historia usuwania - zapisujemy sformatowaną wiadomość, bo po usunięciu nie odczytamy już nazwy
+    await addAnimalHistory(animalId, 'Usunięcie', `${animalName} zostało usunięte z listy zwierząt`);
     clearCache();
   } catch (error) {
     console.error('Error deleting animal:', error);
