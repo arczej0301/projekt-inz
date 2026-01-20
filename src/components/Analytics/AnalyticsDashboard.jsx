@@ -3,15 +3,15 @@ import React, { useState, useEffect, useMemo } from 'react'
 import CustomSelect from '../common/CustomSelect'
 import FieldYieldChart from './FieldYieldChart'
 import FinancialTrendChart from './FinancialTrendChart'
-import { 
-  BarChart as RechartsBarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Cell 
+import {
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell
 } from 'recharts'
 import './AnalyticsDashboard.css'
 import { useFinance } from '../../hooks/useFinance'
@@ -28,10 +28,10 @@ const prepareChartData = (transactions = []) => {
 
   // Grupowanie transakcji miesięcznie
   const monthlyData = {}
-  
+
   transactions.forEach(transaction => {
     if (!transaction.date) return
-    
+
     // Konwersja daty
     let date
     if (transaction.date.toDate) {
@@ -41,10 +41,10 @@ const prepareChartData = (transactions = []) => {
     } else {
       date = new Date(transaction.date)
     }
-    
+
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     const monthName = date.toLocaleDateString('pl-PL', { month: 'short' })
-    
+
     if (!monthlyData[monthKey]) {
       monthlyData[monthKey] = {
         name: monthName,
@@ -54,15 +54,15 @@ const prepareChartData = (transactions = []) => {
         transactionCount: 0
       }
     }
-    
+
     const amount = parseFloat(transaction.amount) || 0
-    
+
     if (transaction.type === 'income') {
       monthlyData[monthKey].revenue += amount
     } else if (transaction.type === 'expense') {
       monthlyData[monthKey].expenses += amount
     }
-    
+
     monthlyData[monthKey].transactionCount++
   })
 
@@ -76,14 +76,14 @@ const prepareChartData = (transactions = []) => {
   const dataWithTrend = sortedData.map((item, index, array) => {
     const trendWindow = 3
     let trend = item.revenue
-    
+
     if (index >= trendWindow - 1) {
       const windowData = array.slice(index - trendWindow + 1, index + 1)
       trend = windowData.reduce((sum, d) => sum + d.revenue, 0) / trendWindow
     } else if (index > 0) {
       trend = (array[index - 1].revenue + item.revenue) / 2
     }
-    
+
     return {
       ...item,
       revenue: parseFloat(item.revenue.toFixed(2)),
@@ -105,7 +105,7 @@ const prepareCostStructure = (completeCostData) => {
 
   return completeCostData.summary.map(item => ({
     name: item.name,
-    value: item.value,
+    value: parseFloat(item.value) || 0,
     percentage: item.percentage,
     bySource: item.bySource,
     details: item.details,
@@ -116,20 +116,20 @@ const prepareCostStructure = (completeCostData) => {
 const AnalyticsDashboard = () => {
   const [timeRange, setTimeRange] = useState('month')
   const [viewType, setViewType] = useState('overview')
-  
+
   // UŻYJ rzeczywistych hooków
-  const { 
-    financialAnalytics, 
-    fieldAnalytics, 
-    animalAnalytics, 
-    loading: analyticsLoading, 
+  const {
+    financialAnalytics,
+    fieldAnalytics,
+    animalAnalytics,
+    loading: analyticsLoading,
     error: analyticsError,
     alerts: realAlerts,
     data: analyticsData,
     completeCostStructure
   } = useAnalytics()
-  
-  const { 
+
+  const {
     transactions: financeTransactions = [],
     getFinancialSummary,
     getBudgetsWithStatus,
@@ -147,7 +147,7 @@ const AnalyticsDashboard = () => {
       console.log('Brak transakcji, używam mock danych')
       const mockTrends = generateMockFinancialData ? generateMockFinancialData(12) : []
       const mockCosts = generateMockCostStructure ? generateMockCostStructure() : []
-      
+
       return {
         financialTrends: mockTrends,
         costStructure: mockCosts,
@@ -182,7 +182,7 @@ const AnalyticsDashboard = () => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return '0,00 zł'
     }
-    
+
     const numAmount = parseFloat(amount)
     const formatted = numAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
     return `${formatted} zł`
@@ -210,7 +210,7 @@ const AnalyticsDashboard = () => {
         <div className="state-container error">
           <h3>Błąd ładowania danych</h3>
           <p>{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="btn-refresh"
           >
@@ -223,22 +223,22 @@ const AnalyticsDashboard = () => {
 
   return (
     <div className="analytics-dashboard">
-    <h3>Kluczowe Wskaźniki Wydajności</h3>
+      <h3>Kluczowe Wskaźniki Wydajności</h3>
 
       {/* Wykresy */}
       <div className="charts-section">
         <div className="chart-row">
           <div className="chart-card large-chart">
-            <FinancialTrendChart 
+            <FinancialTrendChart
               data={dashboardData.financialTrends}
               formatCurrency={safeFormatCurrency}
             />
-            
+
           </div>
-          
+
           <div className="chart-card">
             <h4>Struktura kosztów</h4>
-            <CostStructureChart 
+            <CostStructureChart
               data={dashboardData.costStructure}
               formatCurrency={safeFormatCurrency}
             />
@@ -249,16 +249,16 @@ const AnalyticsDashboard = () => {
           <div className="chart-card">
             <h4>Wydajność pól</h4>
             <div className="chart-card-content"></div>
-             <FieldYieldChart />
+            <FieldYieldChart />
           </div>
-          
+
           <div className="chart-card">
             <h4>Zdrowie stada</h4>
             <HealthChart data={dashboardData.healthData} />
           </div>
         </div>
       </div>
-      
+
       {/* Alerty */}
       {dashboardData.alerts.length > 0 && (
         <div className="alerts-section">
@@ -267,8 +267,8 @@ const AnalyticsDashboard = () => {
             {dashboardData.alerts.map((alert, index) => (
               <div key={index} className={`alert-card ${alert.type} ${alert.priority}`}>
                 <div className="alert-icon">
-                  {alert.type === 'danger' ? '⚠️' : 
-                   alert.type === 'warning' ? '🚨' : 'ℹ️'}
+                  {alert.type === 'danger' ? '⚠️' :
+                    alert.type === 'warning' ? '🚨' : 'ℹ️'}
                 </div>
                 <div className="alert-content">
                   <div className="alert-title">{alert.title}</div>
@@ -289,22 +289,22 @@ const AnalyticsDashboard = () => {
 const CostStructureChart = ({ data, formatCurrency }) => {
   const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#95a5a6'];
   const [selectedSource, setSelectedSource] = useState('all');
-  
+
   // Filtruj dane według źródła
   const filteredData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    
+
     if (selectedSource === 'all') {
-      return data;
+      return data.filter(item => item.value > 0);
     }
-    
+
     // Filtruj dane według źródła
     return data
       .filter(item => item.bySource && item.bySource[selectedSource] > 0)
       .map(item => ({
         ...item,
         value: item.bySource[selectedSource] || 0,
-        percentage: (item.bySource[selectedSource] / 
+        percentage: (item.bySource[selectedSource] /
           Object.values(item.bySource).reduce((sum, val) => sum + val, 0)) * 100
       }))
       .filter(item => item.value > 0)
@@ -314,14 +314,14 @@ const CostStructureChart = ({ data, formatCurrency }) => {
   // Przygotuj listę źródeł
   const sources = useMemo(() => {
     if (!data || data.length === 0) return ['all'];
-    
+
     const sourceSet = new Set(['all']);
     data.forEach(item => {
       if (item.bySource) {
         Object.keys(item.bySource).forEach(source => sourceSet.add(source));
       }
     });
-    
+
     return Array.from(sourceSet);
   }, [data]);
 
@@ -336,7 +336,7 @@ const CostStructureChart = ({ data, formatCurrency }) => {
           Brak danych kosztowych
         </div>
         <div className="empty-subtitle">
-          {selectedSource !== 'all' 
+          {selectedSource !== 'all'
             ? `Brak kosztów z źródła: ${selectedSource}`
             : 'Dodaj transakcje wydatków w module Finanse, naprawy w Garażu lub zakupy w Magazynie'}
         </div>
@@ -358,16 +358,16 @@ const CostStructureChart = ({ data, formatCurrency }) => {
           <p className="tooltip-row" style={{ color: '#7f8c8d' }}>
             <strong>Procent kosztów:</strong> {dataItem.percentage.toFixed(1)}%
           </p>
-          
+
           {dataItem.bySource && (
             <div className="tooltip-section">
               <p className="tooltip-subtitle">Rozkład źródeł:</p>
               {Object.entries(dataItem.bySource).map(([source, amount], index) => (
                 <div key={index} className="tooltip-detail-row">
                   <span style={{ color: '#7f8c8d' }}>
-                    {source === 'finance' ? 'Finanse' : 
-                     source === 'garage' ? 'Garaż' : 
-                     source === 'warehouse' ? 'Magazyn' : source}
+                    {source === 'finance' ? 'Finanse' :
+                      source === 'garage' ? 'Garaż' :
+                        source === 'warehouse' ? 'Magazyn' : source}
                   </span>
                   <span style={{ fontWeight: '600', color: '#2c3e50' }}>
                     {formatCurrency ? formatCurrency(amount) : amount}
@@ -376,7 +376,7 @@ const CostStructureChart = ({ data, formatCurrency }) => {
               ))}
             </div>
           )}
-          
+
           {dataItem.details && dataItem.details.length > 0 && (
             <div className="tooltip-section">
               <p className="tooltip-subtitle">Ostatnie transakcje:</p>
@@ -386,7 +386,7 @@ const CostStructureChart = ({ data, formatCurrency }) => {
                     {detail.description || 'Brak opisu'}
                   </div>
                   <div className="tooltip-transaction-date">
-                    {formatCurrency ? formatCurrency(detail.amount) : detail.amount} • 
+                    {formatCurrency ? formatCurrency(detail.amount) : detail.amount} •
                     {detail.date ? new Date(detail.date).toLocaleDateString('pl-PL') : 'Brak daty'}
                   </div>
                 </div>
@@ -406,11 +406,11 @@ const CostStructureChart = ({ data, formatCurrency }) => {
     <div className="cost-chart-wrapper">
       {/* Nagłówek z filtrami */}
       <div className="cost-chart-header">
-          <div className="header-subtitle">
-            {categoryCount} kategorii • Łącznie: {formatCurrency ? formatCurrency(totalValue) : totalValue}
-          </div>
-        
-        
+        <div className="header-subtitle">
+          {categoryCount} kategorii • Łącznie: {formatCurrency ? formatCurrency(totalValue) : totalValue}
+        </div>
+
+
         {/* Filtry źródeł */}
         <div className="cost-filters">
           <span className="filter-label">Źródło:</span>
@@ -421,16 +421,16 @@ const CostStructureChart = ({ data, formatCurrency }) => {
                 onClick={() => setSelectedSource(source)}
                 className={`source-btn ${selectedSource === source ? 'active' : ''}`}
               >
-                {source === 'all' ? 'Wszystkie' : 
-                 source === 'finance' ? 'Finanse' : 
-                 source === 'garage' ? 'Garaż' : 
-                 source === 'warehouse' ? 'Magazyn' : source}
+                {source === 'all' ? 'Wszystkie' :
+                  source === 'finance' ? 'Finanse' :
+                    source === 'garage' ? 'Garaż' :
+                      source === 'warehouse' ? 'Magazyn' : source}
               </button>
             ))}
           </div>
         </div>
       </div>
-      
+
       {/* Wykres */}
       <ResponsiveContainer width="100%" height="85%">
         <RechartsBarChart
@@ -439,40 +439,40 @@ const CostStructureChart = ({ data, formatCurrency }) => {
           margin={{ top: 5, right: 30, left: 120, bottom: 15 }}
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eee" />
-          <XAxis 
-            type="number" 
+          <XAxis
+            type="number"
             tickFormatter={(value) => {
               if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M zł`;
               if (value >= 1000) return `${(value / 1000).toFixed(0)}k zł`;
               return `${value} zł`;
             }}
             tick={{ fontSize: 11, fill: '#666' }}
-            label={{ 
-              value: 'Kwota (zł)', 
-              position: 'insideBottom', 
+            label={{
+              value: 'Kwota (zł)',
+              position: 'insideBottom',
               offset: -5,
               fontSize: 11,
               fill: '#7f8c8d'
             }}
           />
-          <YAxis 
-            dataKey="name" 
-            type="category" 
+          <YAxis
+            dataKey="name"
+            type="category"
             width={115}
             tick={{ fontSize: 11, fill: '#666' }}
             interval={0}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-          <Bar 
-            dataKey="value" 
-            radius={[0, 4, 4, 0]} 
+          <Bar
+            dataKey="value"
+            radius={[0, 4, 4, 0]}
             barSize={24}
             animationDuration={1500}
             animationBegin={300}
           >
             {sortedData.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
+              <Cell
+                key={`cell-${index}`}
                 fill={COLORS[index % COLORS.length]}
                 strokeWidth={1}
                 stroke="#fff"
@@ -481,12 +481,12 @@ const CostStructureChart = ({ data, formatCurrency }) => {
           </Bar>
         </RechartsBarChart>
       </ResponsiveContainer>
-      
+
       {/* Legenda procentowa na dole */}
       <div className="cost-chart-legend">
         {sortedData.slice(0, 5).map((item, index) => (
           <div key={index} className="legend-item">
-            <div 
+            <div
               className="legend-color-box"
               style={{ backgroundColor: COLORS[index % COLORS.length] }}
             ></div>
@@ -518,10 +518,10 @@ const BarChart = ({ data = [] }) => {
 
   // Oblicz maksymalną wartość dla skalowania
   const maxEfficiency = Math.max(...data.map(item => item.efficiency || 0), 100);
-  
+
   // Oblicz średnią wydajność
-  const averageEfficiency = data.length > 0 
-    ? data.reduce((sum, item) => sum + (item.efficiency || 0), 0) / data.length 
+  const averageEfficiency = data.length > 0
+    ? data.reduce((sum, item) => sum + (item.efficiency || 0), 0) / data.length
     : 0;
 
   return (
@@ -536,7 +536,7 @@ const BarChart = ({ data = [] }) => {
             {data.length} pól • Średnia: {averageEfficiency.toFixed(1)}%
           </div>
         </div>
-        
+
         <div className="yield-legend-mini">
           <div className="mini-legend-item">
             <div className="mini-color-box"></div>
@@ -548,7 +548,7 @@ const BarChart = ({ data = [] }) => {
       {/* Kontener wykresu */}
       <div className="yield-bars-container">
         {/* Linia średniej */}
-        <div 
+        <div
           className="average-line"
           style={{ top: `${100 - (averageEfficiency / maxEfficiency * 100)}%` }}
         >
@@ -562,7 +562,7 @@ const BarChart = ({ data = [] }) => {
           const efficiency = item.efficiency || 0;
           const height = (efficiency / maxEfficiency) * 100;
           const isAboveAverage = efficiency > averageEfficiency;
-          
+
           return (
             <div key={index} className="bar-column">
               {/* Kolumna */}
@@ -580,18 +580,18 @@ const BarChart = ({ data = [] }) => {
                     {isAboveAverage ? 'Powyżej średniej' : 'Poniżej średniej'}
                   </div>
                 </div>
-                
+
                 {/* Wartość na kolumnie */}
                 <div className="bar-value">
                   {efficiency.toFixed(0)}%
                 </div>
               </div>
-              
+
               {/* Podpis pola */}
               <div className="bar-label">
                 {item.name || `Pole ${index + 1}`}
               </div>
-              
+
               {/* Oznaczenie powyżej/poniżej średniej */}
               <div className={`bar-trend ${isAboveAverage ? 'trend-up' : 'trend-down'}`}>
                 {isAboveAverage ? '↑' : '↓'}
@@ -690,14 +690,14 @@ const HealthChart = ({ data = {} }) => {
           </span>
         </div>
       </div>
-      
+
       {/* Prosty wykres rozkładu zdrowia */}
       {chartData.length > 0 && (
         <div className="health-distribution-compact">
           <div className="health-distribution-title">
             Rozkład zdrowia:
           </div>
-          
+
           <div className="health-distribution-list">
             {chartData.map((item, index) => (
               <div key={index} className="health-distribution-item-compact">
@@ -723,7 +723,7 @@ const HealthChart = ({ data = {} }) => {
           <div className="health-issues-title">
             Problemy:
           </div>
-          
+
           <div className="health-issues-list">
             {commonIssues.map((issue, index) => (
               <div key={index} className="health-issue-item">
